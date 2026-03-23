@@ -6,7 +6,6 @@ Module contains tools for collecting data from various remote sources
 
 import warnings
 
-from pandas.util._decorators import deprecate_kwarg
 
 from pandas_datareader.av.forex import AVForexReader
 from pandas_datareader.av.quotes import AVQuotesReader
@@ -275,7 +274,6 @@ def get_iex_book(*args, **kwargs):
     return IEXDeep(*args, **kwargs).read()
 
 
-@deprecate_kwarg("access_key", "api_key")
 def DataReader(
     name,
     data_source=None,
