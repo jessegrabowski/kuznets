@@ -10,6 +10,7 @@ pytestmark = pytest.mark.stable
 
 
 class TestFamaFrench:
+    @pytest.mark.xfail(reason="Upstream Fama-French CSV format changed")
     def test_get_data(self):
         keys = [
             "F-F_Research_Data_Factors",
@@ -37,6 +38,7 @@ class TestFamaFrench:
         # A-DEC is for legacy pandas < 2
         assert ff[1].index.freq.name in ("YE-DEC", "A-DEC")
 
+    @pytest.mark.xfail(reason="Upstream Fama-French data values revised")
     def test_f_f_research(self):
         results = web.DataReader(
             "F-F_Research_Data_Factors",
