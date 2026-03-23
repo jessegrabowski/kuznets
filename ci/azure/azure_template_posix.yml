@@ -40,9 +40,8 @@ jobs:
     displayName: 'Use Python $(python.version)'
 
   - script: |
-      python -m pip install pip setuptools -U      
-      python -m pip install -r requirements.txt
-      python -m pip install -r requirements-dev.txt
+      python -m pip install pip -U      
+      python -m pip install ".[dev]"
       if [[ -n ${NUMPY} ]]; then 
         python -m pip install numpy==${NUMPY}
       fi;
@@ -59,15 +58,14 @@ jobs:
     displayName: 'List Configuration (PyPI)'
 
   - script: |
-     black --check pandas_datareader
-     isort --check pandas_datareader
-     flake8 pandas_datareader
+     ruff check pandas_datareader
+     ruff format --check pandas_datareader
     displayName: 'Check style and formatting'
 
   - script: |
       echo "Testing editable install"
       if [[ ${COVERAGE} == "true" ]]; then
-        export COVERAGE_OPTS="--cov-config .coveragerc --cov=pandas_datareader --cov-report xml:coverage.xml --cov-report term"
+        export COVERAGE_OPTS="--cov-config pyproject.toml --cov=pandas_datareader --cov-report xml:coverage.xml --cov-report term"
       fi
       echo pytest -m "${PYTEST_PATTERN}" --junitxml=junit/test-results.xml -n 2 --durations=25 ${COVERAGE_OPTS} pandas_datareader/tests
       pytest -m "${PYTEST_PATTERN}" --junitxml=junit/test-results.xml -n 2 --durations=25 ${COVERAGE_OPTS} pandas_datareader/tests
