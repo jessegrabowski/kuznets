@@ -10,34 +10,42 @@ from pandas_datareader.yahoo.daily import YahooDailyReader
 
 class YahooFXReader(YahooDailyReader):
     """
-    Returns DataFrame of historical prices for currencies
+    Get historical prices for currency pairs from Yahoo Finance.
 
     Parameters
     ----------
-    symbols : string, array-like object (list, tuple, Series), or DataFrame
-        Single stock symbol (ticker), array-like object of symbols or
-        DataFrame with index containing stock symbols.
-    start : string, int, date, datetime, Timestamp
-        Starting date, timestamp. Parses many different kind of date
-        representations (e.g., 'JAN-01-2010', '1/1/10', 'Jan, 1, 1980').
-        Defaults to '1/1/2010'.
-    end : string, int, date, datetime, Timestamp
-        Ending date, timestamp. Same format as starting date. Defaults to today.
+    symbols : str, list of str, or DataFrame
+        Single currency pair symbol, list of symbols, or DataFrame with
+        index containing symbols.
+    start : str, int, date, datetime, or Timestamp, optional
+        Starting date. Defaults to ``'1/1/2010'``.
+    end : str, int, date, datetime, or Timestamp, optional
+        Ending date. Defaults to today.
     retry_count : int, default 3
         Number of times to retry query request.
-    pause : int, default 0.1
-        Time, in seconds, to pause between consecutive queries of chunks. If
-        single value given for symbol, represents the pause between retries.
-    session : Session, default None
-        requests.sessions.Session instance to be used
-    chunksize : int, default 25 (NOT IMPLEMENTED)
-        Number of symbols to download consecutively before intiating pause.
-    interval : string, default '1d'
-        Valid values are '1d', '5d', '1mo', '3mo', '6mo', '1y', '2y', '5y',
-            '10y', 'ytd', 'max'
+    pause : float, default 0.1
+        Time, in seconds, to pause between consecutive queries.
+    session : Session, optional
+        ``requests.sessions.Session`` instance to be used.
+    chunksize : int, default 25
+        Not implemented.
+    interval : str, default "1d"
+        Valid values are ``'1d'``, ``'5d'``, ``'1mo'``, ``'3mo'``, ``'6mo'``,
+        ``'1y'``, ``'2y'``, ``'5y'``, ``'10y'``, ``'ytd'``, ``'max'``.
     """
 
-    def _get_params(self, symbol):
+    def _get_params(self, symbol: str) -> dict:
+        """Build query parameters for a given symbol.
+
+        Parameters
+        ----------
+        symbol : str
+            Currency pair symbol.
+
+        Returns
+        -------
+        dict
+        """
         unix_start = int(time.mktime(self.start.timetuple()))
         day_end = self.end.replace(hour=23, minute=59, second=59)
         unix_end = int(time.mktime(day_end.timetuple()))
@@ -53,11 +61,16 @@ class YahooFXReader(YahooDailyReader):
         }
         return params
 
-    def read(self):
-        """Read data"""
+    def read(self) -> DataFrame:
+        """Read FX data.
+
+        Returns
+        -------
+        DataFrame
+        """
         try:
             # If a single symbol, (e.g., 'GOOG')
-            if isinstance(self.symbols, (str, int)):
+            if isinstance(self.symbols, str | int):
                 df = self._read_one_data(self.symbols)
 
             # Or multiple symbols, (e.g., ['GOOG', 'AAPL', 'MSFT'])
@@ -76,8 +89,18 @@ class YahooFXReader(YahooDailyReader):
         finally:
             self.close()
 
-    def _read_one_data(self, symbol):
-        """read one data from specified URL"""
+    def _read_one_data(self, symbol: str) -> DataFrame:
+        """Read data for a single currency pair.
+
+        Parameters
+        ----------
+        symbol : str
+            Currency pair symbol.
+
+        Returns
+        -------
+        DataFrame
+        """
         url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}=X"
         params = self._get_params(symbol)
 

@@ -2,7 +2,7 @@ from ftplib import FTP, all_errors
 import time
 import warnings
 
-from pandas import read_csv
+from pandas import DataFrame, read_csv
 
 from pandas_datareader._utils import RemoteDataError
 from pandas_datareader.compat import StringIO
@@ -29,35 +29,40 @@ _DELIMITER = "|"
 _ticker_cache = None
 
 
-def _bool_converter(item):
+def _bool_converter(item: str) -> bool:
     return item == "Y"
 
 
-def _download_nasdaq_symbols(timeout):
+def _download_nasdaq_symbols(timeout: float) -> DataFrame:
     """
-    @param timeout: the time to wait for the FTP connection
+    Download Nasdaq symbol data via FTP.
+
+    Parameters
+    ----------
+    timeout : float
+        The time to wait for the FTP connection.
+
+    Returns
+    -------
+    DataFrame
     """
     try:
         ftp_session = FTP(_NASDAQ_FTP_SERVER, timeout=timeout)
         ftp_session.login()
     except all_errors as err:
-        raise RemoteDataError(
-            f"Error connecting to {_NASDAQ_FTP_SERVER!r}: {err}"
-        ) from err
+        raise RemoteDataError(f"Error connecting to {_NASDAQ_FTP_SERVER!r}: {err}") from err
 
     lines = []
     try:
         ftp_session.retrlines("RETR " + _NASDAQ_TICKER_LOC, lines.append)
     except all_errors as err:
-        raise RemoteDataError(
-            f"Error downloading from {_NASDAQ_FTP_SERVER!r}: {err}"
-        ) from err
+        raise RemoteDataError(f"Error downloading from {_NASDAQ_FTP_SERVER!r}: {err}") from err
     finally:
         ftp_session.close()
 
     # Sanity Checking
     if not lines[-1].startswith("File Creation Time:"):
-        raise RemoteDataError("Missing expected footer. Found %r" % lines[-1])
+        raise RemoteDataError(f"Missing expected footer. Found {lines[-1]!r}")
 
     # Convert Y/N to True/False.
     converter_map = {col: _bool_converter for col, t in _TICKER_DTYPE if t is bool}
@@ -82,13 +87,26 @@ def _download_nasdaq_symbols(timeout):
     return data
 
 
-def get_nasdaq_symbols(retry_count=3, timeout=30, pause=None):
+def get_nasdaq_symbols(
+    retry_count: int = 3,
+    timeout: float = 30,
+    pause: float | None = None,
+) -> DataFrame:
     """
     Get the list of all available equity symbols from Nasdaq.
 
+    Parameters
+    ----------
+    retry_count : int, default 3
+        Number of times to retry query request.
+    timeout : float, default 30
+        Time, in seconds, to wait for the FTP connection.
+    pause : float, optional
+        Time, in seconds, to pause between retries. Defaults to timeout / 3.
+
     Returns
     -------
-    nasdaq_tickers : pandas.DataFrame
+    DataFrame
         DataFrame with company tickers, names, and other properties.
     """
     global _ticker_cache

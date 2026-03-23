@@ -9,32 +9,29 @@ from pandas_datareader.compat import is_list_like
 
 class MoexReader(_DailyBaseReader):
     """
-    Returns a DataFrame of historical stock prices from symbols from Moex
+    Get historical stock prices from the Moscow Exchange (MOEX).
 
     Parameters
     ----------
-    symbols : str, an array-like object (list, tuple, Series), or a DataFrame
-        A single stock symbol (secid), an array-like object of symbols or
-        a DataFrame with an index containing stock symbols.
-    start : string, int, date, datetime, Timestamp
-        Starting date. Parses many different kind of date
-        representations (e.g., 'JAN-01-2010', '1/1/10', 'Jan, 1, 1980'). Defaults to
-        20 years before current date.
-    end : string, int, date, datetime, Timestamp
-        Ending date
+    symbols : str, list of str, or DataFrame
+        A single stock symbol (secid), list of symbols, or a DataFrame
+        with an index containing stock symbols.
+    start : str, int, date, datetime, or Timestamp, optional
+        Starting date. Defaults to 20 years before current date.
+    end : str, int, date, datetime, or Timestamp, optional
+        Ending date.
     retry_count : int, default 3
-        The number of times to retry query request.
-    pause : int, default 0.1
-        Time, in seconds, to pause between consecutive queries of chunks. If
-        single value given for symbol, represents the pause between retries.
+        Number of times to retry query request.
+    pause : float, default 0.1
+        Time, in seconds, to pause between consecutive queries of chunks.
     chunksize : int, default 25
-        The number of symbols to download consecutively before initiating pause.
-    session : Session, default None
-        requests.sessions.Session instance to be used
+        Number of symbols to download consecutively before initiating pause.
+    session : Session, optional
+        ``requests.sessions.Session`` instance to be used.
 
     Notes
     -----
-    To avoid being penalized by Moex servers, pauses more than 0.1s between
+    To avoid being penalized by MOEX servers, pauses more than 0.1s between
     downloading 'chunks' of symbols can be specified.
     """
 
@@ -52,20 +49,14 @@ class MoexReader(_DailyBaseReader):
         self.__markets_n_engines = {}  # dicts for tuples of engines and markets
 
     __url_metadata = "https://iss.moex.com/iss/securities/{symbol}.csv"
-    __url_data = (
-        "https://iss.moex.com/iss/history/engines/{engine}/"
-        "markets/{market}/securities/{symbol}.csv"
-    )
+    __url_data = "https://iss.moex.com/iss/history/engines/{engine}/markets/{market}/securities/{symbol}.csv"
 
     @property
     def url(self):
         """Return a list of API URLs per symbol"""
 
         if not self.__markets_n_engines:
-            raise Exception(
-                "Accessing url property before invocation "
-                "of read() or _get_metadata() methods"
-            )
+            raise Exception("Accessing url property before invocation of read() or _get_metadata() methods")
 
         return [
             self.__url_data.format(engine=engine, market=market, symbol=s)
@@ -106,8 +97,7 @@ class MoexReader(_DailyBaseReader):
             if len(text) == 0:
                 service = self.__class__.__name__
                 raise OSError(
-                    "{} request returned no data; check URL for invalid "
-                    "inputs: {}".format(service, self.__url_metadata)
+                    f"{service} request returned no data; check URL for invalid inputs: {self.__url_metadata}"
                 )
             if isinstance(text, bytes):
                 text = text.decode("windows-1251")
@@ -122,11 +112,9 @@ class MoexReader(_DailyBaseReader):
                     fields = s.split(";")
 
                     if symbol not in markets_n_engines:
-                        markets_n_engines[symbol] = list()
+                        markets_n_engines[symbol] = []
 
-                    markets_n_engines[symbol].append(
-                        (fields[5], fields[7])
-                    )  # market and engine
+                    markets_n_engines[symbol].append((fields[5], fields[7]))  # market and engine
 
                     if fields[14] == "1":  # main board for symbol
                         symbol_U = symbol.upper()
@@ -134,20 +122,20 @@ class MoexReader(_DailyBaseReader):
 
             if symbol not in markets_n_engines:
                 raise OSError(
-                    "{} request returned no metadata: {}\n"
-                    "Typo in the security symbol `{}`?".format(
-                        self.__class__.__name__,
-                        self.__url_metadata.format(symbol=symbol),
-                        symbol,
-                    )
+                    f"{self.__class__.__name__} request returned no metadata: {self.__url_metadata.format(symbol=symbol)}\n"
+                    f"Typo in the security symbol `{symbol}`?"
                 )
             if symbol in markets_n_engines:
                 markets_n_engines[symbol] = list(set(markets_n_engines[symbol]))
         return markets_n_engines, boards
 
-    def read_all_boards(self):
-        """Read all data from every board for every ticker"""
+    def read_all_boards(self) -> pd.DataFrame:
+        """Read all data from every board for every ticker.
 
+        Returns
+        -------
+        DataFrame
+        """
         markets_n_engines, boards = self._get_metadata()
         try:
             self.__markets_n_engines = markets_n_engines
@@ -175,9 +163,7 @@ class MoexReader(_DailyBaseReader):
                         break
 
                     params = self._get_params(start_str)
-                    strings_out = self._read_url_as_String(
-                        urls[i], params
-                    ).splitlines()[2:]
+                    strings_out = self._read_url_as_String(urls[i], params).splitlines()[2:]
                     strings_out = list(filter(lambda x: x.strip(), strings_out))
 
                     if len(out_list) == 0:
@@ -196,19 +182,20 @@ class MoexReader(_DailyBaseReader):
             self.close()
 
         if len(dfs) == 0:
-            raise OSError(
-                "{} returned no data; check URL or correct a date".format(
-                    self.__class__.__name__
-                )
-            )
+            raise OSError(f"{self.__class__.__name__} returned no data; check URL or correct a date")
         elif len(dfs) > 1:
             b = pd.concat(dfs, axis=0, join="outer", sort=True)
         else:
             b = dfs[0]
         return b
 
-    def read(self):
-        """Read data from the primary board for each ticker"""
+    def read(self) -> pd.DataFrame:
+        """Read data from the primary board for each ticker.
+
+        Returns
+        -------
+        DataFrame
+        """
         markets_n_engines, boards = self._get_metadata()
         b = self.read_all_boards()
         parts = []
@@ -219,24 +206,42 @@ class MoexReader(_DailyBaseReader):
         result = result.drop_duplicates()
         return result
 
-    def _read_url_as_String(self, url, params=None):
-        """Open an url (and retry)"""
+    def _read_url_as_String(self, url: str, params: dict | None = None) -> str:
+        """Open a URL and return raw text (retries on failure).
+
+        Parameters
+        ----------
+        url : str
+            Target URL.
+        params : dict, optional
+            Query parameters.
+
+        Returns
+        -------
+        str
+        """
 
         response = self._get_response(url, params=params)
         text = self._sanitize_response(response)
         if len(text) == 0:
             service = self.__class__.__name__
-            raise OSError(
-                "{} request returned no data; check URL for invalid inputs: {}".format(
-                    service, self.url
-                )
-            )
+            raise OSError(f"{service} request returned no data; check URL for invalid inputs: {self.url}")
         if isinstance(text, bytes):
             text = text.decode("windows-1251")
         return text
 
-    def _read_lines(self, input):
-        """Return a pandas DataFrame from input"""
+    def _read_lines(self, input: StringIO) -> pd.DataFrame:
+        """Parse CSV content from a StringIO into a DataFrame.
+
+        Parameters
+        ----------
+        input : StringIO
+            CSV content.
+
+        Returns
+        -------
+        DataFrame
+        """
 
         return pd.read_csv(
             input,

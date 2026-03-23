@@ -1,25 +1,23 @@
-from pandas import concat, read_csv
+from pandas import DataFrame, concat, read_csv
 
 from pandas_datareader.base import _BaseReader
 from pandas_datareader.compat import is_list_like
 
 
 class FredReader(_BaseReader):
-    """
-    Get data for the given name from the St. Louis FED (FRED).
-    """
+    """Get data for the given name from the St. Louis FED (FRED)."""
 
     @property
-    def url(self):
-        """API URL"""
+    def url(self) -> str:
+        """API URL."""
         return "https://fred.stlouisfed.org/graph/fredgraph.csv"
 
-    def read(self):
-        """Read data
+    def read(self) -> DataFrame:
+        """Read data from FRED.
 
         Returns
         -------
-        data : DataFrame
+        DataFrame
             If multiple names are passed for "series" then the index of the
             DataFrame is the outer join of the indices of each series.
         """
@@ -28,7 +26,7 @@ class FredReader(_BaseReader):
         finally:
             self.close()
 
-    def _read(self):
+    def _read(self) -> DataFrame:
         if not is_list_like(self.symbols):
             names = [self.symbols]
         else:
@@ -36,8 +34,8 @@ class FredReader(_BaseReader):
 
         urls = [f"{self.url}?id={n}" for n in names]
 
-        def fetch_data(url, name):
-            """Utility to fetch data"""
+        def fetch_data(url: str, name: str) -> DataFrame:
+            """Fetch a single FRED series."""
             resp = self._read_url_as_StringIO(url)
             data = read_csv(
                 resp,
@@ -52,10 +50,7 @@ class FredReader(_BaseReader):
                 return data.truncate(self.start, self.end)
             except KeyError as exc:  # pragma: no cover
                 if data.iloc[3].name[7:12] == "Error":
-                    raise OSError(
-                        "Failed to get the data. Check that "
-                        "{!r} is a valid FRED series.".format(name)
-                    ) from exc
+                    raise OSError(f"Failed to get the data. Check that {name!r} is a valid FRED series.") from exc
                 raise
 
         try:

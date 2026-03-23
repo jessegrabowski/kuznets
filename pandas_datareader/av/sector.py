@@ -6,31 +6,42 @@ from pandas_datareader.av import AlphaVantage
 
 class AVSectorPerformanceReader(AlphaVantage):
     """
-    Returns DataFrame of the Alpha Vantage Sector Performances SECTOR data.
+    Get Alpha Vantage Sector Performance data.
 
     .. versionadded:: 0.7.0
 
     Parameters
     ----------
-    symbols : string, array-like object (list, tuple, Series)
-        Single currency pair (formatted 'FROM/TO') or list of the same.
+    symbols : str or list of str, optional
+        Not used by this endpoint.
     retry_count : int, default 3
         Number of times to retry query request.
-    pause : int, default 0.1
-        Time, in seconds, to pause between consecutive queries of chunks. If
-        single value given for symbol, represents the pause between retries.
-    session : Session, default None
-        requests.sessions.Session instance to be used
+    pause : float, default 0.1
+        Time, in seconds, to pause between consecutive queries.
+    session : Session, optional
+        ``requests.sessions.Session`` instance to be used.
     api_key : str, optional
-        Alpha Vantage API key . If not provided the environmental variable
-        ALPHAVANTAGE_API_KEY is read. The API key is *required*.
+        Alpha Vantage API key. If not provided the environmental variable
+        ``ALPHAVANTAGE_API_KEY`` is read. The API key is *required*.
     """
 
     @property
-    def function(self):
+    def function(self) -> str:
+        """Alpha Vantage endpoint function."""
         return "SECTOR"
 
-    def _read_lines(self, out):
+    def _read_lines(self, out: dict) -> pd.DataFrame:
+        """Parse Alpha Vantage sector performance JSON response.
+
+        Parameters
+        ----------
+        out : dict
+            Parsed JSON response.
+
+        Returns
+        -------
+        DataFrame
+        """
         if "Information" in out:
             raise RemoteDataError()
         else:

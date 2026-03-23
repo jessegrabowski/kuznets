@@ -10,24 +10,24 @@ from pandas_datareader.exceptions import DEP_ERROR_MSG, ImmediateDeprecationErro
 
 class EnigmaReader(_BaseReader):
     """
-    Collects current snapshot of Enigma data located at the specified
-    data set ID and returns a pandas DataFrame.
+    Collect current snapshot of Enigma data. **Immediately deprecated.**
 
     Parameters
     ----------
-    dataset_id : str
+    dataset_id : str, optional
         Enigma dataset UUID.
     api_key : str, optional
         Enigma API key. If not provided, the environmental variable
-        ENIGMA_API_KEY is read.
+        ``ENIGMA_API_KEY`` is read.
     retry_count : int, default 5
         Number of times to retry query request.
-    pause : float, default 0.1
+    pause : float, default 0.75
         Time, in seconds, of the pause between retries.
-    session : Session, default None
-        requests.sessions.Session instance to be used.
-    base_url : str, optional (defaults to https://public.enigma.com/api)
-        Alternative Enigma endpoint to be used.
+    session : Session, optional
+        ``requests.sessions.Session`` instance to be used.
+    base_url : str, optional
+        Alternative Enigma endpoint (defaults to
+        ``https://public.enigma.com/api``).
 
     Examples
     --------
@@ -35,13 +35,7 @@ class EnigmaReader(_BaseReader):
     https://public.enigma.com/datasets/bedaf052-5fcd-4758-8d27-048ce8746c6a
 
     >>> import pandas_datareader as pdr
-    >>> df = pdr.get_data_enigma('bedaf052-5fcd-4758-8d27-048ce8746c6a')
-
-    In the event that ENIGMA_API_KEY does not exist in your env, the key can
-    be supplied as the second argument or as the keyword argument `api_key`
-
-    >>> df = EnigmaReader(dataset_id='bedaf052-5fcd-4758-8d27-048ce8746c6a',
-    ...                   api_key='INSERT_API_KEY').read()
+    >>> df = pdr.get_data_enigma("bedaf052-5fcd-4758-8d27-048ce8746c6a")
     """
 
     def __init__(
@@ -55,9 +49,7 @@ class EnigmaReader(_BaseReader):
     ):
         raise ImmediateDeprecationError(DEP_ERROR_MSG.format("Enigma"))
 
-        super().__init__(
-            symbols=[], retry_count=retry_count, pause=pause, session=session
-        )
+        super().__init__(symbols=[], retry_count=retry_count, pause=pause, session=session)
         if api_key is None:
             self._api_key = os.getenv("ENIGMA_API_KEY")
             if self._api_key is None:
@@ -72,10 +64,7 @@ class EnigmaReader(_BaseReader):
 
         self._dataset_id = dataset_id
         if not isinstance(self._dataset_id, str):
-            raise ValueError(
-                "The Enigma dataset_id must be a string (ex: "
-                "'bedaf052-5fcd-4758-8d27-048ce8746c6a')"
-            )
+            raise ValueError("The Enigma dataset_id must be a string (ex: 'bedaf052-5fcd-4758-8d27-048ce8746c6a')")
 
         headers = {
             "Authorization": f"Bearer {self._api_key}",

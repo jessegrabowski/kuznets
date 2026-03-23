@@ -66,10 +66,7 @@ def read_sdmx(path_or_buf, dtype="float64", dsd=None):
                 time.sleep(1)
                 continue
 
-        msg = (
-            "Unable to download zipped data within 60 secs, "
-            "please download it manually from: {0}"
-        )
+        msg = "Unable to download zipped data within 60 secs, please download it manually from: {0}"
         raise ValueError(msg.format(result)) from exc
 
     idx_name = structure.get("dimensionAtObservation")

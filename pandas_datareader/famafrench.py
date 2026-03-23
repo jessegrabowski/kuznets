@@ -3,7 +3,7 @@ import re
 import tempfile
 from zipfile import ZipFile
 
-from pandas import read_csv, to_datetime
+from pandas import DataFrame, read_csv, to_datetime
 
 from pandas_datareader.base import _BaseReader
 from pandas_datareader.compat import PYTHON_LT_3_10, StringIO
@@ -13,23 +13,24 @@ _URL_PREFIX = "ftp/"
 _URL_SUFFIX = "_CSV.zip"
 
 
-def get_available_datasets(**kwargs):
+def get_available_datasets(**kwargs) -> list[str]:
     """
     Get the list of datasets available from the Fama/French data library.
 
     Parameters
     ----------
     session : Session, default None
-        requests.sessions.Session instance to be used
+        ``requests.sessions.Session`` instance to be used.
 
     Returns
     -------
-    A list of valid inputs for get_data_famafrench.
+    list of str
+        A list of valid inputs for get_data_famafrench.
     """
     return FamaFrenchReader(symbols="", **kwargs).get_available_datasets()
 
 
-def _parse_date_famafrench(x):
+def _parse_date_famafrench(x: str) -> dt.datetime:
     x = x.strip()
     try:
         return dt.datetime.strptime(x, "%Y%m")
@@ -47,11 +48,22 @@ class FamaFrenchReader(_BaseReader):
     """
 
     @property
-    def url(self):
-        """API URL"""
+    def url(self) -> str:
+        """API URL."""
         return "".join([_URL, _URL_PREFIX, self.symbols, _URL_SUFFIX])
 
-    def _read_zipfile(self, url):
+    def _read_zipfile(self, url: str) -> str:
+        """Download and extract the first file from a ZIP archive.
+
+        Parameters
+        ----------
+        url : str
+            URL of the ZIP file.
+
+        Returns
+        -------
+        str
+        """
         raw = self._get_response(url).content
 
         with tempfile.TemporaryFile() as tmpf:
@@ -63,19 +75,19 @@ class FamaFrenchReader(_BaseReader):
                     data = zf.open(zf.namelist()[0]).read().decode(encoding="cp1252")
         return data
 
-    def read(self):
+    def read(self) -> dict[int | str, DataFrame]:
         """
-        Read data
+        Read data.
 
         Returns
         -------
-        df : dict
+        dict of int or str to DataFrame
             A dictionary of DataFrames. Tables are accessed by integer keys.
             See df['DESCR'] for a description of the data set.
         """
         return super().read()
 
-    def _read_one_data(self, url, params):
+    def _read_one_data(self, url: str, params) -> dict[int | str, DataFrame]:
         params = {
             "index_col": 0,
         }
@@ -115,13 +127,9 @@ class FamaFrenchReader(_BaseReader):
 
             df = read_csv(StringIO("Date" + src[start:]), **params)
             if df.index.min() > 190000:
-                df.index = to_datetime(df.index.astype(str), format="%Y%m").to_period(
-                    freq="M"
-                )
+                df.index = to_datetime(df.index.astype(str), format="%Y%m").to_period(freq="M")
             else:
-                df.index = to_datetime(df.index.astype(str), format="%Y").to_period(
-                    freq="Y"
-                )
+                df.index = to_datetime(df.index.astype(str), format="%Y").to_period(freq="Y")
             df = df.truncate(self.start, self.end)
             datasets[i] = df
 
@@ -129,43 +137,32 @@ class FamaFrenchReader(_BaseReader):
             shape = "({} rows x {} cols)".format(*df.shape)
             table_desc.append(f"{title} {shape}".strip())
 
-        descr = "{}\n{}\n\n".format(
-            self.symbols.replace("_", " "), len(self.symbols) * "-"
-        )
+        descr = "{}\n{}\n\n".format(self.symbols.replace("_", " "), len(self.symbols) * "-")
         if doc_chunks:
             descr += " ".join(doc_chunks).replace(2 * " ", " ") + "\n\n"
-        table_descr = map(lambda x: "{:3} : {}".format(*x), enumerate(table_desc))
+        table_descr = ("{:3} : {}".format(*x) for x in enumerate(table_desc))
         datasets["DESCR"] = descr + "\n".join(table_descr)
 
         return datasets
 
-    def get_available_datasets(self):
+    def get_available_datasets(self) -> list[str]:
         """
         Get the list of datasets available from the Fama/French data library.
 
         Returns
         -------
-        datasets: list
-            A list of valid inputs for get_data_famafrench
+        list of str
+            A list of valid inputs for get_data_famafrench.
         """
         try:
             from lxml.html import document_fromstring
         except ImportError as exc:
-            raise ImportError(
-                "Please install lxml if you want to use the "
-                "get_datasets_famafrench function"
-            ) from exc
+            raise ImportError("Please install lxml if you want to use the get_datasets_famafrench function") from exc
 
         response = self.session.get(_URL + "data_library.html")
         root = document_fromstring(response.content)
 
-        datasets = [
-            e.attrib["href"] for e in root.findall(".//a") if "href" in e.attrib
-        ]
-        datasets = [
-            ds
-            for ds in datasets
-            if ds.startswith(_URL_PREFIX) and ds.endswith(_URL_SUFFIX)
-        ]
+        datasets = [e.attrib["href"] for e in root.findall(".//a") if "href" in e.attrib]
+        datasets = [ds for ds in datasets if ds.startswith(_URL_PREFIX) and ds.endswith(_URL_SUFFIX)]
 
-        return list(map(lambda x: x[len(_URL_PREFIX) : -len(_URL_SUFFIX)], datasets))
+        return [x[len(_URL_PREFIX) : -len(_URL_SUFFIX)] for x in datasets]

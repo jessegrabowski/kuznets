@@ -14,17 +14,17 @@ _DEFAULT_PARAMS = {
 
 
 class YahooQuotesReader(_BaseReader):
-    """Get current yahoo quote"""
+    """Get current Yahoo Finance quote for one or more symbols."""
 
     def __init__(
         self,
-        symbols=None,
+        symbols: str | list[str] | None = None,
         start=None,
         end=None,
-        retry_count=3,
-        pause=0.1,
+        retry_count: int = 3,
+        pause: float = 0.1,
         session=None,
-    ):
+    ) -> None:
         super().__init__(
             symbols=symbols,
             start=start,
@@ -39,28 +39,53 @@ class YahooQuotesReader(_BaseReader):
             self.headers = DEFAULT_HEADERS
 
     @property
-    def url(self):
+    def url(self) -> str:
+        """API URL."""
         return "https://query1.finance.yahoo.com/v7/finance/quote"
 
-    def read(self):
+    def read(self) -> DataFrame:
+        """Read quotes for one or more symbols.
+
+        Returns
+        -------
+        DataFrame
+        """
         if isinstance(self.symbols, str):
             return self._read_one_data(self.url, self.params(self.symbols))
         else:
             data = OrderedDict()
             for symbol in self.symbols:
-                data[symbol] = self._read_one_data(self.url, self.params(symbol)).loc[
-                    symbol
-                ]
+                data[symbol] = self._read_one_data(self.url, self.params(symbol)).loc[symbol]
             return DataFrame.from_dict(data, orient="index")
 
-    def params(self, symbol):
-        """Parameters to use in API calls"""
-        # Construct the code request string.
+    def params(self, symbol: str) -> dict:
+        """Parameters to use in API calls.
+
+        Parameters
+        ----------
+        symbol : str
+            Ticker symbol.
+
+        Returns
+        -------
+        dict
+        """
         params = {"symbols": symbol}
         params.update(_DEFAULT_PARAMS)
         return params
 
-    def _read_lines(self, out):
+    def _read_lines(self, out) -> DataFrame:
+        """Parse Yahoo Finance JSON response.
+
+        Parameters
+        ----------
+        out : file-like
+            Raw response content.
+
+        Returns
+        -------
+        DataFrame
+        """
         data = json.loads(out.read())["quoteResponse"]["result"][0]
         idx = data.pop("symbol")
         data["price"] = data["regularMarketPrice"]

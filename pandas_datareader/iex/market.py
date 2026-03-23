@@ -9,7 +9,7 @@ from pandas_datareader.iex import IEX
 
 class MarketReader(IEX):
     """
-    Near real-time traded volume
+    Near real-time traded volume from IEX.
 
     Notes
     -----
@@ -18,8 +18,14 @@ class MarketReader(IEX):
     """
 
     def __init__(
-        self, symbols=None, start=None, end=None, retry_count=3, pause=0.1, session=None
-    ):
+        self,
+        symbols: str | list[str] | None = None,
+        start=None,
+        end=None,
+        retry_count: int = 3,
+        pause: float = 0.1,
+        session=None,
+    ) -> None:
         super().__init__(
             symbols=symbols,
             start=start,
@@ -30,10 +36,16 @@ class MarketReader(IEX):
         )
 
     @property
-    def service(self):
-        """Service endpoint"""
+    def service(self) -> str:
+        """Service endpoint."""
         return "market"
 
-    def _get_params(self, symbols):
-        # Market API does not take any parameters, returning empty dict
+    def _get_params(self, symbols: str | list[str] | None) -> dict:
+        """Market API does not take any parameters.
+
+        Returns
+        -------
+        dict
+            Empty dict.
+        """
         return {}

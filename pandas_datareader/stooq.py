@@ -3,29 +3,25 @@ from pandas_datareader.base import _DailyBaseReader
 
 class StooqDailyReader(_DailyBaseReader):
     """
-    Returns DataFrame/dict of Dataframes of historical stock prices from
-    symbols, over date range, start to end.
+    Get historical stock prices from Stooq.
 
     Parameters
     ----------
-    symbols : string, array-like object (list, tuple, Series), or DataFrame
-        Single stock symbol (ticker), array-like object of symbols or
-        DataFrame with index containing stock symbols.
-    start : string, int, date, datetime, Timestamp
-        Starting date. Parses many different kind of date
-        representations (e.g., 'JAN-01-2010', '1/1/10', 'Jan, 1, 1980'). Defaults to
-        20 years before current date.
-    end : string, int, date, datetime, Timestamp
-        Ending date
+    symbols : str, list of str, or DataFrame
+        Single stock symbol (ticker), list of symbols, or DataFrame with
+        index containing stock symbols.
+    start : str, int, date, datetime, or Timestamp, optional
+        Starting date. Defaults to 5 years before current date.
+    end : str, int, date, datetime, or Timestamp, optional
+        Ending date.
     retry_count : int, default 3
         Number of times to retry query request.
-    pause : int, default 0.1
-        Time, in seconds, to pause between consecutive queries of chunks. If
-        single value given for symbol, represents the pause between retries.
+    pause : float, default 0.1
+        Time, in seconds, to pause between consecutive queries of chunks.
     chunksize : int, default 25
         Number of symbols to download consecutively before initiating pause.
-    session : Session, default None
-        requests.sessions.Session instance to be used
+    session : Session, optional
+        ``requests.sessions.Session`` instance to be used.
 
     Notes
     -----
@@ -33,11 +29,24 @@ class StooqDailyReader(_DailyBaseReader):
     """
 
     @property
-    def url(self):
-        """API URL"""
+    def url(self) -> str:
+        """API URL."""
         return "https://stooq.com/q/d/l/"
 
-    def _get_params(self, symbol, country="US"):
+    def _get_params(self, symbol: str, country: str = "US") -> dict:
+        """Build query parameters for a given symbol.
+
+        Parameters
+        ----------
+        symbol : str
+            Ticker symbol.
+        country : str, default "US"
+            Country suffix to append if not already present.
+
+        Returns
+        -------
+        dict
+        """
         symbol_parts = symbol.split(".")
         if not symbol.startswith("^"):
             if len(symbol_parts) == 1:

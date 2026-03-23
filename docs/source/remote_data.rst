@@ -790,7 +790,7 @@ The Moscow Exchange (MOEX) provides historical data.
 
    f = pdr.moex.MoexReader('SBER', '2020-07-02', '2020-07-03').read()
    f.head()
-   
+
    f = pdr.moex.MoexReader('SBER', '2020-07-02', '2020-07-03').read_all_boards()
    f.head()
 
@@ -826,7 +826,7 @@ Yahoo Finance provides stock market data
 The following endpoints are available:
 
 * ``yahoo`` - retrieve daily stock prices (high, open, close, volume and adjusted close)
-* ``yahoo-actions`` - retrieve historical corporate actions (dividends and stock splits) 
+* ``yahoo-actions`` - retrieve historical corporate actions (dividends and stock splits)
 * ``yahoo-dividends`` - retrieve historical dividends
 
 .. ipython:: python
@@ -837,11 +837,11 @@ The following endpoints are available:
    import datetime as dt
    df = web.DataReader('GE', 'yahoo', start='2019-09-10', end='2019-10-09')
    df.head()
-	
+
    start = dt.datetime(2010, 1, 29)
    end = dt.datetime.today()
-   actions = web.DataReader('GOOG', 'yahoo-actions', start, end) 
+   actions = web.DataReader('GOOG', 'yahoo-actions', start, end)
    actions.head()
 
-   dividends = web.DataReader('IBM', 'yahoo-dividends', start, end) 
+   dividends = web.DataReader('IBM', 'yahoo-dividends', start, end)
    dividends.head()

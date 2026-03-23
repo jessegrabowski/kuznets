@@ -4,7 +4,6 @@
 from collections import OrderedDict
 import itertools
 import re
-import sys
 
 import numpy as np
 import pandas as pd
@@ -30,9 +29,7 @@ def read_jsdmx(path_or_buf):
 
     try:
         import simplejson as json
-    except ImportError as exc:
-        if sys.version_info[:2] < (2, 7):
-            raise ImportError("simplejson is required in python 2.6") from exc
+    except ImportError:
         import json
 
     if isinstance(jdata, dict):

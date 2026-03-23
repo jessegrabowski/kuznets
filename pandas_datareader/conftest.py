@@ -21,9 +21,7 @@ def pytest_runtest_setup(item):
     if "stable" not in item.keywords and item.config.getoption("--only-stable"):
         pytest.skip("skipping due to --only-stable")
 
-    if "requires_api_key" in item.keywords and item.config.getoption(
-        "--skip-requires-api-key"
-    ):
+    if "requires_api_key" in item.keywords and item.config.getoption("--skip-requires-api-key"):
         pytest.skip("skipping due to --skip-requires-api-key")
 
 

@@ -1,6 +1,1 @@
-sphinx
-ipython
-matplotlib
-requests_cache
-pydata_sphinx_theme
-pickleshare
+.[docs]

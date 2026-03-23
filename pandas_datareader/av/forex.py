@@ -6,30 +6,33 @@ from pandas_datareader.av import AlphaVantage
 
 class AVForexReader(AlphaVantage):
     """
-    Returns DataFrame of the Alpha Vantage Foreign Exchange (FX) Exchange Rates
-    data.
+    Get Alpha Vantage Foreign Exchange (FX) exchange rate data.
 
     .. versionadded:: 0.7.0
 
     Parameters
     ----------
-    symbols : string, array-like object (list, tuple, Series)
-        Single currency pair (formatted 'FROM/TO') or list of the same.
+    symbols : str or list of str, optional
+        Single currency pair (formatted ``'FROM/TO'``) or list of the same.
     retry_count : int, default 3
         Number of times to retry query request.
-    pause : int, default 0.1
-        Time, in seconds, to pause between consecutive queries of chunks. If
-        single value given for symbol, represents the pause between retries.
-    session : Session, default None
-        requests.sessions.Session instance to be used
+    pause : float, default 0.1
+        Time, in seconds, to pause between consecutive queries.
+    session : Session, optional
+        ``requests.sessions.Session`` instance to be used.
     api_key : str, optional
-        Alpha Vantage API key . If not provided the environmental variable
-        ALPHAVANTAGE_API_KEY is read. The API key is *required*.
+        Alpha Vantage API key. If not provided the environmental variable
+        ``ALPHAVANTAGE_API_KEY`` is read. The API key is *required*.
     """
 
     def __init__(
-        self, symbols=None, retry_count=3, pause=0.1, session=None, api_key=None
-    ):
+        self,
+        symbols: str | list[str] | None = None,
+        retry_count: int = 3,
+        pause: float = 0.1,
+        session=None,
+        api_key: str | None = None,
+    ) -> None:
         super().__init__(
             symbols=symbols,
             start=None,
@@ -52,27 +55,32 @@ class AVForexReader(AlphaVantage):
                 self.to_curr[pair] = pair.split("/")[1]
         except Exception as e:
             print(e)
-            raise ValueError(
-                "Please input a currency pair "
-                "formatted 'FROM/TO' or a list of "
-                "currency symbols"
-            ) from e
+            raise ValueError("Please input a currency pair formatted 'FROM/TO' or a list of currency symbols") from e
 
     @property
-    def function(self):
+    def function(self) -> str:
+        """Alpha Vantage endpoint function."""
         return "CURRENCY_EXCHANGE_RATE"
 
     @property
-    def data_key(self):
+    def data_key(self) -> str:
+        """Key of data returned from Alpha Vantage."""
         return "Realtime Currency Exchange Rate"
 
     @property
-    def params(self):
+    def params(self) -> dict:
+        """Parameters to use in API calls."""
         params = {"apikey": self.api_key, "function": self.function}
         params.update(self.optional_params)
         return params
 
-    def read(self):
+    def read(self) -> pd.DataFrame:
+        """Read exchange rate data for all currency pairs.
+
+        Returns
+        -------
+        DataFrame
+        """
         result = []
         for pair in self.symbols:
             self.optional_params = {
@@ -85,7 +93,18 @@ class AVForexReader(AlphaVantage):
         df.columns = self.symbols
         return df
 
-    def _read_lines(self, out):
+    def _read_lines(self, out: dict) -> pd.DataFrame:
+        """Parse Alpha Vantage FX JSON response.
+
+        Parameters
+        ----------
+        out : dict
+            Parsed JSON response.
+
+        Returns
+        -------
+        DataFrame
+        """
         try:
             df = pd.DataFrame.from_dict(out[self.data_key], orient="index")
         except KeyError as exc:
