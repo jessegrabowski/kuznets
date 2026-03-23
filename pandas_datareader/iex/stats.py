@@ -17,9 +17,7 @@ class DailySummaryReader(IEX):
     Daily statistics from IEX for a day or month
     """
 
-    def __init__(
-        self, symbols=None, start=None, end=None, retry_count=3, pause=0.1, session=None
-    ):
+    def __init__(self, symbols=None, start=None, end=None, retry_count=3, pause=0.1, session=None):
         import warnings
 
         warnings.warn(
@@ -69,9 +67,7 @@ class DailySummaryReader(IEX):
 class MonthlySummaryReader(IEX):
     """Monthly statistics from IEX"""
 
-    def __init__(
-        self, symbols=None, start=None, end=None, retry_count=3, pause=0.1, session=None
-    ):
+    def __init__(self, symbols=None, start=None, end=None, retry_count=3, pause=0.1, session=None):
         self.curr_date = start
         self.date_format = "%Y%m"
 
@@ -108,7 +104,7 @@ class MonthlySummaryReader(IEX):
         dfs = []
 
         # Build list of all dates within the given range
-        lrange = [x for x in (self.start + timedelta(n) for n in range(tlen.days))]
+        lrange = [self.start + timedelta(n) for n in range(tlen.days)]
 
         mrange = []
         for dt in lrange:
@@ -134,9 +130,7 @@ class RecordsReader(IEX):
     Total matched volume information from IEX
     """
 
-    def __init__(
-        self, symbols=None, start=None, end=None, retry_count=3, pause=0.1, session=None
-    ):
+    def __init__(self, symbols=None, start=None, end=None, retry_count=3, pause=0.1, session=None):
         super().__init__(
             symbols=symbols,
             start=start,
@@ -175,9 +169,7 @@ class RecentReader(IEX):
         (single-counted).
     """
 
-    def __init__(
-        self, symbols=None, start=None, end=None, retry_count=3, pause=0.1, session=None
-    ):
+    def __init__(self, symbols=None, start=None, end=None, retry_count=3, pause=0.1, session=None):
         super().__init__(
             symbols=symbols,
             start=start,

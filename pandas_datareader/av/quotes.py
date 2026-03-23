@@ -24,9 +24,7 @@ class AVQuotesReader(AlphaVantage):
         requests.sessions.Session instance to be used
     """
 
-    def __init__(
-        self, symbols=None, retry_count=3, pause=0.1, session=None, api_key=None
-    ):
+    def __init__(self, symbols=None, retry_count=3, pause=0.1, session=None, api_key=None):
         raise ImmediateDeprecationError(DEP_ERROR_MSG.format("AVQuotesReader"))
 
         if isinstance(symbols, str):

@@ -6,5 +6,3 @@ Federal Reserve Economic Data (FRED)
 .. autoclass:: FredReader
    :members:
    :inherited-members: read
-
-

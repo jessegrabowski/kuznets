@@ -46,9 +46,7 @@ class NaverDailyReader(_DailyBaseReader):
 
         self.headers = {
             "Sec-Fetch-Mode": "no-cors",
-            "Referer": "https://finance.naver.com/item/fchart.nhn?code={}".format(
-                symbols
-            ),
+            "Referer": f"https://finance.naver.com/item/fchart.nhn?code={symbols}",
             "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/76.0.3809.100 Safari/537.36",  # noqa
         }
 
@@ -77,9 +75,7 @@ class NaverDailyReader(_DailyBaseReader):
         """
         resp = self._get_response(url, params=params)
         parsed = self._parse_xml_response(resp.text)
-        prices = DataFrame(
-            parsed, columns=["Date", "Open", "High", "Low", "Close", "Volume"]
-        )
+        prices = DataFrame(parsed, columns=["Date", "Open", "High", "Low", "Close", "Volume"])
         prices["Date"] = to_datetime(prices["Date"])
         prices = prices.set_index("Date")
 

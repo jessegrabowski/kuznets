@@ -17,9 +17,7 @@ class TopsReader(IEX):
     on IEX's displayed limit order book.
     """
 
-    def __init__(
-        self, symbols=None, start=None, end=None, retry_count=3, pause=0.1, session=None
-    ):
+    def __init__(self, symbols=None, start=None, end=None, retry_count=3, pause=0.1, session=None):
         super().__init__(
             symbols=symbols,
             start=start,
@@ -46,9 +44,7 @@ class LastReader(IEX):
     """
 
     # todo: Eventually we'll want to implement WebSockets as an option.
-    def __init__(
-        self, symbols=None, start=None, end=None, retry_count=3, pause=0.1, session=None
-    ):
+    def __init__(self, symbols=None, start=None, end=None, retry_count=3, pause=0.1, session=None):
         super().__init__(
             symbols=symbols,
             start=start,

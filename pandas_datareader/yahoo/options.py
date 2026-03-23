@@ -38,7 +38,7 @@ class Options(_OptionBaseReader):
     Examples
     --------
     # Instantiate object with ticker
-    >>> aapl = Options('aapl')
+    >>> aapl = Options("aapl")
 
     # Fetch next expiry call data
     >>> calls = aapl.get_call_data()
@@ -119,7 +119,7 @@ class Options(_OptionBaseReader):
         When called, this function will add instance variables named
         calls and puts. See the following example:
 
-            >>> aapl = Options('aapl', 'yahoo')  # Create object
+            >>> aapl = Options("aapl", "yahoo")  # Create object
             >>> aapl.calls  # will give an AttributeError
             >>> aapl.get_options()  # Get data and set ivars
             >>> aapl.calls  # Doesn't throw AttributeError
@@ -131,9 +131,7 @@ class Options(_OptionBaseReader):
         the year, month and day for the expiry of the options.
 
         """
-        return concat(
-            [f(month, year, expiry) for f in (self.get_put_data, self.get_call_data)]
-        ).sort_index()
+        return concat([f(month, year, expiry) for f in (self.get_put_data, self.get_call_data)]).sort_index()
 
     def _option_from_url(self, url):
         jd = self._parse_url(url)
@@ -142,9 +140,7 @@ class Options(_OptionBaseReader):
             calls = result["options"]["calls"]
             puts = result["options"]["puts"]
         except IndexError as exc:
-            raise RemoteDataError(
-                "Option json not available for url: %s" % url
-            ) from exc
+            raise RemoteDataError(f"Option json not available for url: {url}") from exc
 
         self.underlying_price = (
             result["quote"]["regularMarketPrice"]
@@ -236,7 +232,7 @@ class Options(_OptionBaseReader):
         When called, this function will add instance variables named
         calls and puts. See the following example:
 
-            >>> aapl = Options('aapl', 'yahoo')  # Create object
+            >>> aapl = Options("aapl", "yahoo")  # Create object
             >>> aapl.calls  # will give an AttributeError
             >>> aapl.get_call_data()  # Get data and set ivars
             >>> aapl.calls  # Doesn't throw AttributeError
@@ -305,7 +301,7 @@ class Options(_OptionBaseReader):
         When called, this function will add instance variables named
         puts. See the following example:
 
-            >>> aapl = Options('aapl')  # Create object
+            >>> aapl = Options("aapl")  # Create object
             >>> aapl.puts  # will give an AttributeError
             >>> aapl.get_put_data()  # Get data and set ivars
             >>> aapl.puts  # Doesn't throw AttributeError
@@ -321,9 +317,7 @@ class Options(_OptionBaseReader):
         expiry = self._try_parse_dates(year, month, expiry)
         return self._get_data_in_date_range(expiry, put=True, call=False)
 
-    def get_near_stock_price(
-        self, above_below=2, call=True, put=False, month=None, year=None, expiry=None
-    ):
+    def get_near_stock_price(self, above_below=2, call=True, put=False, month=None, year=None, expiry=None):
         """
         Returns a DataFrame of options that are near the current stock price.
 
@@ -404,13 +398,8 @@ class Options(_OptionBaseReader):
         max_strike = max(df.index.get_level_values("Strike"))
         min_strike = min(df.index.get_level_values("Strike"))
 
-        if (
-            not np.isnan(underlying_price)
-            and min_strike < underlying_price < max_strike
-        ):
-            start_index = np.where(
-                df.index.get_level_values("Strike") > underlying_price
-            )[0][0]
+        if not np.isnan(underlying_price) and min_strike < underlying_price < max_strike:
+            start_index = np.where(df.index.get_level_values("Strike") > underlying_price)[0][0]
 
             get_range = slice(start_index - above_below, start_index + above_below + 1)
             df = df[get_range].dropna(how="all")
@@ -440,14 +429,9 @@ class Options(_OptionBaseReader):
 
         # Checks if the user gave one of the month or the year
         # but not both and did not provide an expiry:
-        if (
-            (month is not None and year is None)
-            or (month is None and year is not None)
-            and expiry is None
-        ):
+        if (month is not None and year is None) or (month is None and year is not None) and expiry is None:
             msg = (
-                "You must specify either (`year` and `month`) or `expiry` "
-                "or none of these options for the next expiry."
+                "You must specify either (`year` and `month`) or `expiry` or none of these options for the next expiry."
             )
             raise ValueError(msg)
 
@@ -469,11 +453,7 @@ class Options(_OptionBaseReader):
 
         else:
             # Year and month passed, provide all expiries in that month
-            expiry = [
-                expiry
-                for expiry in self.expiry_dates
-                if expiry.year == year and expiry.month == month
-            ]
+            expiry = [expiry for expiry in self.expiry_dates if expiry.year == year and expiry.month == month]
             if len(expiry) == 0:
                 raise ValueError(f"No expiries available in {year}-{month}")
 
@@ -498,9 +478,7 @@ class Options(_OptionBaseReader):
             index = DatetimeIndex(expiry_dates).sort_values()
             return index[index.date >= expiry][0].date()
 
-    def get_forward_data(
-        self, months, call=True, put=False, near=False, above_below=2
-    ):  # pragma: no cover
+    def get_forward_data(self, months, call=True, put=False, near=False, above_below=2):  # pragma: no cover
         """
         Gets either call, put, or both data for months starting in the current
         month and going out in the future a specified amount of time.
@@ -619,12 +597,10 @@ class Options(_OptionBaseReader):
         to_ret = to_ret[to_ret].index
 
         df = self._load_data(dates)
-        types = [typ for typ in to_ret]
+        types = list(to_ret)
 
         df_filtered_by_type = df[df.index.map(lambda x: x[2] in types).tolist()]
-        df_filtered_by_expiry = df_filtered_by_type[
-            df_filtered_by_type.index.get_level_values("Expiry").isin(dates)
-        ]
+        df_filtered_by_expiry = df_filtered_by_type[df_filtered_by_type.index.get_level_values("Expiry").isin(dates)]
         return df_filtered_by_expiry
 
     @property
@@ -675,8 +651,7 @@ class Options(_OptionBaseReader):
         jd = self._parse_url(url)
 
         expiry_dates = [
-            dt.datetime.utcfromtimestamp(ts).date()
-            for ts in jd["optionChain"]["result"][0]["expirationDates"]
+            dt.datetime.utcfromtimestamp(ts).date() for ts in jd["optionChain"]["result"][0]["expirationDates"]
         ]
 
         if len(expiry_dates) == 0:
@@ -795,10 +770,7 @@ class Options(_OptionBaseReader):
                     if quote["marketState"] == "PRE" and "preMarketPrice" in quote:
                         d["Underlying_Price"] = quote["preMarketPrice"]
                         quote_unix_time = quote["preMarketTime"]
-                    elif (
-                        quote["marketState"] == "POSTPOST"
-                        and "postMarketPrice" in quote
-                    ):
+                    elif quote["marketState"] == "POSTPOST" and "postMarketPrice" in quote:
                         d["Underlying_Price"] = quote["postMarketPrice"]
                         quote_unix_time = quote["postMarketTime"]
                     d["Quote_Time"] = dt.datetime.utcfromtimestamp(quote_unix_time)
@@ -806,17 +778,13 @@ class Options(_OptionBaseReader):
                     self._underlying_price = d["Underlying_Price"]
                     self._quote_time = d["Quote_Time"]
 
-                    d["Last_Trade_Date"] = dt.datetime.utcfromtimestamp(
-                        d["Last_Trade_Date"]
-                    )
+                    d["Last_Trade_Date"] = dt.datetime.utcfromtimestamp(d["Last_Trade_Date"])
 
                     rows_list.append(d)
                     index.append(
                         (
                             float(option_by_strike["strike"]),
-                            dt.datetime.utcfromtimestamp(
-                                option_by_strike["expiration"]
-                            ),
+                            dt.datetime.utcfromtimestamp(option_by_strike["expiration"]),
                             typ.replace("s", ""),
                             option_by_strike["contractSymbol"],
                         )
@@ -845,17 +813,11 @@ class Options(_OptionBaseReader):
             if exp_dates is None:
                 exp_dates = self._get_expiry_dates()
             exp_unix_times = [
-                int(
-                    (
-                        dt.datetime(exp_date.year, exp_date.month, exp_date.day) - epoch
-                    ).total_seconds()
-                )
+                int((dt.datetime(exp_date.year, exp_date.month, exp_date.day) - epoch).total_seconds())
                 for exp_date in exp_dates
             ]
             for exp_date in exp_unix_times:
-                url = (self._OPTIONS_BASE_URL + "?date={exp_date}").format(
-                    sym=self.symbol, exp_date=exp_date
-                )
+                url = (self._OPTIONS_BASE_URL + "?date={exp_date}").format(sym=self.symbol, exp_date=exp_date)
                 jd = self._parse_url(url)
                 data.append(self._process_data(jd))
             return concat(data).sort_index()

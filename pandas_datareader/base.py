@@ -114,11 +114,7 @@ class _BaseReader:
         out = StringIO()
         if len(text) == 0:
             service = self.__class__.__name__
-            raise OSError(
-                "{} request returned no data; check URL for invalid inputs: {}".format(
-                    service, self.url
-                )
-            )
+            raise OSError(f"{service} request returned no data; check URL for invalid inputs: {self.url}")
         if isinstance(text, bytes):
             out.write(text.decode("utf-8"))
         else:
@@ -146,9 +142,7 @@ class _BaseReader:
         pause = self.pause
         last_response_text = ""
         for _ in range(self.retry_count + 1):
-            response = self.session.get(
-                url, params=params, headers=headers, timeout=self.timeout
-            )
+            response = self.session.get(url, params=params, headers=headers, timeout=self.timeout)
             if response.status_code == requests.codes.ok:
                 return response
 
@@ -196,7 +190,7 @@ class _BaseReader:
     def _read_lines(self, out):
         rs = read_csv(out, index_col=0, parse_dates=True, na_values=("-", "null"))[::-1]
         # Needed to remove blank space character in header names
-        rs.columns = list(map(lambda x: x.strip(), rs.columns.values.tolist()))
+        rs.columns = [x.strip() for x in rs.columns.values.tolist()]
 
         # Yahoo! Finance sometimes does this awesome thing where they
         # return 2 rows for the most recent business day
@@ -204,9 +198,7 @@ class _BaseReader:
             rs = rs[:-1]
         # Get rid of unicode characters in index name.
         try:
-            rs.index.name = rs.index.name.decode("unicode_escape").encode(
-                "ascii", "ignore"
-            )
+            rs.index.name = rs.index.name.decode("unicode_escape").encode("ascii", "ignore")
         except AttributeError:
             # Python 3 string has no decode method.
             rs.index.name = rs.index.name.encode("ascii", "ignore").decode()
@@ -243,7 +235,7 @@ class _DailyBaseReader(_BaseReader):
     def read(self):
         """Read data"""
         # If a single symbol, (e.g., 'GOOG')
-        if isinstance(self.symbols, (str, int)):
+        if isinstance(self.symbols, str | int):
             df = self._read_one_data(self.url, params=self._get_params(self.symbols))
         # Or multiple symbols, (e.g., ['GOOG', 'AAPL', 'MSFT'])
         elif isinstance(self.symbols, DataFrame):
@@ -321,18 +313,14 @@ class _OptionBaseReader(_BaseReader):
         """
         raise NotImplementedError
 
-    def get_near_stock_price(
-        self, above_below=2, call=True, put=False, month=None, year=None, expiry=None
-    ):
+    def get_near_stock_price(self, above_below=2, call=True, put=False, month=None, year=None, expiry=None):
         """
         ***Experimental***
         Returns a data frame of options that are near the current stock price.
         """
         raise NotImplementedError
 
-    def get_forward_data(
-        self, months, call=True, put=False, near=False, above_below=2
-    ):  # pragma: no cover
+    def get_forward_data(self, months, call=True, put=False, near=False, above_below=2):  # pragma: no cover
         """
         ***Experimental***
         Gets either call, put, or both data for months starting in the current

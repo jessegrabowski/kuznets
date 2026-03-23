@@ -490,11 +490,7 @@ def DataReader(
         ).read()
     elif data_source == "nasdaq":
         if name != "symbols":
-            raise ValueError(
-                "Only the string 'symbols' is supported for Nasdaq, not {!r}".format(
-                    name
-                )
-            )
+            raise ValueError("Only the string 'symbols' is supported for Nasdaq, not {!r}".format(name))
         return get_nasdaq_symbols(retry_count=retry_count, pause=pause)
 
     elif data_source == "quandl":

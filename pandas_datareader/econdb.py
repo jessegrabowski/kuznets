@@ -71,9 +71,7 @@ class EcondbReader(_BaseReader):
         if not isinstance(self.symbols, str):
             raise ValueError("data name must be string")
 
-        return "{}?{}&format=json&page_size=500&expand=both".format(
-            self._URL, self.symbols
-        )
+        return f"{self._URL}?{self.symbols}&format=json&page_size=500&expand=both"
 
     def read(self):
         """read one data from specified URL"""

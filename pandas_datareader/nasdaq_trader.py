@@ -41,23 +41,19 @@ def _download_nasdaq_symbols(timeout):
         ftp_session = FTP(_NASDAQ_FTP_SERVER, timeout=timeout)
         ftp_session.login()
     except all_errors as err:
-        raise RemoteDataError(
-            f"Error connecting to {_NASDAQ_FTP_SERVER!r}: {err}"
-        ) from err
+        raise RemoteDataError(f"Error connecting to {_NASDAQ_FTP_SERVER!r}: {err}") from err
 
     lines = []
     try:
         ftp_session.retrlines("RETR " + _NASDAQ_TICKER_LOC, lines.append)
     except all_errors as err:
-        raise RemoteDataError(
-            f"Error downloading from {_NASDAQ_FTP_SERVER!r}: {err}"
-        ) from err
+        raise RemoteDataError(f"Error downloading from {_NASDAQ_FTP_SERVER!r}: {err}") from err
     finally:
         ftp_session.close()
 
     # Sanity Checking
     if not lines[-1].startswith("File Creation Time:"):
-        raise RemoteDataError("Missing expected footer. Found %r" % lines[-1])
+        raise RemoteDataError(f"Missing expected footer. Found {lines[-1]!r}")
 
     # Convert Y/N to True/False.
     converter_map = {col: _bool_converter for col, t in _TICKER_DTYPE if t is bool}

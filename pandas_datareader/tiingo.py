@@ -67,9 +67,7 @@ class TiingoIEXHistoricalReader(_BaseReader):
         freq=None,
         api_key=None,
     ):
-        super().__init__(
-            symbols, start, end, retry_count, pause, timeout, session, freq
-        )
+        super().__init__(symbols, start, end, retry_count, pause, timeout, session, freq)
 
         if isinstance(self.symbols, str):
             self.symbols = [self.symbols]
@@ -171,9 +169,7 @@ class TiingoDailyReader(_BaseReader):
         freq=None,
         api_key=None,
     ):
-        super().__init__(
-            symbols, start, end, retry_count, pause, timeout, session, freq
-        )
+        super().__init__(symbols, start, end, retry_count, pause, timeout, session, freq)
         if isinstance(self.symbols, str):
             self.symbols = [self.symbols]
         self._symbol = ""
@@ -271,9 +267,7 @@ class TiingoMetaDataReader(TiingoDailyReader):
         freq=None,
         api_key=None,
     ):
-        super().__init__(
-            symbols, start, end, retry_count, pause, timeout, session, freq, api_key
-        )
+        super().__init__(symbols, start, end, retry_count, pause, timeout, session, freq, api_key)
         self._concat_axis = 1
 
     @property

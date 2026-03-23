@@ -27,9 +27,7 @@ class AVForexReader(AlphaVantage):
         ALPHAVANTAGE_API_KEY is read. The API key is *required*.
     """
 
-    def __init__(
-        self, symbols=None, retry_count=3, pause=0.1, session=None, api_key=None
-    ):
+    def __init__(self, symbols=None, retry_count=3, pause=0.1, session=None, api_key=None):
         super().__init__(
             symbols=symbols,
             start=None,
@@ -52,11 +50,7 @@ class AVForexReader(AlphaVantage):
                 self.to_curr[pair] = pair.split("/")[1]
         except Exception as e:
             print(e)
-            raise ValueError(
-                "Please input a currency pair "
-                "formatted 'FROM/TO' or a list of "
-                "currency symbols"
-            ) from e
+            raise ValueError("Please input a currency pair formatted 'FROM/TO' or a list of currency symbols") from e
 
     @property
     def function(self):

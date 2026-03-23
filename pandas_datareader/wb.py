@@ -583,10 +583,10 @@ class WorldBankReader(_BaseReader):
         if len(bad_countries) > 0:
             tmp = ", ".join(bad_countries)
             if errors == "raise":
-                raise ValueError("Invalid Country Code(s): %s" % tmp)
+                raise ValueError(f"Invalid Country Code(s): {tmp}")
             if errors == "warn":
                 warnings.warn(
-                    "Non-standard ISO country codes: %s" % tmp,
+                    f"Non-standard ISO country codes: {tmp}",
                     UserWarning,
                     stacklevel=2,
                 )
@@ -612,17 +612,13 @@ class WorldBankReader(_BaseReader):
         """Parameters to use in API calls"""
         if self.freq == "M":
             return {
-                "date": "{}M{:02d}:{}M{:02d}".format(
-                    self.start.year, self.start.month, self.end.year, self.end.month
-                ),
+                "date": f"{self.start.year}M{self.start.month:02d}:{self.end.year}M{self.end.month:02d}",
                 "per_page": 25000,
                 "format": "json",
             }
         elif self.freq == "Q":
             return {
-                "date": "{}Q{}:{}Q{}".format(
-                    self.start.year, self.start.quarter, self.end.year, self.end.quarter
-                ),
+                "date": f"{self.start.year}Q{self.start.quarter}:{self.end.year}Q{self.end.quarter}",
                 "per_page": 25000,
                 "format": "json",
             }
@@ -684,7 +680,7 @@ class WorldBankReader(_BaseReader):
                 if "value" in msg.keys():
                     wb_err += msg["value"]
 
-            msg = "Problem with a World Bank Query \n %s." % wb_err
+            msg = f"Problem with a World Bank Query \n {wb_err}."
             raise ValueError(msg)
 
         if "total" in possible_message.keys():

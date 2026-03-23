@@ -73,14 +73,11 @@ class AlphaVantage(_BaseReader):
         except KeyError as exc:
             if "Error Message" in out:
                 raise ValueError(
-                    "The requested symbol {} could not be "
-                    "retrieved. Check valid ticker"
-                    ".".format(self.symbols)
+                    f"The requested symbol {self.symbols} could not be retrieved. Check valid ticker."
                 ) from exc
             else:
                 raise RemoteDataError(
-                    " Their was an issue from the data vendor "
-                    "side, here is their response: {}".format(out)
+                    f" Their was an issue from the data vendor side, here is their response: {out}"
                 ) from exc
         df = df[sorted(df.columns)]
         df.columns = [id[3:] for id in df.columns]

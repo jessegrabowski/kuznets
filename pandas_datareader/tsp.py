@@ -73,7 +73,7 @@ class TSPReader(_BaseReader):
     def read(self):
         """read one data from specified URL"""
         df = super().read()
-        df.columns = map(lambda x: x.strip(), df.columns)
+        df.columns = (x.strip() for x in df.columns)
         df.drop(columns=self.all_symbols - set(self.symbols), inplace=True)
         return df
 

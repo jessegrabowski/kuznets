@@ -115,13 +115,9 @@ class FamaFrenchReader(_BaseReader):
 
             df = read_csv(StringIO("Date" + src[start:]), **params)
             if df.index.min() > 190000:
-                df.index = to_datetime(df.index.astype(str), format="%Y%m").to_period(
-                    freq="M"
-                )
+                df.index = to_datetime(df.index.astype(str), format="%Y%m").to_period(freq="M")
             else:
-                df.index = to_datetime(df.index.astype(str), format="%Y").to_period(
-                    freq="Y"
-                )
+                df.index = to_datetime(df.index.astype(str), format="%Y").to_period(freq="Y")
             df = df.truncate(self.start, self.end)
             datasets[i] = df
 
@@ -129,12 +125,10 @@ class FamaFrenchReader(_BaseReader):
             shape = "({} rows x {} cols)".format(*df.shape)
             table_desc.append(f"{title} {shape}".strip())
 
-        descr = "{}\n{}\n\n".format(
-            self.symbols.replace("_", " "), len(self.symbols) * "-"
-        )
+        descr = "{}\n{}\n\n".format(self.symbols.replace("_", " "), len(self.symbols) * "-")
         if doc_chunks:
             descr += " ".join(doc_chunks).replace(2 * " ", " ") + "\n\n"
-        table_descr = map(lambda x: "{:3} : {}".format(*x), enumerate(table_desc))
+        table_descr = ("{:3} : {}".format(*x) for x in enumerate(table_desc))
         datasets["DESCR"] = descr + "\n".join(table_descr)
 
         return datasets
@@ -151,21 +145,12 @@ class FamaFrenchReader(_BaseReader):
         try:
             from lxml.html import document_fromstring
         except ImportError as exc:
-            raise ImportError(
-                "Please install lxml if you want to use the "
-                "get_datasets_famafrench function"
-            ) from exc
+            raise ImportError("Please install lxml if you want to use the get_datasets_famafrench function") from exc
 
         response = self.session.get(_URL + "data_library.html")
         root = document_fromstring(response.content)
 
-        datasets = [
-            e.attrib["href"] for e in root.findall(".//a") if "href" in e.attrib
-        ]
-        datasets = [
-            ds
-            for ds in datasets
-            if ds.startswith(_URL_PREFIX) and ds.endswith(_URL_SUFFIX)
-        ]
+        datasets = [e.attrib["href"] for e in root.findall(".//a") if "href" in e.attrib]
+        datasets = [ds for ds in datasets if ds.startswith(_URL_PREFIX) and ds.endswith(_URL_SUFFIX)]
 
-        return list(map(lambda x: x[len(_URL_PREFIX) : -len(_URL_SUFFIX)], datasets))
+        return [x[len(_URL_PREFIX) : -len(_URL_SUFFIX)] for x in datasets]

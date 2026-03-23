@@ -48,9 +48,7 @@ class YahooQuotesReader(_BaseReader):
         else:
             data = OrderedDict()
             for symbol in self.symbols:
-                data[symbol] = self._read_one_data(self.url, self.params(symbol)).loc[
-                    symbol
-                ]
+                data[symbol] = self._read_one_data(self.url, self.params(symbol)).loc[symbol]
             return DataFrame.from_dict(data, orient="index")
 
     def params(self, symbol):

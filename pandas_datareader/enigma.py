@@ -35,13 +35,12 @@ class EnigmaReader(_BaseReader):
     https://public.enigma.com/datasets/bedaf052-5fcd-4758-8d27-048ce8746c6a
 
     >>> import pandas_datareader as pdr
-    >>> df = pdr.get_data_enigma('bedaf052-5fcd-4758-8d27-048ce8746c6a')
+    >>> df = pdr.get_data_enigma("bedaf052-5fcd-4758-8d27-048ce8746c6a")
 
     In the event that ENIGMA_API_KEY does not exist in your env, the key can
     be supplied as the second argument or as the keyword argument `api_key`
 
-    >>> df = EnigmaReader(dataset_id='bedaf052-5fcd-4758-8d27-048ce8746c6a',
-    ...                   api_key='INSERT_API_KEY').read()
+    >>> df = EnigmaReader(dataset_id="bedaf052-5fcd-4758-8d27-048ce8746c6a", api_key="INSERT_API_KEY").read()
     """
 
     def __init__(
@@ -55,9 +54,7 @@ class EnigmaReader(_BaseReader):
     ):
         raise ImmediateDeprecationError(DEP_ERROR_MSG.format("Enigma"))
 
-        super().__init__(
-            symbols=[], retry_count=retry_count, pause=pause, session=session
-        )
+        super().__init__(symbols=[], retry_count=retry_count, pause=pause, session=session)
         if api_key is None:
             self._api_key = os.getenv("ENIGMA_API_KEY")
             if self._api_key is None:
@@ -72,10 +69,7 @@ class EnigmaReader(_BaseReader):
 
         self._dataset_id = dataset_id
         if not isinstance(self._dataset_id, str):
-            raise ValueError(
-                "The Enigma dataset_id must be a string (ex: "
-                "'bedaf052-5fcd-4758-8d27-048ce8746c6a')"
-            )
+            raise ValueError("The Enigma dataset_id must be a string (ex: 'bedaf052-5fcd-4758-8d27-048ce8746c6a')")
 
         headers = {
             "Authorization": f"Bearer {self._api_key}",

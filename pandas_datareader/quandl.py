@@ -72,7 +72,7 @@ class QuandlReader(_DailyBaseReader):
         """API URL"""
         symbol = self.symbols if isinstance(self.symbols, str) else self.symbols[0]
         mm = self._fullmatch(r"([A-Z0-9]+)(([/\.])([A-Z0-9_]+))?", symbol)
-        assert mm, "Symbol '%s' must conform to Quandl convention 'DB/SYM'" % symbol
+        assert mm, f"Symbol '{symbol}' must conform to Quandl convention 'DB/SYM'"
         datasetname = "WIKI"
         if not mm.group(2):
             # bare symbol:
@@ -93,38 +93,34 @@ class QuandlReader(_DailyBaseReader):
         }
         paramstring = "&".join([f"{k}={v}" for k, v in params.items()])
         url = "{url}{dataset}/{symbol}.csv?{params}"
-        return url.format(
-            url=self._BASE_URL, dataset=datasetname, symbol=symbol, params=paramstring
-        )
+        return url.format(url=self._BASE_URL, dataset=datasetname, symbol=symbol, params=paramstring)
 
     def _fullmatch(self, regex, string, flags=0):
         """Emulate python-3.4 re.fullmatch()."""
         return re.match("(?:" + regex + r")\Z", string, flags=flags)
 
-    _COUNTRYCODE_TO_DATASET = dict(
+    _COUNTRYCODE_TO_DATASET = {
         # https://www.quandl.com/data/EURONEXT-Euronext-Stock-Exchange
-        BE="EURONEXT",
+        "BE": "EURONEXT",
         # https://www.quandl.com/data/HKEX-Hong-Kong-Exchange
-        CN="HKEX",
+        "CN": "HKEX",
         # https://www.quandl.com/data/SSE-Boerse-Stuttgart
-        DE="SSE",
-        FR="EURONEXT",
+        "DE": "SSE",
+        "FR": "EURONEXT",
         # https://www.quandl.com/data/NSE-National-Stock-Exchange-of-India
-        IN="NSE",
+        "IN": "NSE",
         # https://www.quandl.com/data/TSE-Tokyo-Stock-Exchange
-        JP="TSE",
-        NL="EURONEXT",
-        PT="EURONEXT",
+        "JP": "TSE",
+        "NL": "EURONEXT",
+        "PT": "EURONEXT",
         # https://www.quandl.com/data/LSE-London-Stock-Exchange
-        UK="LSE",
+        "UK": "LSE",
         # https://www.quandl.com/data/WIKI-Wiki-EOD-Stock-Prices
-        US="WIKI",
-    )
+        "US": "WIKI",
+    }
 
     def _db_from_countrycode(self, code):
-        assert code in self._COUNTRYCODE_TO_DATASET, (
-            "No Quandl dataset known for country code '%s'" % code
-        )
+        assert code in self._COUNTRYCODE_TO_DATASET, f"No Quandl dataset known for country code '{code}'"
         return self._COUNTRYCODE_TO_DATASET[code]
 
     def _get_params(self, symbol):

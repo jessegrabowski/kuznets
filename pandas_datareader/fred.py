@@ -52,10 +52,7 @@ class FredReader(_BaseReader):
                 return data.truncate(self.start, self.end)
             except KeyError as exc:  # pragma: no cover
                 if data.iloc[3].name[7:12] == "Error":
-                    raise OSError(
-                        "Failed to get the data. Check that "
-                        "{!r} is a valid FRED series.".format(name)
-                    ) from exc
+                    raise OSError(f"Failed to get the data. Check that {name!r} is a valid FRED series.") from exc
                 raise
 
         try:

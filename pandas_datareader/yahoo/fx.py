@@ -57,7 +57,7 @@ class YahooFXReader(YahooDailyReader):
         """Read data"""
         try:
             # If a single symbol, (e.g., 'GOOG')
-            if isinstance(self.symbols, (str, int)):
+            if isinstance(self.symbols, str | int):
                 df = self._read_one_data(self.symbols)
 
             # Or multiple symbols, (e.g., ['GOOG', 'AAPL', 'MSFT'])

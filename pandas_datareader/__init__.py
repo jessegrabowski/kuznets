@@ -1,11 +1,10 @@
+from importlib.metadata import version
 import os
 import sys
 
-from importlib.metadata import version
-
 __version__ = version("pandas-datareader")
 
-from .data import (
+from pandas_datareader.data import (
     DataReader,
     Options,
     get_components_yahoo,

@@ -186,9 +186,7 @@ class YahooDailyReader(_DailyBaseReader):
         if self.get_actions and data["eventsData"]:
             actions = DataFrame(data["eventsData"])
             actions.columns = [col.capitalize() for col in actions.columns]
-            actions["Date"] = to_datetime(
-                to_datetime(actions["Date"], unit="s").dt.date
-            )
+            actions["Date"] = to_datetime(to_datetime(actions["Date"], unit="s").dt.date)
 
             types = actions["Type"].unique()
             if "DIVIDEND" in types:
@@ -219,9 +217,7 @@ class YahooDailyReader(_DailyBaseReader):
 
                 if "DIVIDEND" in types and not self.adjust_dividends:
                     # dividends are adjusted automatically by Yahoo
-                    adj = (
-                        prices["Splits"].sort_index(ascending=False).fillna(1).cumprod()
-                    )
+                    adj = prices["Splits"].sort_index(ascending=False).fillna(1).cumprod()
                     prices["Dividends"] = prices["Dividends"] / adj
 
         return prices

@@ -111,10 +111,8 @@ class Deep(IEX):
         # Reference: https://www.iextrading.com/developer/docs/#trading-status
         smap = {
             "H": "Trading halted across all US equity markets",
-            "O": "Trading halt released into an Order Acceptance Period "
-            "(IEX-listed securities only)",
-            "P": "Trading paused and Order Acceptance Period on IEX "
-            "(IEX-listed securities only)",
+            "O": "Trading halt released into an Order Acceptance Period (IEX-listed securities only)",
+            "P": "Trading paused and Order Acceptance Period on IEX (IEX-listed securities only)",
             "T": "Trading on IEX",
         }
         rmap = {
