@@ -39,4 +39,3 @@ Bug Fixes
 
 - Fixed bug that caused ``DataReader`` to fail if company name has a comma. (:issue:`85`).
 - Fixed bug in ``YahooOptions`` caused as a result of change in yahoo website format. (:issue:`244`).
-

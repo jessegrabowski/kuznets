@@ -1,29 +1,27 @@
+from pandas import DataFrame
+import requests
+
 from pandas_datareader.base import _BaseReader
 
 
 class TSPReader(_BaseReader):
     """
-    Returns DataFrame of historical TSP fund prices from symbols, over date
-    range, start to end.
+    Get historical TSP (Thrift Savings Plan) fund prices.
 
     Parameters
     ----------
-    symbols : str, array-like object (list, tuple, Series), or DataFrame
-        Single stock symbol (ticker), array-like object of symbols or
-        DataFrame with index containing stock symbols.
-    start : string, int, date, datetime, Timestamp
-        Starting date. Parses many different kind of date
-        representations (e.g., 'JAN-01-2010', '1/1/10', 'Jan, 1, 1980'). Defaults to
-        20 years before current date.
-    end : string, int, date, datetime, Timestamp
-        Ending date
+    symbols : str, list of str, or frozenset, optional
+        Single fund name, list of fund names, or default ``all_symbols``.
+    start : str, int, date, datetime, or Timestamp, optional
+        Starting date. Defaults to 5 years before current date.
+    end : str, int, date, datetime, or Timestamp, optional
+        Ending date.
     retry_count : int, default 3
         Number of times to retry query request.
-    pause : int, default 0.1
-        Time, in seconds, to pause between consecutive queries of chunks. If
-        single value given for symbol, represents the pause between retries.
-    session : Session, default None
-        requests.sessions.Session instance to be used
+    pause : float, default 0.1
+        Time, in seconds, to pause between consecutive queries.
+    session : Session, optional
+        ``requests.sessions.Session`` instance to be used.
     """
 
     all_symbols = frozenset(
@@ -51,10 +49,10 @@ class TSPReader(_BaseReader):
         symbols=all_symbols,
         start=None,
         end=None,
-        retry_count=3,
-        pause=0.1,
+        retry_count: int = 3,
+        pause: float = 0.1,
         session=None,
-    ):
+    ) -> None:
         super().__init__(
             symbols=symbols,
             start=start,
@@ -66,20 +64,25 @@ class TSPReader(_BaseReader):
         self._format = "string"
 
     @property
-    def url(self):
-        """API URL"""
+    def url(self) -> str:
+        """API URL."""
         return "https://secure.tsp.gov/components/CORS/getSharePricesRaw.html"
 
-    def read(self):
-        """read one data from specified URL"""
+    def read(self) -> DataFrame:
+        """Read TSP fund price data.
+
+        Returns
+        -------
+        DataFrame
+        """
         df = super().read()
-        df.columns = map(lambda x: x.strip(), df.columns)
+        df.columns = (x.strip() for x in df.columns)
         df.drop(columns=self.all_symbols - set(self.symbols), inplace=True)
         return df
 
     @property
-    def params(self):
-        """Parameters to use in API calls"""
+    def params(self) -> dict:
+        """Parameters to use in API calls."""
         return {
             "startdate": self.start.strftime("%Y%m%d"),
             "enddate": self.end.strftime("%Y%m%d"),
@@ -89,9 +92,17 @@ class TSPReader(_BaseReader):
         }
 
     @staticmethod
-    def _sanitize_response(response):
-        """
-        Clean up the response string
+    def _sanitize_response(response: requests.Response) -> str:
+        """Clean up the response string.
+
+        Parameters
+        ----------
+        response : Response
+            Raw HTTP response.
+
+        Returns
+        -------
+        str
         """
         text = response.text.strip()
         if text[-1] == ",":

@@ -9,7 +9,7 @@ from pandas_datareader.iex import IEX
 
 class TopsReader(IEX):
     """
-    Near-real time aggregated bid and offer positions
+    Near-real time aggregated bid and offer positions from IEX.
 
     Notes
     -----
@@ -18,8 +18,14 @@ class TopsReader(IEX):
     """
 
     def __init__(
-        self, symbols=None, start=None, end=None, retry_count=3, pause=0.1, session=None
-    ):
+        self,
+        symbols: str | list[str] | None = None,
+        start=None,
+        end=None,
+        retry_count: int = 3,
+        pause: float = 0.1,
+        session=None,
+    ) -> None:
         super().__init__(
             symbols=symbols,
             start=start,
@@ -30,14 +36,14 @@ class TopsReader(IEX):
         )
 
     @property
-    def service(self):
-        """Service endpoint"""
+    def service(self) -> str:
+        """Service endpoint."""
         return "tops"
 
 
 class LastReader(IEX):
     """
-    Information of executions on IEX
+    Last sale information from IEX.
 
     Notes
     -----
@@ -45,10 +51,15 @@ class LastReader(IEX):
     size and time.
     """
 
-    # todo: Eventually we'll want to implement WebSockets as an option.
     def __init__(
-        self, symbols=None, start=None, end=None, retry_count=3, pause=0.1, session=None
-    ):
+        self,
+        symbols: str | list[str] | None = None,
+        start=None,
+        end=None,
+        retry_count: int = 3,
+        pause: float = 0.1,
+        session=None,
+    ) -> None:
         super().__init__(
             symbols=symbols,
             start=start,
@@ -59,6 +70,6 @@ class LastReader(IEX):
         )
 
     @property
-    def service(self):
-        """Service endpoint"""
+    def service(self) -> str:
+        """Service endpoint."""
         return "tops/last"

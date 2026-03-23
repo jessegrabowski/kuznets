@@ -1,34 +1,38 @@
 import datetime as dt
 
+import pandas as pd
+
 from pandas_datareader.av import AlphaVantage
 
 
 class AVTimeSeriesReader(AlphaVantage):
     """
-    Returns DataFrame of the Alpha Vantage Stock Time Series endpoints
+    Get data from Alpha Vantage Stock Time Series endpoints.
 
     .. versionadded:: 0.7.0
 
     Parameters
     ----------
-    symbols : string
-        Single stock symbol (ticker)
-    start : string, int, date, datetime, Timestamp
-        Starting date. Parses many different kind of date
-        representations (e.g., 'JAN-01-2010', '1/1/10', 'Jan, 1, 1980'). Defaults to
-        20 years before current date.
-    end : string, int, date, datetime, Timestamp
-        Ending date
+    symbols : str, optional
+        Single stock symbol (ticker).
+    function : str, default "TIME_SERIES_DAILY"
+        Alpha Vantage time series function name.
+    start : str, int, date, datetime, or Timestamp, optional
+        Starting date. Defaults to 20 years before current date (3 days for
+        intraday).
+    end : str, int, date, datetime, or Timestamp, optional
+        Ending date.
     retry_count : int, default 3
         Number of times to retry query request.
-    pause : int, default 0.1
-        Time, in seconds, to pause between consecutive queries of chunks. If
-        single value given for symbol, represents the pause between retries.
-    session : Session, default None
-        requests.sessions.Session instance to be used
+    pause : float, default 0.1
+        Time, in seconds, to pause between consecutive queries of chunks.
+    session : Session, optional
+        ``requests.sessions.Session`` instance to be used.
+    chunksize : int, default 25
+        Not used.
     api_key : str, optional
-        AlphaVantage API key . If not provided the environmental variable
-        ALPHAVANTAGE_API_KEY is read. The API key is *required*.
+        Alpha Vantage API key. If not provided the environmental variable
+        ``ALPHAVANTAGE_API_KEY`` is read. The API key is *required*.
     """
 
     _FUNC_TO_DATA_KEY = {
@@ -44,16 +48,16 @@ class AVTimeSeriesReader(AlphaVantage):
 
     def __init__(
         self,
-        symbols=None,
-        function="TIME_SERIES_DAILY",
+        symbols: str | None = None,
+        function: str = "TIME_SERIES_DAILY",
         start=None,
         end=None,
-        retry_count=3,
-        pause=0.1,
+        retry_count: int = 3,
+        pause: float = 0.1,
         session=None,
-        chunksize=25,
-        api_key=None,
-    ):
+        chunksize: int = 25,
+        api_key: str | None = None,
+    ) -> None:
         self._func = function
         super().__init__(
             symbols=symbols,
@@ -66,36 +70,47 @@ class AVTimeSeriesReader(AlphaVantage):
         )
 
     @property
-    def default_start_date(self):
+    def default_start_date(self) -> dt.datetime:
+        """Default start date (3 days for intraday, 20 years otherwise)."""
         d_days = 3 if self.intraday else 365 * 20
         return dt.datetime.today() - dt.timedelta(days=d_days)
 
     @property
-    def function(self):
+    def function(self) -> str:
+        """Alpha Vantage endpoint function."""
         return self._func
 
     @property
-    def intraday(self):
-        return True if self.function == "TIME_SERIES_INTRADAY" else False
+    def intraday(self) -> bool:
+        """Whether the function is intraday."""
+        return self.function == "TIME_SERIES_INTRADAY"
 
     @property
-    def forex(self):
-        return True if self.function == "FX_DAILY" else False
+    def forex(self) -> bool:
+        """Whether the function is forex daily."""
+        return self.function == "FX_DAILY"
 
     @property
-    def output_size(self):
-        """Used to limit the size of the Alpha Vantage query when
-        possible.
+    def output_size(self) -> str:
+        """Compact or full output size based on date range.
+
+        Returns
+        -------
+        str
+            ``"compact"`` if the date range is less than 80 days and not
+            intraday, otherwise ``"full"``.
         """
         delta = dt.datetime.now() - self.start
         return "compact" if delta.days < 80 and not self.intraday else "full"
 
     @property
-    def data_key(self):
+    def data_key(self) -> str:
+        """Key of data returned from Alpha Vantage."""
         return self._FUNC_TO_DATA_KEY[self.function]
 
     @property
-    def params(self):
+    def params(self) -> dict:
+        """Parameters to use in API calls."""
         p = {
             "function": self.function,
             "apikey": self.api_key,
@@ -110,7 +125,18 @@ class AVTimeSeriesReader(AlphaVantage):
             p.update({"symbol": self.symbols})
         return p
 
-    def _read_lines(self, out):
+    def _read_lines(self, out: dict) -> pd.DataFrame:
+        """Parse Alpha Vantage time series JSON response.
+
+        Parameters
+        ----------
+        out : dict
+            Parsed JSON response.
+
+        Returns
+        -------
+        DataFrame
+        """
         data = super()._read_lines(out)
         # reverse since alphavantage returns descending by date
         data = data[::-1]

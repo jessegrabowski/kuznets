@@ -11,7 +11,25 @@ from pandas_datareader.iex import IEX
 
 class Deep(IEX):
     """
-    Retrieve order book data from IEX
+    Retrieve order book data from IEX.
+
+    Parameters
+    ----------
+    symbols : str or list of str, optional
+        String symbol or list of symbols (will be lower-cased).
+    service : str, optional
+        Sub-service to access (e.g. ``'book'``, ``'trades'``,
+        ``'trading-status'``).
+    start : str, int, date, datetime, or Timestamp, optional
+        Starting date.
+    end : str, int, date, datetime, or Timestamp, optional
+        Ending date.
+    retry_count : int, default 3
+        Number of times to retry query request.
+    pause : float, default 0.1
+        Time, in seconds, of the pause between retries.
+    session : Session, optional
+        ``requests.sessions.Session`` instance to be used.
 
     Notes
     -----
@@ -26,14 +44,14 @@ class Deep(IEX):
 
     def __init__(
         self,
-        symbols=None,
-        service=None,
+        symbols: str | list[str] | None = None,
+        service: str | None = None,
         start=None,
         end=None,
-        retry_count=3,
-        pause=0.1,
+        retry_count: int = 3,
+        pause: float = 0.1,
         session=None,
-    ):
+    ) -> None:
         if isinstance(symbols, str):
             symbols = symbols.lower()
         else:
@@ -50,23 +68,22 @@ class Deep(IEX):
         self.sub = service
 
     @property
-    def service(self):
-        """Service endpoint"""
+    def service(self) -> str:
+        """Service endpoint."""
         ss = "/" + self.sub if self.sub is not None else ""
         return f"deep{ss}"
 
-    def _read_lines(self, out):
-        """
-        IEX depth of book data varies and shouldn't always be returned in a DF
+    def _read_lines(self, out: dict | list) -> dict | list:
+        """Parse IEX Deep response based on the sub-service.
 
         Parameters
         ----------
-        out: bytes
-            The raw output from an HTTP request
+        out : dict or list
+            Parsed JSON response.
 
         Returns
         -------
-        DataFrame
+        dict or list
         """
 
         # Runs appropriate output functions per the service being accessed.
@@ -87,7 +104,18 @@ class Deep(IEX):
         else:
             raise ValueError(f"Invalid service specified: {self.sub}.")
 
-    def _read_system_event(self, out):
+    def _read_system_event(self, out: dict) -> dict:
+        """Map system event response code to human-readable string.
+
+        Parameters
+        ----------
+        out : dict
+            Parsed JSON response.
+
+        Returns
+        -------
+        dict
+        """
         # Map the response code to a string output per the API docs.
         # Per: https://www.iextrading.com/developer/docs/#system-event-message
         smap = {
@@ -104,17 +132,27 @@ class Deep(IEX):
         return self._convert_tstamp(out)
 
     @staticmethod
-    def _pass(out):
+    def _pass(out: dict | list) -> dict | list:
+        """Return input unchanged."""
         return out
 
-    def _read_trading_status(self, out):
+    def _read_trading_status(self, out: dict) -> dict:
+        """Map trading status codes to human-readable strings.
+
+        Parameters
+        ----------
+        out : dict
+            Parsed JSON response.
+
+        Returns
+        -------
+        dict
+        """
         # Reference: https://www.iextrading.com/developer/docs/#trading-status
         smap = {
             "H": "Trading halted across all US equity markets",
-            "O": "Trading halt released into an Order Acceptance Period "
-            "(IEX-listed securities only)",
-            "P": "Trading paused and Order Acceptance Period on IEX "
-            "(IEX-listed securities only)",
+            "O": "Trading halt released into an Order Acceptance Period (IEX-listed securities only)",
+            "P": "Trading paused and Order Acceptance Period on IEX (IEX-listed securities only)",
             "T": "Trading on IEX",
         }
         rmap = {
@@ -143,7 +181,18 @@ class Deep(IEX):
         return self._convert_tstamp(out)
 
     @staticmethod
-    def _convert_tstamp(out):
+    def _convert_tstamp(out: dict) -> dict:
+        """Convert UNIX timestamps to datetime objects.
+
+        Parameters
+        ----------
+        out : dict
+            Parsed JSON response.
+
+        Returns
+        -------
+        dict
+        """
         # Searches for top-level timestamp attributes or within dictionaries
         if "timestamp" in out:
             # Convert UNIX to datetime object

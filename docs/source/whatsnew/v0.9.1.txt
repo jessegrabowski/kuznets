@@ -14,9 +14,9 @@ Highlights include:
 Enhancements
 ~~~~~~~~~~~~
 
-- MOEX now returns data only from primary trading boards for 
+- MOEX now returns data only from primary trading boards for
   each ticker (:issue:`811`, :issue:`748`)
-- Added read_all_boards() method for MOEX that returns data 
+- Added read_all_boards() method for MOEX that returns data
   from every trading board (ver. 0.9.0 behaviour)
 - Docs for MOEX reedited
 

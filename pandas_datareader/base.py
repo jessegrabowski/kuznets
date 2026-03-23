@@ -1,3 +1,4 @@
+from collections.abc import Generator
 import datetime
 from io import StringIO
 import time
@@ -5,7 +6,7 @@ from urllib.parse import urlencode
 import warnings
 
 import numpy as np
-from pandas import DataFrame, concat, read_csv
+from pandas import DataFrame, Timestamp, concat, read_csv
 import requests
 
 from pandas_datareader._utils import (
@@ -18,23 +19,27 @@ from pandas_datareader._utils import (
 
 class _BaseReader:
     """
+    Base class for all data readers.
+
     Parameters
     ----------
-    symbols : {str, List[str]}
-        String symbol of like of symbols
-    start : string, int, date, datetime, Timestamp
+    symbols : str or list of str
+        String symbol or list of symbols.
+    start : str, int, date, datetime, or Timestamp, optional
         Starting date. Parses many different kind of date
-        representations (e.g., 'JAN-01-2010', '1/1/10', 'Jan, 1, 1980')
-    end : string, int, date, datetime, Timestamp
-        Ending date
+        representations (e.g., 'JAN-01-2010', '1/1/10', 'Jan, 1, 1980').
+    end : str, int, date, datetime, or Timestamp, optional
+        Ending date.
     retry_count : int, default 3
         Number of times to retry query request.
     pause : float, default 0.1
         Time, in seconds, of the pause between retries.
-    session : Session, default None
-        requests.sessions.Session instance to be used.
-    freq : {str, None}
-        Frequency to use in select readers
+    timeout : float, default 30
+        Time, in seconds, to wait for server response.
+    session : Session, optional
+        ``requests.sessions.Session`` instance to be used.
+    freq : str, optional
+        Frequency to use in select readers.
     """
 
     _chunk_size = 1024 * 1024
@@ -42,15 +47,15 @@ class _BaseReader:
 
     def __init__(
         self,
-        symbols,
-        start=None,
-        end=None,
-        retry_count=3,
-        pause=0.1,
-        timeout=30,
-        session=None,
-        freq=None,
-    ):
+        symbols: str | list[str],
+        start: str | int | datetime.date | datetime.datetime | Timestamp | None = None,
+        end: str | int | datetime.date | datetime.datetime | Timestamp | None = None,
+        retry_count: int = 3,
+        pause: float = 0.1,
+        timeout: float = 30,
+        session: requests.Session | None = None,
+        freq: str | None = None,
+    ) -> None:
         self.symbols = symbols
 
         start, end = _sanitize_dates(start or self.default_start_date, end)
@@ -67,36 +72,53 @@ class _BaseReader:
         self.freq = freq
         self.headers = None
 
-    def close(self):
-        """Close network session"""
+    def close(self) -> None:
+        """Close network session."""
         self.session.close()
 
     @property
-    def default_start_date(self):
-        """Default start date for reader. Defaults to 5 years before current date"""
+    def default_start_date(self) -> datetime.date:
+        """Default start date for reader. Defaults to 5 years before current date."""
         today = datetime.date.today()
         return today - datetime.timedelta(days=365 * 5)
 
     @property
-    def url(self):
-        """API URL"""
+    def url(self) -> str:
+        """API URL. Must be overridden in subclass."""
         # must be overridden in subclass
         raise NotImplementedError
 
     @property
-    def params(self):
-        """Parameters to use in API calls"""
+    def params(self) -> dict | None:
+        """Parameters to use in API calls."""
         return None
 
-    def read(self):
-        """Read data from connector"""
+    def read(self) -> DataFrame:
+        """Read data from connector.
+
+        Returns
+        -------
+        DataFrame
+        """
         try:
             return self._read_one_data(self.url, self.params)
         finally:
             self.close()
 
-    def _read_one_data(self, url, params):
-        """read one data from specified URL"""
+    def _read_one_data(self, url: str, params: dict | None) -> DataFrame:
+        """Read one data from specified URL.
+
+        Parameters
+        ----------
+        url : str
+            Target URL.
+        params : dict, optional
+            Parameters passed to the URL.
+
+        Returns
+        -------
+        DataFrame
+        """
         if self._format == "string":
             out = self._read_url_as_StringIO(url, params=params)
         elif self._format == "json":
@@ -105,20 +127,26 @@ class _BaseReader:
             raise NotImplementedError(self._format)
         return self._read_lines(out)
 
-    def _read_url_as_StringIO(self, url, params=None):
-        """
-        Open url (and retry)
+    def _read_url_as_StringIO(self, url: str, params: dict | None = None) -> StringIO:
+        """Open URL and return contents as StringIO (retries on failure).
+
+        Parameters
+        ----------
+        url : str
+            Target URL.
+        params : dict, optional
+            Parameters passed to the URL.
+
+        Returns
+        -------
+        StringIO
         """
         response = self._get_response(url, params=params)
         text = self._sanitize_response(response)
         out = StringIO()
         if len(text) == 0:
             service = self.__class__.__name__
-            raise OSError(
-                "{} request returned no data; check URL for invalid inputs: {}".format(
-                    service, self.url
-                )
-            )
+            raise OSError(f"{service} request returned no data; check URL for invalid inputs: {self.url}")
         if isinstance(text, bytes):
             out.write(text.decode("utf-8"))
         else:
@@ -127,28 +155,51 @@ class _BaseReader:
         return out
 
     @staticmethod
-    def _sanitize_response(response):
-        """
-        Hook to allow subclasses to clean up response data
+    def _sanitize_response(response: requests.Response) -> str | bytes:
+        """Hook to allow subclasses to clean up response data.
+
+        Parameters
+        ----------
+        response : Response
+            The raw response from an HTTP request.
+
+        Returns
+        -------
+        str or bytes
         """
         return response.content
 
-    def _get_response(self, url, params=None, headers=None):
-        """send raw HTTP request to get requests.Response from the specified url
+    def _get_response(
+        self,
+        url: str,
+        params: dict | None = None,
+        headers: dict | None = None,
+    ) -> requests.Response:
+        """Send raw HTTP request to get requests.Response from the specified URL.
+
         Parameters
         ----------
         url : str
-            target URL
-        params : dict or None
-            parameters passed to the URL
+            Target URL.
+        params : dict, optional
+            Parameters passed to the URL.
+        headers : dict, optional
+            Headers passed to the request.
+
+        Returns
+        -------
+        Response
+
+        Raises
+        ------
+        RemoteDataError
+            If the request fails after all retries.
         """
         headers = headers or self.headers
         pause = self.pause
         last_response_text = ""
         for _ in range(self.retry_count + 1):
-            response = self.session.get(
-                url, params=params, headers=headers, timeout=self.timeout
-            )
+            response = self.session.get(url, params=params, headers=headers, timeout=self.timeout)
             if response.status_code == requests.codes.ok:
                 return response
 
@@ -174,29 +225,40 @@ class _BaseReader:
 
         raise RemoteDataError(msg)
 
-    def _get_crumb(self, *args):
-        """To be implemented by subclass"""
+    def _get_crumb(self, *args) -> str:
+        """To be implemented by subclass."""
         raise NotImplementedError("Subclass has not implemented method.")
 
-    def _output_error(self, out):
-        """If necessary, a service can implement an interpreter for any non-200
-         HTTP responses.
+    def _output_error(self, out: requests.Response) -> bool:
+        """Interpret non-200 HTTP responses. Override in subclass if needed.
 
         Parameters
         ----------
-        out: bytes
-            The raw output from an HTTP request
+        out : Response
+            The raw output from an HTTP request.
 
         Returns
         -------
-        boolean
+        bool
+            If True, stop retrying.
         """
         return False
 
-    def _read_lines(self, out):
+    def _read_lines(self, out: StringIO) -> DataFrame:
+        """Parse CSV content from a StringIO into a DataFrame.
+
+        Parameters
+        ----------
+        out : StringIO
+            CSV content.
+
+        Returns
+        -------
+        DataFrame
+        """
         rs = read_csv(out, index_col=0, parse_dates=True, na_values=("-", "null"))[::-1]
         # Needed to remove blank space character in header names
-        rs.columns = list(map(lambda x: x.strip(), rs.columns.values.tolist()))
+        rs.columns = [x.strip() for x in rs.columns.values.tolist()]
 
         # Yahoo! Finance sometimes does this awesome thing where they
         # return 2 rows for the most recent business day
@@ -204,9 +266,7 @@ class _BaseReader:
             rs = rs[:-1]
         # Get rid of unicode characters in index name.
         try:
-            rs.index.name = rs.index.name.decode("unicode_escape").encode(
-                "ascii", "ignore"
-            )
+            rs.index.name = rs.index.name.decode("unicode_escape").encode("ascii", "ignore")
         except AttributeError:
             # Python 3 string has no decode method.
             rs.index.name = rs.index.name.encode("ascii", "ignore").decode()
@@ -215,18 +275,37 @@ class _BaseReader:
 
 
 class _DailyBaseReader(_BaseReader):
-    """Base class for Google / Yahoo daily reader"""
+    """Base class for daily-frequency readers.
+
+    Parameters
+    ----------
+    symbols : str, list of str, or DataFrame, optional
+        String symbol, list of symbols, or DataFrame with index
+        containing stock symbols.
+    start : str, int, date, datetime, or Timestamp, optional
+        Starting date.
+    end : str, int, date, datetime, or Timestamp, optional
+        Ending date.
+    retry_count : int, default 3
+        Number of times to retry query request.
+    pause : float, default 0.1
+        Time, in seconds, of the pause between retries.
+    session : Session, optional
+        ``requests.sessions.Session`` instance to be used.
+    chunksize : int, default 25
+        Number of symbols to download consecutively before initiating pause.
+    """
 
     def __init__(
         self,
-        symbols=None,
-        start=None,
-        end=None,
-        retry_count=3,
-        pause=0.1,
-        session=None,
-        chunksize=25,
-    ):
+        symbols: str | list[str] | DataFrame | None = None,
+        start: str | int | datetime.date | datetime.datetime | Timestamp | None = None,
+        end: str | int | datetime.date | datetime.datetime | Timestamp | None = None,
+        retry_count: int = 3,
+        pause: float = 0.1,
+        session: requests.Session | None = None,
+        chunksize: int = 25,
+    ) -> None:
         super().__init__(
             symbols=symbols,
             start=start,
@@ -237,13 +316,19 @@ class _DailyBaseReader(_BaseReader):
         )
         self.chunksize = chunksize
 
-    def _get_params(self, *args, **kwargs):
+    def _get_params(self, *args, **kwargs) -> dict:
+        """Return parameters for an API call. Must be overridden in subclass."""
         raise NotImplementedError
 
-    def read(self):
-        """Read data"""
+    def read(self) -> DataFrame:
+        """Read data for one or more symbols.
+
+        Returns
+        -------
+        DataFrame
+        """
         # If a single symbol, (e.g., 'GOOG')
-        if isinstance(self.symbols, (str, int)):
+        if isinstance(self.symbols, str | int):
             df = self._read_one_data(self.url, params=self._get_params(self.symbols))
         # Or multiple symbols, (e.g., ['GOOG', 'AAPL', 'MSFT'])
         elif isinstance(self.symbols, DataFrame):
@@ -252,7 +337,23 @@ class _DailyBaseReader(_BaseReader):
             df = self._dl_mult_symbols(self.symbols)
         return df
 
-    def _dl_mult_symbols(self, symbols):
+    def _dl_mult_symbols(self, symbols: list[str]) -> DataFrame:
+        """Download data for multiple symbols.
+
+        Parameters
+        ----------
+        symbols : list of str
+            List of ticker symbols.
+
+        Returns
+        -------
+        DataFrame
+
+        Raises
+        ------
+        RemoteDataError
+            If no data is fetched for any symbol.
+        """
         stocks = {}
         failed = []
         passed = []
@@ -284,66 +385,189 @@ class _DailyBaseReader(_BaseReader):
             raise RemoteDataError(msg.format(self.__class__.__name__)) from exc
 
 
-def _in_chunks(seq, size):
+def _in_chunks(seq, size: int) -> Generator:
     """
-    Return sequence in 'chunks' of size defined by size
+    Return sequence in 'chunks' of size defined by *size*.
+
+    Parameters
+    ----------
+    seq : sequence
+        Input sequence.
+    size : int
+        Chunk size.
+
+    Yields
+    ------
+    sequence
+        A slice of *seq* of length *size* (or less for the final chunk).
     """
     return (seq[pos : pos + size] for pos in range(0, len(seq), size))
 
 
 class _OptionBaseReader(_BaseReader):
-    def __init__(self, symbol, session=None):
-        """Instantiates options_data with a ticker saved as symbol"""
+    """Base class for options data readers.
+
+    Parameters
+    ----------
+    symbol : str
+        Ticker symbol (will be upper-cased).
+    session : Session, optional
+        ``requests.sessions.Session`` instance to be used.
+    """
+
+    def __init__(self, symbol: str, session: requests.Session | None = None) -> None:
+        """Instantiate options reader with a ticker saved as *symbol*."""
         self.symbol = symbol.upper()
         super().__init__(symbols=symbol, session=session)
 
-    def get_options_data(self, month=None, year=None, expiry=None):
+    def get_options_data(
+        self,
+        month: int | None = None,
+        year: int | None = None,
+        expiry: datetime.date | None = None,
+    ) -> DataFrame:
         """
-        ***Experimental***
-        Gets call/put data for the stock with the expiration data in the
-        given month and year
+        Get call and put data for the given expiry.
+
+        Parameters
+        ----------
+        month : int, optional
+            Expiry month.
+        year : int, optional
+            Expiry year.
+        expiry : date, optional
+            Exact expiry date.
+
+        Returns
+        -------
+        DataFrame
         """
         raise NotImplementedError
 
-    def get_call_data(self, month=None, year=None, expiry=None):
+    def get_call_data(
+        self,
+        month: int | None = None,
+        year: int | None = None,
+        expiry: datetime.date | None = None,
+    ) -> DataFrame:
         """
-        ***Experimental***
-        Gets call/put data for the stock with the expiration data in the
-        given month and year
+        Get call data for the given expiry.
+
+        Parameters
+        ----------
+        month : int, optional
+            Expiry month.
+        year : int, optional
+            Expiry year.
+        expiry : date, optional
+            Exact expiry date.
+
+        Returns
+        -------
+        DataFrame
         """
         raise NotImplementedError
 
-    def get_put_data(self, month=None, year=None, expiry=None):
+    def get_put_data(
+        self,
+        month: int | None = None,
+        year: int | None = None,
+        expiry: datetime.date | None = None,
+    ) -> DataFrame:
         """
-        ***Experimental***
-        Gets put data for the stock with the expiration data in the
-        given month and year
+        Get put data for the given expiry.
+
+        Parameters
+        ----------
+        month : int, optional
+            Expiry month.
+        year : int, optional
+            Expiry year.
+        expiry : date, optional
+            Exact expiry date.
+
+        Returns
+        -------
+        DataFrame
         """
         raise NotImplementedError
 
     def get_near_stock_price(
-        self, above_below=2, call=True, put=False, month=None, year=None, expiry=None
-    ):
+        self,
+        above_below: int = 2,
+        call: bool = True,
+        put: bool = False,
+        month: int | None = None,
+        year: int | None = None,
+        expiry: datetime.date | None = None,
+    ) -> DataFrame:
         """
-        ***Experimental***
-        Returns a data frame of options that are near the current stock price.
+        Get options data near the current stock price.
+
+        Parameters
+        ----------
+        above_below : int, default 2
+            Number of strike prices above and below the current stock price.
+        call : bool, default True
+            Include call data.
+        put : bool, default False
+            Include put data.
+        month : int, optional
+            Expiry month.
+        year : int, optional
+            Expiry year.
+        expiry : date, optional
+            Exact expiry date.
+
+        Returns
+        -------
+        DataFrame
         """
         raise NotImplementedError
 
     def get_forward_data(
-        self, months, call=True, put=False, near=False, above_below=2
-    ):  # pragma: no cover
+        self,
+        months: int,
+        call: bool = True,
+        put: bool = False,
+        near: bool = False,
+        above_below: int = 2,
+    ) -> DataFrame:  # pragma: no cover
         """
-        ***Experimental***
-        Gets either call, put, or both data for months starting in the current
-        month and going out in the future a specified amount of time.
+        Get call/put data for future months.
+
+        Parameters
+        ----------
+        months : int
+            Number of months forward.
+        call : bool, default True
+            Include call data.
+        put : bool, default False
+            Include put data.
+        near : bool, default False
+            Only include options near the current stock price.
+        above_below : int, default 2
+            Number of strike prices above and below the current stock price.
+
+        Returns
+        -------
+        DataFrame
         """
         raise NotImplementedError
 
-    def get_all_data(self, call=True, put=True):
+    def get_all_data(self, call: bool = True, put: bool = True) -> DataFrame:
         """
-        ***Experimental***
-        Gets either call, put, or both data for all available months starting
-        in the current month.
+        Get call and/or put data for all available expiry months.
+
+        Parameters
+        ----------
+        call : bool, default True
+            Include call data.
+        put : bool, default True
+            Include put data.
+
+        Returns
+        -------
+        DataFrame
         """
         raise NotImplementedError

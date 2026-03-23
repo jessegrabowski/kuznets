@@ -1,6 +1,6 @@
 import datetime as dt
 
-from pandas import to_datetime
+from pandas import Timestamp, to_datetime
 import requests
 
 from pandas_datareader.compat import is_number
@@ -14,27 +14,33 @@ class RemoteDataError(IOError):
     pass
 
 
-def _sanitize_dates(start, end):
+def _sanitize_dates(
+    start: str | int | dt.date | dt.datetime | Timestamp,
+    end: str | int | dt.date | dt.datetime | Timestamp,
+) -> tuple[Timestamp, Timestamp]:
     """
-    Return (timestamp_start, timestamp_end) tuple
-    if start is None - default is 5 years before the current date
-    if end is None - default is today
+    Return (timestamp_start, timestamp_end) tuple.
+    If start is None - default is 5 years before the current date.
+    If end is None - default is today.
 
     Parameters
     ----------
-    start : str, int, date, datetime, Timestamp
-        Desired start date
-    end : str, int, date, datetime, Timestamp
-        Desired end date
+    start : str, int, date, datetime, or Timestamp
+        Desired start date.
+    end : str, int, date, datetime, or Timestamp
+        Desired end date.
+
+    Returns
+    -------
+    tuple of Timestamp
+        Sanitized (start, end) pair.
     """
     if is_number(start):
         # regard int as year
         start = dt.datetime(start, 1, 1)
-    start = to_datetime(start)
 
     if is_number(end):
         end = dt.datetime(end, 1, 1)
-    end = to_datetime(end)
 
     if start is None:
         # default to 5 years before today
@@ -53,7 +59,21 @@ def _sanitize_dates(start, end):
     return start, end
 
 
-def _init_session(session):
+def _init_session(session: requests.Session | None) -> requests.Session:
+    """
+    Initialize a requests session.
+
+    Parameters
+    ----------
+    session : Session or None
+        ``requests.sessions.Session`` instance to be used, or None to
+        create a new session.
+
+    Returns
+    -------
+    Session
+        The initialized session.
+    """
     if session is None:
         session = requests.Session()
         # do not set requests max_retries here to support arbitrary pause

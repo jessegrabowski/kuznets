@@ -1,4 +1,5 @@
 import pandas as pd
+from pandas import DataFrame
 
 from pandas_datareader.base import _BaseReader
 from pandas_datareader.io.sdmx import _read_sdmx_dsd, read_sdmx
@@ -10,8 +11,8 @@ class EurostatReader(_BaseReader):
     _URL = "http://ec.europa.eu/eurostat/SDMX/diss-web/rest"
 
     @property
-    def url(self):
-        """API URL"""
+    def url(self) -> str:
+        """API URL."""
         if not isinstance(self.symbols, str):
             raise ValueError("data name must be string")
 
@@ -19,14 +20,27 @@ class EurostatReader(_BaseReader):
         return q.format(self._URL, self.symbols, self.start.year, self.end.year)
 
     @property
-    def dsd_url(self):
-        """API DSD URL"""
+    def dsd_url(self) -> str:
+        """API DSD URL."""
         if not isinstance(self.symbols, str):
             raise ValueError("data name must be string")
 
         return f"{self._URL}/datastructure/ESTAT/DSD_{self.symbols}"
 
-    def _read_one_data(self, url, params):
+    def _read_one_data(self, url: str, params: dict | None) -> DataFrame:
+        """Read one data from specified URL.
+
+        Parameters
+        ----------
+        url : str
+            Target URL.
+        params : dict, optional
+            Not used.
+
+        Returns
+        -------
+        DataFrame
+        """
         resp_dsd = self._get_response(self.dsd_url)
         dsd = _read_sdmx_dsd(resp_dsd.content)
 
