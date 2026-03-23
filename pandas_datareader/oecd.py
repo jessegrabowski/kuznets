@@ -1,4 +1,5 @@
 import pandas as pd
+from pandas import DataFrame
 
 from pandas_datareader.base import _BaseReader
 from pandas_datareader.io import read_jsdmx
@@ -10,8 +11,8 @@ class OECDReader(_BaseReader):
     _format = "json"
 
     @property
-    def url(self):
-        """API URL"""
+    def url(self) -> str:
+        """API URL."""
         url = "https://stats.oecd.org/SDMX-JSON/data"
 
         if not isinstance(self.symbols, str):
@@ -20,8 +21,18 @@ class OECDReader(_BaseReader):
         # API: https://data.oecd.org/api/sdmx-json-documentation/
         return f"{url}/{self.symbols}/all/all"
 
-    def _read_lines(self, out):
-        """read one data from specified URL"""
+    def _read_lines(self, out: dict) -> DataFrame:
+        """Parse OECD JSON-SDMX response.
+
+        Parameters
+        ----------
+        out : dict
+            Parsed JSON response.
+
+        Returns
+        -------
+        DataFrame
+        """
         df = read_jsdmx(out)
         try:
             idx_name = df.index.name  # hack for pandas 0.16.2

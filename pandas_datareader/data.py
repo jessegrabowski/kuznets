@@ -1,11 +1,12 @@
 """
-Module contains tools for collecting data from various remote sources
+Module contains tools for collecting data from various remote sources.
 """
 
-# flake8: noqa
-
+import datetime
 import warnings
 
+from pandas import DataFrame, Timestamp
+import requests
 
 from pandas_datareader.av.forex import AVForexReader
 from pandas_datareader.av.quotes import AVQuotesReader
@@ -64,86 +65,86 @@ __all__ = [
 ]
 
 
-def get_data_alphavantage(*args, **kwargs):
+def get_data_alphavantage(*args, **kwargs) -> DataFrame:
     return AVTimeSeriesReader(*args, **kwargs).read()
 
 
-def get_data_fred(*args, **kwargs):
+def get_data_fred(*args, **kwargs) -> DataFrame:
     return FredReader(*args, **kwargs).read()
 
 
-def get_data_famafrench(*args, **kwargs):
+def get_data_famafrench(*args, **kwargs) -> dict[int | str, DataFrame]:
     return FamaFrenchReader(*args, **kwargs).read()
 
 
-def get_data_yahoo(*args, **kwargs):
+def get_data_yahoo(*args, **kwargs) -> DataFrame:
     return YahooDailyReader(*args, **kwargs).read()
 
 
-def get_data_econdb(*args, **kwargs):
+def get_data_econdb(*args, **kwargs) -> DataFrame:
     return EcondbReader(*args, **kwargs).read()
 
 
-def get_data_enigma(*args, **kwargs):
+def get_data_enigma(*args, **kwargs) -> DataFrame:
     return EnigmaReader(*args, **kwargs).read()
 
 
-def get_quote_av(*args, **kwargs):
+def get_quote_av(*args, **kwargs) -> DataFrame:
     return AVQuotesReader(*args, **kwargs).read()
 
 
-def get_data_yahoo_actions(*args, **kwargs):
+def get_data_yahoo_actions(*args, **kwargs) -> DataFrame:
     return YahooActionReader(*args, **kwargs).read()
 
 
-def get_quote_yahoo(*args, **kwargs):
+def get_quote_yahoo(*args, **kwargs) -> DataFrame:
     return YahooQuotesReader(*args, **kwargs).read()
 
 
-def get_data_quandl(*args, **kwargs):
+def get_data_quandl(*args, **kwargs) -> DataFrame:
     return QuandlReader(*args, **kwargs).read()
 
 
-def get_data_moex(*args, **kwargs):
+def get_data_moex(*args, **kwargs) -> DataFrame:
     return MoexReader(*args, **kwargs).read()
 
 
-def get_data_stooq(*args, **kwargs):
+def get_data_stooq(*args, **kwargs) -> DataFrame:
     return StooqDailyReader(*args, **kwargs).read()
 
 
-def get_tops_iex(*args, **kwargs):
+def get_tops_iex(*args, **kwargs) -> DataFrame:
     return IEXTops(*args, **kwargs).read()
 
 
-def get_last_iex(*args, **kwargs):
+def get_last_iex(*args, **kwargs) -> DataFrame:
     return IEXLasts(*args, **kwargs).read()
 
 
-def get_data_tiingo(*args, **kwargs):
+def get_data_tiingo(*args, **kwargs) -> DataFrame:
     return TiingoDailyReader(*args, **kwargs).read()
 
 
-def get_iex_data_tiingo(*args, **kwargs):
+def get_iex_data_tiingo(*args, **kwargs) -> DataFrame:
     return TiingoIEXHistoricalReader(*args, **kwargs).read()
 
 
-def get_quotes_tiingo(*args, **kwargs):
+def get_quotes_tiingo(*args, **kwargs) -> DataFrame:
     return TiingoQuoteReader(*args, **kwargs).read()
 
 
-def get_exchange_rate_av(*args, **kwargs):
+def get_exchange_rate_av(*args, **kwargs) -> DataFrame:
     return AVForexReader(*args, **kwargs).read()
 
 
-def get_sector_performance_av(*args, **kwargs):
+def get_sector_performance_av(*args, **kwargs) -> DataFrame:
     return AVSectorPerformanceReader(*args, **kwargs).read()
 
 
-def get_markets_iex(*args, **kwargs):
+def get_markets_iex(*args, **kwargs) -> DataFrame:
     """
-    Returns near-real time volume data across markets segregated by tape
-    and including a percentage of overall volume during the session
+    Return near-real time volume data across markets segregated by tape
+    and including a percentage of overall volume during the session.
 
     This endpoint does not accept any parameters.
 
@@ -158,37 +159,41 @@ def get_markets_iex(*args, **kwargs):
     return MarketReader(*args, **kwargs).read()
 
 
-def get_dailysummary_iex(*args, **kwargs):
+def get_dailysummary_iex(*args, **kwargs) -> DataFrame:
     """
-    Returns a summary of daily market volume statistics. Without parameters,
+    Return a summary of daily market volume statistics. Without parameters,
     this will return the most recent trading session by default.
 
     Parameters
     ----------
-    start : string, int, date, datetime, Timestamp
+    start : str, int, date, datetime, or Timestamp
         The beginning of the date range.
-    end : string, int, date, datetime, Timestamp
+    end : str, int, date, datetime, or Timestamp
         The end of the date range.
 
     Reference: https://www.iextrading.com/developer/docs/#historical-daily
 
-    :return: DataFrame
+    Returns
+    -------
+    DataFrame
     """
     from pandas_datareader.iex.stats import DailySummaryReader
 
     return DailySummaryReader(*args, **kwargs).read()
 
 
-def get_summary_iex(*args, **kwargs):
+def get_summary_iex(*args, **kwargs) -> DataFrame:
     """
-    Returns an aggregated monthly summary of market volume and a variety of
+    Return an aggregated monthly summary of market volume and a variety of
     related metrics for trades by lot size, security market cap, and venue.
     In the absence of parameters, this will return month-to-date statistics.
     For ranges spanning multiple months, this will return one row per month.
 
-    start : string, int, date, datetime, Timestamp
+    Parameters
+    ----------
+    start : str, int, date, datetime, or Timestamp
         A datetime object - the beginning of the date range.
-    end : string, int, date, datetime, Timestamp
+    end : str, int, date, datetime, or Timestamp
         A datetime object - the end of the date range.
 
     Returns
@@ -200,24 +205,26 @@ def get_summary_iex(*args, **kwargs):
     return MonthlySummaryReader(*args, **kwargs).read()
 
 
-def get_records_iex(*args, **kwargs):
+def get_records_iex(*args, **kwargs) -> DataFrame:
     """
-    Returns the record value, record date, recent value, and 30-day average for
+    Return the record value, record date, recent value, and 30-day average for
     market volume, # of symbols traded, # of routed trades and notional value.
     This function accepts no additional parameters.
 
     Reference: https://www.iextrading.com/developer/docs/#records
 
-    :return: DataFrame
+    Returns
+    -------
+    DataFrame
     """
     from pandas_datareader.iex.stats import RecordsReader
 
     return RecordsReader(*args, **kwargs).read()
 
 
-def get_recent_iex(*args, **kwargs):
+def get_recent_iex(*args, **kwargs) -> DataFrame:
     """
-    Returns market volume and trade routing statistics for recent sessions.
+    Return market volume and trade routing statistics for recent sessions.
     Also reports IEX's relative market share, lit share volume and a boolean
     halfday indicator.
 
@@ -232,29 +239,31 @@ def get_recent_iex(*args, **kwargs):
     return RecentReader(*args, **kwargs).read()
 
 
-def get_iex_symbols(*args, **kwargs):
+def get_iex_symbols(*args, **kwargs) -> DataFrame:
     """
-    Returns a list of all equity symbols available for trading on IEX. Accepts
+    Return a list of all equity symbols available for trading on IEX. Accepts
     no additional parameters.
 
     Reference: https://www.iextrading.com/developer/docs/#symbols
 
-    :return: DataFrame
+    Returns
+    -------
+    DataFrame
     """
     from pandas_datareader.iex.ref import SymbolsReader
 
     return SymbolsReader(*args, **kwargs).read()
 
 
-def get_iex_book(*args, **kwargs):
+def get_iex_book(*args, **kwargs) -> DataFrame:
     """
-    Returns an array of dictionaries with depth of book data from IEX for up to
+    Return an array of dictionaries with depth of book data from IEX for up to
     10 securities at a time. Returns a dictionary of the bid and ask books.
 
     Parameters
     ----------
-    symbols : str, List[str]
-        A string or list of strings of valid tickers
+    symbols : str or list of str
+        A string or list of strings of valid tickers.
     service : str
         One of:
 
@@ -275,44 +284,48 @@ def get_iex_book(*args, **kwargs):
 
 
 def DataReader(
-    name,
-    data_source=None,
-    start=None,
-    end=None,
-    retry_count=3,
-    pause=0.1,
-    session=None,
-    api_key=None,
-):
+    name: str | list[str],
+    data_source: str | None = None,
+    start: str | int | datetime.date | datetime.datetime | Timestamp | None = None,
+    end: str | int | datetime.date | datetime.datetime | Timestamp | None = None,
+    retry_count: int = 3,
+    pause: float = 0.1,
+    session: requests.Session | None = None,
+    api_key: str | None = None,
+) -> DataFrame:
     """
-    Imports data from a number of online sources.
+    Import data from a number of online sources.
 
     Currently supports Google Finance, St. Louis FED (FRED),
     and Kenneth French's data library, among others.
 
     Parameters
     ----------
-    name : str or list of strs
-        the name of the dataset. Some data sources (IEX, fred) will
+    name : str or list of str
+        The name of the dataset. Some data sources (IEX, fred) will
         accept a list of names.
-    data_source: {str, None}
-        the data source ("iex", "fred", "ff")
-    start : string, int, date, datetime, Timestamp
-        left boundary for range (defaults to 1/1/2010)
-    end : string, int, date, datetime, Timestamp
-        right boundary for range (defaults to today)
-    retry_count : {int, 3}
+    data_source : str, optional
+        The data source ("iex", "fred", "ff").
+    start : str, int, date, datetime, or Timestamp, optional
+        Left boundary for range (defaults to 1/1/2010).
+    end : str, int, date, datetime, or Timestamp, optional
+        Right boundary for range (defaults to today).
+    retry_count : int, default 3
         Number of times to retry query request.
-    pause : {numeric, 0.001}
+    pause : float, default 0.1
         Time, in seconds, to pause between consecutive queries of chunks. If
         single value given for symbol, represents the pause between retries.
     session : Session, default None
-        requests.sessions.Session instance to be used
-    api_key : (str, None)
+        ``requests.sessions.Session`` instance to be used.
+    api_key : str, optional
         Optional parameter to specify an API key for certain data sources.
 
+    Returns
+    -------
+    DataFrame
+
     Examples
-    ----------
+    --------
     # Data from Google Finance
     aapl = DataReader("AAPL", "iex")
 
@@ -366,7 +379,7 @@ def DataReader(
     ]
 
     if data_source not in expected_source:
-        msg = "data_source=%r is not implemented" % data_source
+        msg = f"data_source={data_source!r} is not implemented"
         raise NotImplementedError(msg)
 
     if data_source == "yahoo":
@@ -488,7 +501,7 @@ def DataReader(
         ).read()
     elif data_source == "nasdaq":
         if name != "symbols":
-            raise ValueError("Only the string 'symbols' is supported for Nasdaq, not {!r}".format(name))
+            raise ValueError(f"Only the string 'symbols' is supported for Nasdaq, not {name!r}")
         return get_nasdaq_symbols(retry_count=retry_count, pause=pause)
 
     elif data_source == "quandl":
@@ -670,11 +683,15 @@ def DataReader(
         ).read()
 
     else:
-        msg = "data_source=%r is not implemented" % data_source
+        msg = f"data_source={data_source!r} is not implemented"
         raise NotImplementedError(msg)
 
 
-def Options(symbol, data_source=None, session=None):
+def Options(
+    symbol: str,
+    data_source: str | None = None,
+    session: requests.Session | None = None,
+) -> YahooOptions:
     if data_source is None:
         warnings.warn(
             "Options(symbol) is deprecated, use Options(symbol, data_source) instead",

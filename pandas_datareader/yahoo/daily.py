@@ -11,45 +11,37 @@ from pandas_datareader.yahoo.headers import DEFAULT_HEADERS
 
 class YahooDailyReader(_DailyBaseReader):
     """
-    Returns DataFrame of with historical over date range,
-    start to end.
-    To avoid being penalized by Yahoo! Finance servers, pauses between
-    downloading 'chunks' of symbols can be specified.
+    Get historical stock prices from Yahoo Finance.
 
     Parameters
     ----------
-    symbols : string, array-like object (list, tuple, Series), or DataFrame
-        Single stock symbol (ticker), array-like object of symbols or
-        DataFrame with index containing stock symbols.
-    start : string, int, date, datetime, Timestamp
-        Starting date. Parses many different kind of date
-        representations (e.g., 'JAN-01-2010', '1/1/10', 'Jan, 1, 1980'). Defaults to
-        5 years before current date.
-    end : string, int, date, datetime, Timestamp
-        Ending date
+    symbols : str, list of str, or DataFrame
+        Single stock symbol (ticker), list of symbols, or DataFrame with
+        index containing stock symbols.
+    start : str, int, date, datetime, or Timestamp, optional
+        Starting date. Defaults to 5 years before current date.
+    end : str, int, date, datetime, or Timestamp, optional
+        Ending date.
     retry_count : int, default 3
         Number of times to retry query request.
-    pause : int, default 0.1
-        Time, in seconds, to pause between consecutive queries of chunks. If
-        single value given for symbol, represents the pause between retries.
-    session : Session, default None
-        requests.sessions.Session instance to be used. Passing a session
-        is an advanced usage and you must set any required
-        headers in the session directly.
+    pause : float, default 0.1
+        Time, in seconds, to pause between consecutive queries of chunks.
+    session : Session, optional
+        ``requests.sessions.Session`` instance to be used.
     adjust_price : bool, default False
-        If True, adjusts all prices in hist_data ('Open', 'High', 'Low',
-        'Close') based on 'Adj Close' price. Adds 'Adj_Ratio' column and drops
-        'Adj Close'.
+        If True, adjusts all prices ('Open', 'High', 'Low', 'Close') based
+        on 'Adj Close'. Adds 'Adj_Ratio' column and drops 'Adj Close'.
     ret_index : bool, default False
-        If True, includes a simple return index 'Ret_Index' in hist_data.
-    chunksize : int, default 25
-        Number of symbols to download consecutively before intiating pause.
-    interval : string, default 'd'
-        Time interval code, valid values are 'd' for daily, 'w' for weekly,
-        'm' for monthly.
+        If True, includes a simple return index 'Ret_Index'.
+    chunksize : int, default 1
+        Number of symbols to download consecutively before initiating pause.
+    interval : str, default "d"
+        Time interval code. Valid values are ``'d'`` for daily, ``'wk'`` for
+        weekly, ``'mo'`` for monthly (``'w'`` and ``'m'`` accepted for
+        backward compatibility).
     get_actions : bool, default False
-        If True, adds Dividend and Split columns to dataframe.
-    adjust_dividends: bool, default true
+        If True, adds Dividend and Split columns to the DataFrame.
+    adjust_dividends : bool, default True
         If True, adjusts dividends for splits.
     """
 
@@ -108,11 +100,13 @@ class YahooDailyReader(_DailyBaseReader):
         self.adjust_dividends = adjust_dividends
 
     @property
-    def get_actions(self):
+    def get_actions(self) -> bool:
+        """Whether to fetch actions data."""
         return self._get_actions
 
     @property
-    def url(self):
+    def url(self) -> str:
+        """API URL."""
         return "https://finance.yahoo.com/quote/{}/history"
 
     # Test test_get_data_interval() crashed because of this issue, probably

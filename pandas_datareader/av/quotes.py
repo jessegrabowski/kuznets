@@ -7,24 +7,31 @@ from pandas_datareader.exceptions import DEP_ERROR_MSG, ImmediateDeprecationErro
 
 class AVQuotesReader(AlphaVantage):
     """
-    Returns DataFrame of Alpha Vantage Realtime Stock quotes for a symbol or
-    list of symbols.
+    Get Alpha Vantage realtime stock quotes. **Immediately deprecated.**
 
     Parameters
     ----------
-    symbols : string, array-like object (list, tuple, Series), or DataFrame
-        Single stock symbol (ticker), array-like object of symbols or
-        DataFrame with index containing stock symbols.
+    symbols : str, list of str, or DataFrame, optional
+        Single stock symbol (ticker), list of symbols, or DataFrame with
+        index containing stock symbols.
     retry_count : int, default 3
         Number of times to retry query request.
-    pause : int, default 0.1
-        Time, in seconds, to pause between consecutive queries of chunks. If
-        single value given for symbol, represents the pause between retries.
-    session : Session, default None
-        requests.sessions.Session instance to be used
+    pause : float, default 0.1
+        Time, in seconds, to pause between consecutive queries.
+    session : Session, optional
+        ``requests.sessions.Session`` instance to be used.
+    api_key : str, optional
+        Alpha Vantage API key.
     """
 
-    def __init__(self, symbols=None, retry_count=3, pause=0.1, session=None, api_key=None):
+    def __init__(
+        self,
+        symbols: str | list[str] | None = None,
+        retry_count: int = 3,
+        pause: float = 0.1,
+        session=None,
+        api_key: str | None = None,
+    ) -> None:
         raise ImmediateDeprecationError(DEP_ERROR_MSG.format("AVQuotesReader"))
 
         if isinstance(symbols, str):
@@ -45,22 +52,36 @@ class AVQuotesReader(AlphaVantage):
         )
 
     @property
-    def function(self):
+    def function(self) -> str:
+        """Alpha Vantage endpoint function."""
         return "BATCH_STOCK_QUOTES"
 
     @property
-    def data_key(self):
+    def data_key(self) -> str:
+        """Key of data returned from Alpha Vantage."""
         return "Stock Quotes"
 
     @property
-    def params(self):
+    def params(self) -> dict:
+        """Parameters to use in API calls."""
         return {
             "symbols": ",".join(self.symbols),
             "function": self.function,
             "apikey": self.api_key,
         }
 
-    def _read_lines(self, out):
+    def _read_lines(self, out: dict) -> pd.DataFrame:
+        """Parse Alpha Vantage quotes JSON response.
+
+        Parameters
+        ----------
+        out : dict
+            Parsed JSON response.
+
+        Returns
+        -------
+        DataFrame
+        """
         result = []
         quotes = out[self.data_key]
         for quote in quotes:

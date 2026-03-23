@@ -1,3 +1,5 @@
+import requests
+
 from pandas_datareader.base import _BaseReader
 
 
@@ -6,30 +8,40 @@ class BankOfCanadaReader(_BaseReader):
 
     Notes
     -----
-    See `Bank of Canada <https://www.bankofcanada.ca/rates/>`__"""
+    See `Bank of Canada <https://www.bankofcanada.ca/rates/>`__
+    """
 
     _URL = "http://www.bankofcanada.ca/valet/observations"
 
     @property
-    def url(self):
-        """API URL"""
+    def url(self) -> str:
+        """API URL."""
         if not isinstance(self.symbols, str):
             raise ValueError("data name must be string")
 
         return f"{self._URL}/{self.symbols}/csv"
 
     @property
-    def params(self):
-        """Parameters to use in API calls"""
+    def params(self) -> dict:
+        """Parameters to use in API calls."""
         return {
             "start_date": self.start.strftime("%Y-%m-%d"),
             "end_date": self.end.strftime("%Y-%m-%d"),
         }
 
     @staticmethod
-    def _sanitize_response(response):
-        """
-        Clean up the response string
+    def _sanitize_response(response: requests.Response) -> str:
+        """Clean up the response string.
+
+        Parameters
+        ----------
+        response : Response
+            Raw HTTP response.
+
+        Returns
+        -------
+        str
+            Cleaned text between OBSERVATIONS and ERRORS sections.
         """
         data = response.text.split("OBSERVATIONS")[1]
         return data.split("ERRORS")[0].strip()

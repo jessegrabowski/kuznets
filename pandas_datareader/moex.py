@@ -9,32 +9,29 @@ from pandas_datareader.compat import is_list_like
 
 class MoexReader(_DailyBaseReader):
     """
-    Returns a DataFrame of historical stock prices from symbols from Moex
+    Get historical stock prices from the Moscow Exchange (MOEX).
 
     Parameters
     ----------
-    symbols : str, an array-like object (list, tuple, Series), or a DataFrame
-        A single stock symbol (secid), an array-like object of symbols or
-        a DataFrame with an index containing stock symbols.
-    start : string, int, date, datetime, Timestamp
-        Starting date. Parses many different kind of date
-        representations (e.g., 'JAN-01-2010', '1/1/10', 'Jan, 1, 1980'). Defaults to
-        20 years before current date.
-    end : string, int, date, datetime, Timestamp
-        Ending date
+    symbols : str, list of str, or DataFrame
+        A single stock symbol (secid), list of symbols, or a DataFrame
+        with an index containing stock symbols.
+    start : str, int, date, datetime, or Timestamp, optional
+        Starting date. Defaults to 20 years before current date.
+    end : str, int, date, datetime, or Timestamp, optional
+        Ending date.
     retry_count : int, default 3
-        The number of times to retry query request.
-    pause : int, default 0.1
-        Time, in seconds, to pause between consecutive queries of chunks. If
-        single value given for symbol, represents the pause between retries.
+        Number of times to retry query request.
+    pause : float, default 0.1
+        Time, in seconds, to pause between consecutive queries of chunks.
     chunksize : int, default 25
-        The number of symbols to download consecutively before initiating pause.
-    session : Session, default None
-        requests.sessions.Session instance to be used
+        Number of symbols to download consecutively before initiating pause.
+    session : Session, optional
+        ``requests.sessions.Session`` instance to be used.
 
     Notes
     -----
-    To avoid being penalized by Moex servers, pauses more than 0.1s between
+    To avoid being penalized by MOEX servers, pauses more than 0.1s between
     downloading 'chunks' of symbols can be specified.
     """
 
@@ -132,9 +129,13 @@ class MoexReader(_DailyBaseReader):
                 markets_n_engines[symbol] = list(set(markets_n_engines[symbol]))
         return markets_n_engines, boards
 
-    def read_all_boards(self):
-        """Read all data from every board for every ticker"""
+    def read_all_boards(self) -> pd.DataFrame:
+        """Read all data from every board for every ticker.
 
+        Returns
+        -------
+        DataFrame
+        """
         markets_n_engines, boards = self._get_metadata()
         try:
             self.__markets_n_engines = markets_n_engines
@@ -188,8 +189,13 @@ class MoexReader(_DailyBaseReader):
             b = dfs[0]
         return b
 
-    def read(self):
-        """Read data from the primary board for each ticker"""
+    def read(self) -> pd.DataFrame:
+        """Read data from the primary board for each ticker.
+
+        Returns
+        -------
+        DataFrame
+        """
         markets_n_engines, boards = self._get_metadata()
         b = self.read_all_boards()
         parts = []
@@ -200,8 +206,20 @@ class MoexReader(_DailyBaseReader):
         result = result.drop_duplicates()
         return result
 
-    def _read_url_as_String(self, url, params=None):
-        """Open an url (and retry)"""
+    def _read_url_as_String(self, url: str, params: dict | None = None) -> str:
+        """Open a URL and return raw text (retries on failure).
+
+        Parameters
+        ----------
+        url : str
+            Target URL.
+        params : dict, optional
+            Query parameters.
+
+        Returns
+        -------
+        str
+        """
 
         response = self._get_response(url, params=params)
         text = self._sanitize_response(response)
@@ -212,8 +230,18 @@ class MoexReader(_DailyBaseReader):
             text = text.decode("windows-1251")
         return text
 
-    def _read_lines(self, input):
-        """Return a pandas DataFrame from input"""
+    def _read_lines(self, input: StringIO) -> pd.DataFrame:
+        """Parse CSV content from a StringIO into a DataFrame.
+
+        Parameters
+        ----------
+        input : StringIO
+            CSV content.
+
+        Returns
+        -------
+        DataFrame
+        """
 
         return pd.read_csv(
             input,

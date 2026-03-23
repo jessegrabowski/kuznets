@@ -9,7 +9,7 @@ from pandas_datareader.iex import IEX
 
 class SymbolsReader(IEX):
     """
-    Symbols available for trading on IEX
+    Symbols available for trading on IEX.
 
     Notes
     -----
@@ -17,7 +17,15 @@ class SymbolsReader(IEX):
     ET.
     """
 
-    def __init__(self, symbols=None, start=None, end=None, retry_count=3, pause=0.1, session=None):
+    def __init__(
+        self,
+        symbols: str | list[str] | None = None,
+        start=None,
+        end=None,
+        retry_count: int = 3,
+        pause: float = 0.1,
+        session=None,
+    ) -> None:
         super().__init__(
             symbols=symbols,
             start=start,
@@ -28,10 +36,16 @@ class SymbolsReader(IEX):
         )
 
     @property
-    def service(self):
-        """Service endpoint"""
+    def service(self) -> str:
+        """Service endpoint."""
         return "ref-data/symbols"
 
-    def _get_params(self, symbols):
-        # Ref Data API does not take any parameters, returning empty dict
+    def _get_params(self, symbols: str | list[str] | None) -> dict:
+        """Ref Data API does not take any parameters.
+
+        Returns
+        -------
+        dict
+            Empty dict.
+        """
         return {}

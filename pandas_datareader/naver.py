@@ -1,3 +1,4 @@
+from collections.abc import Generator
 from datetime import datetime
 from xml.etree import ElementTree
 
@@ -8,29 +9,52 @@ from pandas_datareader.base import _DailyBaseReader
 
 
 class NaverDailyReader(_DailyBaseReader):
-    """Fetches daily historical data from Naver Finance.
+    """
+    Fetch daily historical data from Naver Finance.
 
-    :param symbols: A single symbol; multiple symbols are not currently supported.
-    :param adjust_price: Not implemented
-    :param interval: Not implemented
-    :param adjust_dividends: Not implemented
+    Parameters
+    ----------
+    symbols : str
+        A single stock symbol. Multiple symbols are not currently supported.
+    start : str, int, date, datetime, or Timestamp, optional
+        Starting date.
+    end : str, int, date, datetime, or Timestamp, optional
+        Ending date.
+    retry_count : int, default 3
+        Number of times to retry query request.
+    pause : float, default 0.1
+        Time, in seconds, to pause between retries.
+    session : Session, optional
+        ``requests.sessions.Session`` instance to be used.
+    adjust_price : bool, default False
+        Not implemented.
+    ret_index : bool, default False
+        Not implemented.
+    chunksize : int, default 1
+        Number of symbols to download consecutively before initiating pause.
+    interval : str, default "d"
+        Not implemented.
+    get_actions : bool, default False
+        Not implemented.
+    adjust_dividends : bool, default True
+        Not implemented.
     """
 
     def __init__(
         self,
-        symbols=None,
+        symbols: str | None = None,
         start=None,
         end=None,
-        retry_count=3,
-        pause=0.1,
+        retry_count: int = 3,
+        pause: float = 0.1,
         session=None,
-        adjust_price=False,
-        ret_index=False,
-        chunksize=1,
-        interval="d",
-        get_actions=False,
-        adjust_dividends=True,
-    ):
+        adjust_price: bool = False,
+        ret_index: bool = False,
+        chunksize: int = 1,
+        interval: str = "d",
+        get_actions: bool = False,
+        adjust_dividends: bool = True,
+    ) -> None:
         if not isinstance(symbols, str):
             raise NotImplementedError("Bulk-fetching is not implemented")
 
@@ -51,14 +75,27 @@ class NaverDailyReader(_DailyBaseReader):
         }
 
     @property
-    def get_actions(self):
+    def get_actions(self) -> bool:
+        """Whether to fetch actions data."""
         return self._get_actions
 
     @property
-    def url(self):
+    def url(self) -> str:
+        """API URL."""
         return "https://fchart.stock.naver.com/sise.nhn"
 
-    def _get_params(self, symbol):
+    def _get_params(self, symbol: str) -> dict:
+        """Build query parameters.
+
+        Parameters
+        ----------
+        symbol : str
+            Ticker symbol.
+
+        Returns
+        -------
+        dict
+        """
         # NOTE: The server does not take start, end dates as inputs; it only
         # takes the number of trading days as an input. To circumvent this
         # pitfall, we calculate the number of business days between self.start
@@ -68,10 +105,19 @@ class NaverDailyReader(_DailyBaseReader):
         params = {"symbol": symbol, "timeframe": "day", "count": days, "requestType": 0}
         return params
 
-    def _read_one_data(self, url, params):
+    def _read_one_data(self, url: str, params: dict) -> DataFrame:
         """Read one data from specified symbol.
 
-        :rtype: DataFrame
+        Parameters
+        ----------
+        url : str
+            Target URL.
+        params : dict
+            Query parameters.
+
+        Returns
+        -------
+        DataFrame
         """
         resp = self._get_response(url, params=params)
         parsed = self._parse_xml_response(resp.text)
@@ -82,19 +128,18 @@ class NaverDailyReader(_DailyBaseReader):
         # NOTE: See _get_params() for explanations.
         return prices[(prices.index >= self.start) & (prices.index <= self.end)]
 
-    def _parse_xml_response(self, xml_content):
-        """Parses XML response from the server.
+    def _parse_xml_response(self, xml_content: str) -> Generator:
+        """Parse XML response from the server.
 
-        An example of response:
+        Parameters
+        ----------
+        xml_content : str
+            Raw XML string.
 
-            <?xml version="1.0" encoding="EUC-KR" ?>
-            <protocol>
-                <chartdata symbol="005930" name="Samsung Elctronics" count="500"
-                        timeframe="day" precision="0" origintime="19900103">
-                    <item data="20170918|218500|222000|217000|220500|72124" />
-                    <item data="20170919|218000|221000|217500|219000|62753" />
-                    ...
-            </protocol>
+        Yields
+        ------
+        list of str
+            Each row's data fields split by ``'|'``.
         """
         root = ElementTree.fromstring(xml_content)
         items = root.findall("chartdata/item")

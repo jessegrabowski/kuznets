@@ -2,7 +2,7 @@ from ftplib import FTP, all_errors
 import time
 import warnings
 
-from pandas import read_csv
+from pandas import DataFrame, read_csv
 
 from pandas_datareader._utils import RemoteDataError
 from pandas_datareader.compat import StringIO
@@ -29,13 +29,22 @@ _DELIMITER = "|"
 _ticker_cache = None
 
 
-def _bool_converter(item):
+def _bool_converter(item: str) -> bool:
     return item == "Y"
 
 
-def _download_nasdaq_symbols(timeout):
+def _download_nasdaq_symbols(timeout: float) -> DataFrame:
     """
-    @param timeout: the time to wait for the FTP connection
+    Download Nasdaq symbol data via FTP.
+
+    Parameters
+    ----------
+    timeout : float
+        The time to wait for the FTP connection.
+
+    Returns
+    -------
+    DataFrame
     """
     try:
         ftp_session = FTP(_NASDAQ_FTP_SERVER, timeout=timeout)
@@ -78,13 +87,26 @@ def _download_nasdaq_symbols(timeout):
     return data
 
 
-def get_nasdaq_symbols(retry_count=3, timeout=30, pause=None):
+def get_nasdaq_symbols(
+    retry_count: int = 3,
+    timeout: float = 30,
+    pause: float | None = None,
+) -> DataFrame:
     """
     Get the list of all available equity symbols from Nasdaq.
 
+    Parameters
+    ----------
+    retry_count : int, default 3
+        Number of times to retry query request.
+    timeout : float, default 30
+        Time, in seconds, to wait for the FTP connection.
+    pause : float, optional
+        Time, in seconds, to pause between retries. Defaults to timeout / 3.
+
     Returns
     -------
-    nasdaq_tickers : pandas.DataFrame
+    DataFrame
         DataFrame with company tickers, names, and other properties.
     """
     global _ticker_cache

@@ -14,12 +14,35 @@ from pandas_datareader.base import _BaseReader
 
 class IEX(_BaseReader):
     """
-    Serves as the base class for all IEX API services.
+    Base class for all IEX API services.
+
+    Parameters
+    ----------
+    symbols : str or list of str, optional
+        String symbol or list of symbols.
+    start : str, int, date, datetime, or Timestamp, optional
+        Starting date.
+    end : str, int, date, datetime, or Timestamp, optional
+        Ending date.
+    retry_count : int, default 3
+        Number of times to retry query request.
+    pause : float, default 0.1
+        Time, in seconds, of the pause between retries.
+    session : Session, optional
+        ``requests.sessions.Session`` instance to be used.
     """
 
     _format = "json"
 
-    def __init__(self, symbols=None, start=None, end=None, retry_count=3, pause=0.1, session=None):
+    def __init__(
+        self,
+        symbols: str | list[str] | None = None,
+        start=None,
+        end=None,
+        retry_count: int = 3,
+        pause: float = 0.1,
+        session=None,
+    ) -> None:
         super().__init__(
             symbols=symbols,
             start=start,
@@ -30,19 +53,23 @@ class IEX(_BaseReader):
         )
 
     @property
-    def service(self):
-        """Service endpoint"""
-        # This property will be overridden by the subclass
+    def service(self) -> str:
+        """Service endpoint. Must be overridden by subclass."""
         raise NotImplementedError("IEX API service not specified.")
 
     @property
-    def url(self):
-        """API URL"""
+    def url(self) -> str:
+        """API URL."""
         qstring = urlencode(self._get_params(self.symbols))
         return f"https://api.iextrading.com/1.0/{self.service}?{qstring}"
 
-    def read(self):
-        """Read data"""
+    def read(self) -> pd.DataFrame:
+        """Read data from IEX.
+
+        Returns
+        -------
+        DataFrame
+        """
         df = super().read()
         if isinstance(df, pd.DataFrame):
             df = df.squeeze()
@@ -50,7 +77,18 @@ class IEX(_BaseReader):
                 df = pd.DataFrame(df)
         return df
 
-    def _get_params(self, symbols):
+    def _get_params(self, symbols: str | list[str] | None) -> dict:
+        """Build query parameters.
+
+        Parameters
+        ----------
+        symbols : str or list of str, optional
+            Ticker symbols.
+
+        Returns
+        -------
+        dict
+        """
         p = {}
         if isinstance(symbols, list):
             p["symbols"] = ",".join(symbols)
@@ -58,14 +96,17 @@ class IEX(_BaseReader):
             p["symbols"] = symbols
         return p
 
-    def _output_error(self, out):
-        """If IEX returns a non-200 status code, we need to notify the user of
-        the error returned.
+    def _output_error(self, out) -> bool:
+        """Interpret non-200 IEX responses.
 
         Parameters
         ----------
-        out: bytes
-            The raw output from an HTTP request
+        out : Response
+            The raw output from an HTTP request.
+
+        Returns
+        -------
+        bool
         """
         try:
             content = json.loads(out.text)
@@ -77,20 +118,18 @@ class IEX(_BaseReader):
             if key == "error":
                 raise Exception(e)
 
-    def _read_lines(self, out):
-        """IEX's output does not need anything complex, so we're overriding to
-        use Pandas' default interpreter
+    def _read_lines(self, out: list | dict) -> pd.DataFrame:
+        """Parse IEX JSON response.
 
         Parameters
         ----------
-        out: bytes
-            The raw output from an HTTP request
+        out : list or dict
+            Parsed JSON response.
 
         Returns
         -------
         DataFrame
         """
-
         # IEX will return a blank line for invalid tickers:
         if isinstance(out, list):
             out = [x for x in out if x is not None]
