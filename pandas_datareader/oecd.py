@@ -36,9 +36,9 @@ class OECDReader(_BaseReader):
         df = read_jsdmx(out)
         try:
             idx_name = df.index.name  # hack for pandas 0.16.2
-            df.index = pd.to_datetime(df.index, errors="ignore")
+            df.index = pd.to_datetime(df.index, errors="coerce")
             for col in df:
-                df[col] = pd.to_numeric(df[col], errors="ignore")
+                df[col] = pd.to_numeric(df[col], errors="coerce")
             df = df.sort_index()
             df = df.truncate(self.start, self.end)
             df.index.name = idx_name

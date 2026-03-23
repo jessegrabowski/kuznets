@@ -668,7 +668,7 @@ class WorldBankReader(_BaseReader):
             out = reduce(lambda x, y: x.merge(y, how="outer"), data)
             out = out.drop("iso_code", axis=1)
             out = out.set_index(["country", "year"])
-            out = out.apply(pd.to_numeric, errors="ignore")
+            out = out.apply(pd.to_numeric, errors="coerce")
 
             return out
         else:
@@ -706,7 +706,7 @@ class WorldBankReader(_BaseReader):
         year = [x["date"] for x in data]
         value = [x["value"] for x in data]
         # Prepare output
-        df = pd.DataFrame([country, iso_code, year, value]).T
+        df = pd.DataFrame({"country": country, "iso_code": iso_code, "year": year, "value": value})
         return df
 
     def get_countries(self) -> pd.DataFrame:

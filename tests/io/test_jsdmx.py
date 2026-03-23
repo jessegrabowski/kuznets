@@ -163,7 +163,6 @@ def test_quartervalue(dirpath):
             "2011-07-01",
             "2011-10-01",
         ],
-        dtype="datetime64[ns]",
         name="Period",
         freq=None,
     )

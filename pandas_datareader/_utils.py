@@ -38,11 +38,9 @@ def _sanitize_dates(
     if is_number(start):
         # regard int as year
         start = dt.datetime(start, 1, 1)
-    start = to_datetime(start)
 
     if is_number(end):
         end = dt.datetime(end, 1, 1)
-    end = to_datetime(end)
 
     if start is None:
         # default to 5 years before today
