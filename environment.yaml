@@ -6,7 +6,7 @@ dependencies:
   # Runtime
   - python>=3.12
   - lxml
-  - pandas
+  - pandas>=3.0
   - requests
 
   # Dev / testing
@@ -15,7 +15,7 @@ dependencies:
   - coverage
   - codecov
   - coveralls
-  - pytest>=7.3.0,<8
+  - pytest
   - pytest-xdist
   - pytest-cov
   - wrapt

@@ -14,8 +14,8 @@ authors = [
 ]
 dependencies = [
     "lxml",
-    "pandas>=1.5.3",
-    "requests>=2.19.0",
+    "pandas>=3.0",
+    "requests",
 ]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
@@ -100,7 +100,7 @@ docstring-code-format = true
 [tool.pytest.ini_options]
 minversion = "6.0"
 addopts = "-ra -q"
-testpaths = ["pandas_datareader"]
+testpaths = ["tests"]
 markers = [
     "stable: mark a test as applying to a stable reader",
     "requires_api_key: mark a test as requiring an API key",
