@@ -5,35 +5,36 @@ from pandas_datareader.base import _BaseReader
 
 class EcondbReader(_BaseReader):
     """
-    Returns DataFrame of historical stock prices from symbol, over date
-    range, start to end.
+    Get data from the EconDB API.
 
     .. versionadded:: 0.5.0
 
     Parameters
     ----------
-    symbols : string
+    symbols : str
         Can be in two different formats:
-        1. 'ticker=<code>' for fetching a single series,
-        where <code> is CPIUS for, e.g. the series at
-        https://www.econdb.com/series/CPIUS/
-        2. 'dataset=<dataset>&<params>' for fetching full
-        or filtered subset of a dataset, like the one at
-        https://www.econdb.com/dataset/ABS_GDP. After choosing the desired filters,
-        the correctly formatted query string can be easily generated
-        from that dataset's page by using the Export function, and choosing Pandas Python3.
-    start : string, int, date, datetime, Timestamp
-        Starting date. Parses many different kind of date
-        representations (e.g., 'JAN-01-2010', '1/1/10', 'Jan, 1, 1980')
-    end : string, int, date, datetime, Timestamp
-        Ending date
+
+        1. ``'ticker=<code>'`` for fetching a single series, where ``<code>``
+           is, e.g., ``CPIUS`` for the series at
+           https://www.econdb.com/series/CPIUS/
+        2. ``'dataset=<dataset>&<params>'`` for fetching a full or filtered
+           subset of a dataset, like the one at
+           https://www.econdb.com/dataset/ABS_GDP. After choosing the desired
+           filters, the correctly formatted query string can be easily generated
+           from that dataset's page by using the Export function and choosing
+           Pandas Python3.
+    start : str, int, date, datetime, or Timestamp, optional
+        Starting date.
+    end : str, int, date, datetime, or Timestamp, optional
+        Ending date.
     retry_count : int, default 3
         Number of times to retry query request.
-    pause : int, default 0.1
-        Time, in seconds, to pause between consecutive queries of chunks. If
-        single value given for symbol, represents the pause between retries.
-    session : Session, default None
-        requests.sessions.Session instance to be used
+    pause : float, default 0.1
+        Time, in seconds, to pause between consecutive queries of chunks.
+    session : Session, optional
+        ``requests.sessions.Session`` instance to be used.
+    freq : str, optional
+        Not used.
     """
 
     _URL = "https://www.econdb.com/api/series/"
@@ -42,14 +43,14 @@ class EcondbReader(_BaseReader):
 
     def __init__(
         self,
-        symbols,
+        symbols: str,
         start=None,
         end=None,
-        retry_count=3,
-        pause=0.1,
+        retry_count: int = 3,
+        pause: float = 0.1,
         session=None,
-        freq=None,
-    ):
+        freq: str | None = None,
+    ) -> None:
         super().__init__(
             symbols=symbols,
             start=start,
@@ -66,15 +67,20 @@ class EcondbReader(_BaseReader):
             self.end = pd.to_datetime(params["to"], format="%Y-%m-%d")
 
     @property
-    def url(self):
-        """API URL"""
+    def url(self) -> str:
+        """API URL."""
         if not isinstance(self.symbols, str):
             raise ValueError("data name must be string")
 
         return f"{self._URL}?{self.symbols}&format=json&page_size=500&expand=both"
 
-    def read(self):
-        """read one data from specified URL"""
+    def read(self) -> pd.DataFrame:
+        """Read one data from specified URL.
+
+        Returns
+        -------
+        DataFrame
+        """
         results = self.session.get(self.url).json()["results"]
         df = pd.DataFrame({"dates": []}).set_index("dates")
 

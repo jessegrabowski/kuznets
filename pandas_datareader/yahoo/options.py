@@ -22,43 +22,15 @@ def _parse_options_data(jd):
 
 class Options(_OptionBaseReader):
     """
-    ***Experimental***
-    This class fetches call/put data for a given stock/expiry month.
+    **Experimental.** Fetches call/put data for a given stock/expiry month.
 
-    It is instantiated with a string representing the ticker symbol.
-
-    The class has the following methods:
-        get_options_data(month, year, expiry)
-        get_call_data(month, year, expiry)
-        get_put_data(month, year, expiry)
-        get_near_stock_price(opt_frame, above_below)
-        get_all_data(call, put)
-        get_forward_data(months, call, put) (deprecated)
+    Instantiate with a ticker symbol string.
 
     Examples
     --------
-    # Instantiate object with ticker
     >>> aapl = Options("aapl")
-
-    # Fetch next expiry call data
     >>> calls = aapl.get_call_data()
-
-    # Can now access aapl.calls instance variable
-    >>> aapl.calls
-
-    # Fetch next expiry put data
     >>> puts = aapl.get_put_data()
-
-    # Can now access aapl.puts instance variable
-    >>> aapl.puts
-
-    # cut down the call data to be 3 below and 3 above the stock price.
-    >>> cut_calls = aapl.get_near_stock_price(call=True, above_below=3)
-
-    # Fetch call and put data with expiry from now to 8 months out
-    >>> forward_data = aapl.get_forward_data(8, call=True, put=True)
-
-    # Fetch all call and put data
     >>> all_data = aapl.get_all_data()
     """
 

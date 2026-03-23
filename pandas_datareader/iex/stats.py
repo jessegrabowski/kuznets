@@ -13,11 +13,21 @@ from pandas_datareader.iex import IEX
 
 
 class DailySummaryReader(IEX):
-    """
-    Daily statistics from IEX for a day or month
+    """Daily statistics from IEX for a day or month.
+
+    .. warning::
+       Daily statistics is not working due to issues with the IEX API.
     """
 
-    def __init__(self, symbols=None, start=None, end=None, retry_count=3, pause=0.1, session=None):
+    def __init__(
+        self,
+        symbols: str | list[str] | None = None,
+        start=None,
+        end=None,
+        retry_count: int = 3,
+        pause: float = 0.1,
+        session=None,
+    ) -> None:
         import warnings
 
         warnings.warn(
@@ -36,24 +46,28 @@ class DailySummaryReader(IEX):
         )
 
     @property
-    def service(self):
-        """Service endpoint"""
+    def service(self) -> str:
+        """Service endpoint."""
         return "stats/historical/daily"
 
-    def _get_params(self, symbols):
-        p = {}
+    def _get_params(self, symbols: str | list[str] | None) -> dict:
+        """Build query parameters.
 
+        Returns
+        -------
+        dict
+        """
+        p = {}
         if self.curr_date is not None:
             p["date"] = self.curr_date.strftime("%Y%m%d")
-
         return p
 
-    def read(self):
-        """Unfortunately, IEX's API can only retrieve data one day or one month
-        at a time. Rather than specifying a date range, we will have to run
-        the read function for each date provided.
+    def read(self) -> pd.DataFrame:
+        """Read daily statistics for each date in the range.
 
-        :return: DataFrame
+        Returns
+        -------
+        DataFrame
         """
         tlen = self.end - self.start
         dfs = []
@@ -65,12 +79,19 @@ class DailySummaryReader(IEX):
 
 
 class MonthlySummaryReader(IEX):
-    """Monthly statistics from IEX"""
+    """Monthly statistics from IEX."""
 
-    def __init__(self, symbols=None, start=None, end=None, retry_count=3, pause=0.1, session=None):
+    def __init__(
+        self,
+        symbols: str | list[str] | None = None,
+        start=None,
+        end=None,
+        retry_count: int = 3,
+        pause: float = 0.1,
+        session=None,
+    ) -> None:
         self.curr_date = start
         self.date_format = "%Y%m"
-
         super().__init__(
             symbols=symbols,
             start=start,
@@ -81,24 +102,28 @@ class MonthlySummaryReader(IEX):
         )
 
     @property
-    def service(self):
-        """Service endpoint"""
+    def service(self) -> str:
+        """Service endpoint."""
         return "stats/historical"
 
-    def _get_params(self, symbols):
-        p = {}
+    def _get_params(self, symbols: str | list[str] | None) -> dict:
+        """Build query parameters.
 
+        Returns
+        -------
+        dict
+        """
+        p = {}
         if self.curr_date is not None:
             p["date"] = self.curr_date.strftime(self.date_format)
-
         return p
 
-    def read(self):
-        """Unfortunately, IEX's API can only retrieve data one day or one month
-         at a time. Rather than specifying a date range, we will have to run
-         the read function for each date provided.
+    def read(self) -> pd.DataFrame:
+        """Read monthly statistics for each month in the range.
 
-        :return: DataFrame
+        Returns
+        -------
+        DataFrame
         """
         tlen = self.end - self.start
         dfs = []
@@ -126,11 +151,17 @@ class MonthlySummaryReader(IEX):
 
 
 class RecordsReader(IEX):
-    """
-    Total matched volume information from IEX
-    """
+    """Total matched volume information from IEX."""
 
-    def __init__(self, symbols=None, start=None, end=None, retry_count=3, pause=0.1, session=None):
+    def __init__(
+        self,
+        symbols: str | list[str] | None = None,
+        start=None,
+        end=None,
+        retry_count: int = 3,
+        pause: float = 0.1,
+        session=None,
+    ) -> None:
         super().__init__(
             symbols=symbols,
             start=start,
@@ -141,17 +172,23 @@ class RecordsReader(IEX):
         )
 
     @property
-    def service(self):
-        """Service endpoint"""
+    def service(self) -> str:
+        """Service endpoint."""
         return "stats/records"
 
-    def _get_params(self, symbols):
-        # Record Stats API does not take any parameters, returning empty dict
+    def _get_params(self, symbols: str | list[str] | None) -> dict:
+        """Record Stats API does not take any parameters.
+
+        Returns
+        -------
+        dict
+            Empty dict.
+        """
         return {}
 
 
 class RecentReader(IEX):
-    """Recent trading volume from IEX
+    """Recent trading volume from IEX.
 
     Notes
     -----
@@ -169,7 +206,15 @@ class RecentReader(IEX):
         (single-counted).
     """
 
-    def __init__(self, symbols=None, start=None, end=None, retry_count=3, pause=0.1, session=None):
+    def __init__(
+        self,
+        symbols: str | list[str] | None = None,
+        start=None,
+        end=None,
+        retry_count: int = 3,
+        pause: float = 0.1,
+        session=None,
+    ) -> None:
         super().__init__(
             symbols=symbols,
             start=start,
@@ -180,10 +225,16 @@ class RecentReader(IEX):
         )
 
     @property
-    def service(self):
-        """Service endpoint"""
+    def service(self) -> str:
+        """Service endpoint."""
         return "stats/recent"
 
-    def _get_params(self, symbols):
-        # Record Stats API does not take any parameters, returning empty dict
+    def _get_params(self, symbols: str | list[str] | None) -> dict:
+        """Recent Stats API does not take any parameters.
+
+        Returns
+        -------
+        dict
+            Empty dict.
+        """
         return {}

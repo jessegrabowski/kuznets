@@ -16,46 +16,41 @@ from pandas_datareader.base import _DailyBaseReader
 
 class IEXDailyReader(_DailyBaseReader):
     """
-    Returns DataFrame of historical stock prices
-    from symbols, over date range, start to end. To avoid being penalized by
-    IEX servers, pauses between downloading 'chunks' of symbols can be
-    specified.
+    Get historical stock prices from IEX Cloud.
 
     Parameters
     ----------
-    symbols : string, array-like object (list, tuple, Series), or DataFrame
-        Single stock symbol (ticker), array-like object of symbols or
-        DataFrame with index containing stock symbols.
-    start : string, int, date, datetime, Timestamp
-        Starting date. Parses many different kind of date
-        representations (e.g., 'JAN-01-2010', '1/1/10', 'Jan, 1, 1980'). Defaults to
-        15 years before current date
-    end : string, int, date, datetime, Timestamp
-        Ending date
+    symbols : str, list of str, or DataFrame, optional
+        Single stock symbol (ticker), list of symbols, or DataFrame with
+        index containing stock symbols.
+    start : str, int, date, datetime, or Timestamp, optional
+        Starting date. Defaults to 15 years before current date.
+    end : str, int, date, datetime, or Timestamp, optional
+        Ending date.
     retry_count : int, default 3
         Number of times to retry query request.
-    pause : int, default 0.1
-        Time, in seconds, to pause between consecutive queries of chunks. If
-        single value given for symbol, represents the pause between retries.
+    pause : float, default 0.1
+        Time, in seconds, to pause between consecutive queries.
+    session : Session, optional
+        ``requests.sessions.Session`` instance to be used.
     chunksize : int, default 25
-        Number of symbols to download consecutively before intiating pause.
-    session : Session, default None
-        requests.sessions.Session instance to be used
-    api_key: str
-        IEX Cloud Secret Token
+        Number of symbols to download consecutively before initiating pause.
+    api_key : str, optional
+        IEX Cloud Secret Token. If not provided the environmental variable
+        ``IEX_API_KEY`` is read. The API key is *required*.
     """
 
     def __init__(
         self,
-        symbols=None,
+        symbols: str | list[str] | None = None,
         start=None,
         end=None,
-        retry_count=3,
-        pause=0.1,
+        retry_count: int = 3,
+        pause: float = 0.1,
         session=None,
-        chunksize=25,
-        api_key=None,
-    ):
+        chunksize: int = 25,
+        api_key: str | None = None,
+    ) -> None:
         if api_key is None:
             api_key = os.getenv("IEX_API_KEY")
         if not api_key or not isinstance(api_key, str):
@@ -81,24 +76,36 @@ class IEXDailyReader(_DailyBaseReader):
         )
 
     @property
-    def default_start_date(self):
+    def default_start_date(self) -> datetime.date:
+        """Default start date (15 years before today)."""
         today = datetime.date.today()
         return today - datetime.timedelta(days=365 * 15)
 
     @property
-    def url(self):
-        """API URL"""
+    def url(self) -> str:
+        """API URL."""
         if self.sandbox is True:
             return "https://sandbox.iexapis.com/stable/stock/market/batch"
         else:
             return "https://cloud.iexapis.com/stable/stock/market/batch"
 
     @property
-    def endpoint(self):
-        """API endpoint"""
+    def endpoint(self) -> str:
+        """API endpoint."""
         return "chart"
 
-    def _get_params(self, symbol):
+    def _get_params(self, symbol: str | list[str]) -> dict:
+        """Build query parameters for an API call.
+
+        Parameters
+        ----------
+        symbol : str or list of str
+            Ticker symbol(s).
+
+        Returns
+        -------
+        dict
+        """
         chart_range = self._range_string_from_date()
         if isinstance(symbol, list):
             symbolList = ",".join(symbol)
@@ -112,7 +119,15 @@ class IEXDailyReader(_DailyBaseReader):
         }
         return params
 
-    def _range_string_from_date(self):
+    def _range_string_from_date(self) -> str:
+        """Convert start date into an IEX-compatible range string.
+
+        Returns
+        -------
+        str
+            One of ``"5d"``, ``"1m"``, ``"3m"``, ``"6m"``, ``"1y"``,
+            ``"2y"``, ``"5y"``, or ``"max"``.
+        """
         delta = relativedelta(self.start, datetime.datetime.now())
         years = delta.years * -1
         if 5 <= years <= 15:
@@ -136,14 +151,30 @@ class IEXDailyReader(_DailyBaseReader):
         else:
             raise ValueError("Invalid date specified. Must be within past 15 years.")
 
-    def read(self):
-        """Read data"""
+    def read(self) -> pd.DataFrame:
+        """Read data from IEX Cloud.
+
+        Returns
+        -------
+        DataFrame
+        """
         try:
             return self._read_one_data(self.url, self._get_params(self.symbols))
         finally:
             self.close()
 
-    def _read_lines(self, out):
+    def _read_lines(self, out) -> pd.DataFrame:
+        """Parse IEX Cloud JSON response.
+
+        Parameters
+        ----------
+        out : StringIO
+            Raw response content.
+
+        Returns
+        -------
+        DataFrame
+        """
         data = out.read()
         json_data = json.loads(data)
         result = {}

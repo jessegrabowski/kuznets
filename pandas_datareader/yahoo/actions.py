@@ -6,12 +6,18 @@ from pandas_datareader.yahoo.daily import YahooDailyReader
 
 class YahooActionReader(YahooDailyReader):
     """
-    Returns DataFrame of historical corporate actions (dividends and stock
-    splits) from symbols, over date range, start to end. All dates in the
-    resulting DataFrame correspond with dividend and stock split ex-dates.
+    Get historical corporate actions (dividends and stock splits) from Yahoo
+    Finance. All dates correspond with dividend and stock split ex-dates.
     """
 
-    def read(self):
+    def read(self) -> DataFrame | dict[str, DataFrame]:
+        """Read action data.
+
+        Returns
+        -------
+        DataFrame or dict of str to DataFrame
+            If multiple symbols, returns a dict keyed by symbol.
+        """
         data = super().read()
         actions = {}
         if isinstance(data.columns, MultiIndex):
@@ -23,11 +29,23 @@ class YahooActionReader(YahooDailyReader):
             return _get_one_action(data)
 
     @property
-    def get_actions(self):
+    def get_actions(self) -> bool:
+        """Always True for action reader."""
         return True
 
 
-def _get_one_action(data):
+def _get_one_action(data: DataFrame) -> DataFrame:
+    """Extract actions (dividends and splits) from a single-symbol DataFrame.
+
+    Parameters
+    ----------
+    data : DataFrame
+        DataFrame with optional ``'Dividends'`` and ``'Splits'`` columns.
+
+    Returns
+    -------
+    DataFrame
+    """
     actions = DataFrame(columns=["action", "value"])
 
     if "Dividends" in data.columns:
@@ -50,12 +68,28 @@ def _get_one_action(data):
 
 
 class YahooDivReader(YahooActionReader):
-    def read(self):
+    """Get historical dividend data from Yahoo Finance."""
+
+    def read(self) -> DataFrame:
+        """Read dividend data only.
+
+        Returns
+        -------
+        DataFrame
+        """
         data = super().read()
         return data[data["action"] == "DIVIDEND"]
 
 
 class YahooSplitReader(YahooActionReader):
-    def read(self):
+    """Get historical stock split data from Yahoo Finance."""
+
+    def read(self) -> DataFrame:
+        """Read split data only.
+
+        Returns
+        -------
+        DataFrame
+        """
         data = super().read()
         return data[data["action"] == "SPLIT"]

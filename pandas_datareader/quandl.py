@@ -1,61 +1,61 @@
 import os
 import re
 
+from pandas import DataFrame
+
 from pandas_datareader.base import _DailyBaseReader
 
 
 class QuandlReader(_DailyBaseReader):
     """
-    Returns DataFrame of historical stock prices from symbol, over date
-    range, start to end.
+    Get historical stock prices from Quandl.
 
     .. versionadded:: 0.5.0
 
     Parameters
     ----------
-    symbols : string
+    symbols : str
         Possible formats:
-        1. DB/SYM: The Quandl 'codes': DB is the database name,
-        SYM is a ticker-symbol-like Quandl abbreviation
-        for a particular security.
-        2. SYM.CC: SYM is the same symbol and CC is an ISO country code,
-        will try to map to the best single Quandl database for that country.
-        Beware of ambiguous symbols (different securities per country)!
-        Note: Cannot use more than a single string because of the inflexible
-        way the URL is composed of url and _get_params in the superclass
-    start : string, int, date, datetime, Timestamp
-        Starting date. Parses many different kind of date
-        representations (e.g., 'JAN-01-2010', '1/1/10', 'Jan, 1, 1980'). Defaults to
-        20 years before current date.
-    end : string, int, date, datetime, Timestamp
-        Ending date
+
+        1. ``DB/SYM`` — the Quandl "codes": ``DB`` is the database name,
+           ``SYM`` is a ticker-symbol-like Quandl abbreviation for a
+           particular security.
+        2. ``SYM.CC`` — ``SYM`` is the same symbol and ``CC`` is an ISO
+           country code.  Will try to map to the best single Quandl database
+           for that country.  Beware of ambiguous symbols (different securities
+           per country)!
+
+        Only a single string is accepted.
+    start : str, int, date, datetime, or Timestamp, optional
+        Starting date. Defaults to 20 years before current date.
+    end : str, int, date, datetime, or Timestamp, optional
+        Ending date.
     retry_count : int, default 3
         Number of times to retry query request.
-    pause : int, default 0.1
-        Time, in seconds, to pause between consecutive queries of chunks. If
-        single value given for symbol, represents the pause between retries.
+    pause : float, default 0.1
+        Time, in seconds, to pause between consecutive queries of chunks.
     chunksize : int, default 25
         Number of symbols to download consecutively before initiating pause.
-    session : Session, default None
-        requests.sessions.Session instance to be used
+    session : Session, optional
+        ``requests.sessions.Session`` instance to be used.
     api_key : str, optional
-        Quandl API key . If not provided the environmental variable
-        QUANDL_API_KEY is read. The API key is *required*.
+        Quandl API key. If not provided the environmental variable
+        ``QUANDL_API_KEY`` is read. The API key is *required*.
     """
 
     _BASE_URL = "https://www.quandl.com/api/v3/datasets/"
 
     def __init__(
         self,
-        symbols,
+        symbols: str,
         start=None,
         end=None,
-        retry_count=3,
-        pause=0.1,
+        retry_count: int = 3,
+        pause: float = 0.1,
         session=None,
-        chunksize=25,
-        api_key=None,
-    ):
+        chunksize: int = 25,
+        api_key: str | None = None,
+    ) -> None:
         super().__init__(symbols, start, end, retry_count, pause, session, chunksize)
         if api_key is None:
             api_key = os.getenv("QUANDL_API_KEY")
@@ -68,8 +68,8 @@ class QuandlReader(_DailyBaseReader):
         self.api_key = api_key
 
     @property
-    def url(self):
-        """API URL"""
+    def url(self) -> str:
+        """API URL."""
         symbol = self.symbols if isinstance(self.symbols, str) else self.symbols[0]
         mm = self._fullmatch(r"([A-Z0-9]+)(([/\.])([A-Z0-9_]+))?", symbol)
         assert mm, f"Symbol '{symbol}' must conform to Quandl convention 'DB/SYM'"
@@ -95,8 +95,22 @@ class QuandlReader(_DailyBaseReader):
         url = "{url}{dataset}/{symbol}.csv?{params}"
         return url.format(url=self._BASE_URL, dataset=datasetname, symbol=symbol, params=paramstring)
 
-    def _fullmatch(self, regex, string, flags=0):
-        """Emulate python-3.4 re.fullmatch()."""
+    def _fullmatch(self, regex: str, string: str, flags: int = 0) -> re.Match | None:
+        """Emulate python-3.4 ``re.fullmatch()``.
+
+        Parameters
+        ----------
+        regex : str
+            Regular expression pattern.
+        string : str
+            String to match.
+        flags : int, default 0
+            Regex flags.
+
+        Returns
+        -------
+        Match or None
+        """
         return re.match("(?:" + regex + r")\Z", string, flags=flags)
 
     _COUNTRYCODE_TO_DATASET = {
@@ -119,15 +133,45 @@ class QuandlReader(_DailyBaseReader):
         "US": "WIKI",
     }
 
-    def _db_from_countrycode(self, code):
+    def _db_from_countrycode(self, code: str) -> str:
+        """Map an ISO country code to a Quandl dataset name.
+
+        Parameters
+        ----------
+        code : str
+            Two-letter ISO country code.
+
+        Returns
+        -------
+        str
+            Quandl dataset name.
+        """
         assert code in self._COUNTRYCODE_TO_DATASET, f"No Quandl dataset known for country code '{code}'"
         return self._COUNTRYCODE_TO_DATASET[code]
 
-    def _get_params(self, symbol):
+    def _get_params(self, symbol: str) -> dict:
+        """Return parameters for an API call (unused, URL contains params).
+
+        Parameters
+        ----------
+        symbol : str
+            Ticker symbol.
+
+        Returns
+        -------
+        dict
+            Empty dict.
+        """
         return {}
 
-    def read(self):
-        """Read data"""
+    def read(self) -> DataFrame:
+        """Read data from Quandl.
+
+        Returns
+        -------
+        DataFrame
+            Columns are cleaned (whitespace, punctuation removed).
+        """
         df = super().read()
         df.rename(
             columns=lambda n: n.replace(" ", "")
