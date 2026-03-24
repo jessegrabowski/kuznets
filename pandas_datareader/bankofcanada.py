@@ -40,7 +40,7 @@ class BankOfCanadaReader(_BaseReader):
 
         Returns
         -------
-        str
+        cleaned : str
             Cleaned text between OBSERVATIONS and ERRORS sections.
         """
         data = response.text.split("OBSERVATIONS")[1]

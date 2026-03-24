@@ -48,7 +48,7 @@ class YahooQuotesReader(_BaseReader):
 
         Returns
         -------
-        DataFrame
+        df : DataFrame
         """
         if isinstance(self.symbols, str):
             return self._read_one_data(self.url, self.params(self.symbols))
@@ -68,7 +68,7 @@ class YahooQuotesReader(_BaseReader):
 
         Returns
         -------
-        dict
+        result : dict
         """
         params = {"symbols": symbol}
         params.update(_DEFAULT_PARAMS)
@@ -84,7 +84,7 @@ class YahooQuotesReader(_BaseReader):
 
         Returns
         -------
-        DataFrame
+        df : DataFrame
         """
         data = json.loads(out.read())["quoteResponse"]["result"][0]
         idx = data.pop("symbol")

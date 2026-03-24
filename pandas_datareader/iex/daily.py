@@ -15,30 +15,7 @@ from pandas_datareader.base import _DailyBaseReader
 
 
 class IEXDailyReader(_DailyBaseReader):
-    """
-    Get historical stock prices from IEX Cloud.
-
-    Parameters
-    ----------
-    symbols : str, list of str, or DataFrame, optional
-        Single stock symbol (ticker), list of symbols, or DataFrame with
-        index containing stock symbols.
-    start : str, int, date, datetime, or Timestamp, optional
-        Starting date. Defaults to 15 years before current date.
-    end : str, int, date, datetime, or Timestamp, optional
-        Ending date.
-    retry_count : int, default 3
-        Number of times to retry query request.
-    pause : float, default 0.1
-        Time, in seconds, to pause between consecutive queries.
-    session : Session, optional
-        ``requests.sessions.Session`` instance to be used.
-    chunksize : int, default 25
-        Number of symbols to download consecutively before initiating pause.
-    api_key : str, optional
-        IEX Cloud Secret Token. If not provided the environmental variable
-        ``IEX_API_KEY`` is read. The API key is *required*.
-    """
+    """Get historical stock prices from IEX Cloud."""
 
     def __init__(
         self,
@@ -51,6 +28,30 @@ class IEXDailyReader(_DailyBaseReader):
         chunksize: int = 25,
         api_key: str | None = None,
     ) -> None:
+        """
+        Initialize the reader.
+
+        Parameters
+        ----------
+        symbols : str, list of str, or DataFrame, optional
+            Single stock symbol (ticker), list of symbols, or DataFrame with index containing stock
+            symbols.
+        start : str, int, date, datetime, or Timestamp, optional
+            Starting date. Defaults to 15 years before current date.
+        end : str, int, date, datetime, or Timestamp, optional
+            Ending date.
+        retry_count : int, default 3
+            Number of times to retry query request.
+        pause : float, default 0.1
+            Time, in seconds, to pause between consecutive queries.
+        session : Session, optional
+            ``requests.sessions.Session`` instance to be used.
+        chunksize : int, default 25
+            Number of symbols to download consecutively before initiating pause.
+        api_key : str, optional
+            IEX Cloud Secret Token. If not provided the environmental variable ``IEX_API_KEY`` is
+            read. The API key is *required*.
+        """
         if api_key is None:
             api_key = os.getenv("IEX_API_KEY")
         if not api_key or not isinstance(api_key, str):
@@ -104,7 +105,7 @@ class IEXDailyReader(_DailyBaseReader):
 
         Returns
         -------
-        dict
+        params : dict
         """
         chart_range = self._range_string_from_date()
         if isinstance(symbol, list):
@@ -124,9 +125,9 @@ class IEXDailyReader(_DailyBaseReader):
 
         Returns
         -------
-        str
-            One of ``"5d"``, ``"1m"``, ``"3m"``, ``"6m"``, ``"1y"``,
-            ``"2y"``, ``"5y"``, or ``"max"``.
+        range_str : str
+            One of ``"5d"``, ``"1m"``, ``"3m"``, ``"6m"``, ``"1y"``, ``"2y"``, ``"5y"``, or
+            ``"max"``.
         """
         delta = relativedelta(self.start, datetime.datetime.now())
         years = delta.years * -1
@@ -156,7 +157,7 @@ class IEXDailyReader(_DailyBaseReader):
 
         Returns
         -------
-        DataFrame
+        df : DataFrame
         """
         try:
             return self._read_one_data(self.url, self._get_params(self.symbols))
@@ -173,7 +174,7 @@ class IEXDailyReader(_DailyBaseReader):
 
         Returns
         -------
-        DataFrame
+        df : DataFrame
         """
         data = out.read()
         json_data = json.loads(data)

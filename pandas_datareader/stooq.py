@@ -2,31 +2,7 @@ from pandas_datareader.base import _DailyBaseReader
 
 
 class StooqDailyReader(_DailyBaseReader):
-    """
-    Get historical stock prices from Stooq.
-
-    Parameters
-    ----------
-    symbols : str, list of str, or DataFrame
-        Single stock symbol (ticker), list of symbols, or DataFrame with
-        index containing stock symbols.
-    start : str, int, date, datetime, or Timestamp, optional
-        Starting date. Defaults to 5 years before current date.
-    end : str, int, date, datetime, or Timestamp, optional
-        Ending date.
-    retry_count : int, default 3
-        Number of times to retry query request.
-    pause : float, default 0.1
-        Time, in seconds, to pause between consecutive queries of chunks.
-    chunksize : int, default 25
-        Number of symbols to download consecutively before initiating pause.
-    session : Session, optional
-        ``requests.sessions.Session`` instance to be used.
-
-    Notes
-    -----
-    See `Stooq <https://stooq.com>`__
-    """
+    """Get historical stock prices from Stooq."""
 
     @property
     def url(self) -> str:
@@ -45,7 +21,7 @@ class StooqDailyReader(_DailyBaseReader):
 
         Returns
         -------
-        dict
+        params : dict
         """
         symbol_parts = symbol.split(".")
         if not symbol.startswith("^"):

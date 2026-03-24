@@ -74,8 +74,8 @@ def test(extra_args=None):
     Parameters
     ----------
     extra_args : {str, List[str]}
-        A string or list of strings to pass to pytest. Default is
-        ["--only-stable", "--skip-requires-api-key"]
+        A string or list of strings to pass to pytest. Default is ["--only-stable",
+        "--skip-requires-api-key"]
     """
     try:
         import pytest

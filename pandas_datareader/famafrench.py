@@ -43,8 +43,8 @@ class FamaFrenchReader(_BaseReader):
     """
     Get data for the given name from the Fama/French data library.
 
-    For annual and monthly data, index is a pandas.PeriodIndex, otherwise
-    it's a pandas.DatetimeIndex.
+    For annual and monthly data, index is a pandas.PeriodIndex, otherwise it's a
+    pandas.DatetimeIndex.
     """
 
     @property
@@ -62,7 +62,8 @@ class FamaFrenchReader(_BaseReader):
 
         Returns
         -------
-        str
+        data : str
+            Contents of the first file in the archive.
         """
         raw = self._get_response(url).content
 
@@ -81,9 +82,9 @@ class FamaFrenchReader(_BaseReader):
 
         Returns
         -------
-        dict of int or str to DataFrame
-            A dictionary of DataFrames. Tables are accessed by integer keys.
-            See df['DESCR'] for a description of the data set.
+        datasets : dict of int or str to DataFrame
+            A dictionary of DataFrames. Tables are accessed by integer keys. See df['DESCR'] for a
+            description of the data set.
         """
         return super().read()
 

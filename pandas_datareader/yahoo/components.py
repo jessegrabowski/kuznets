@@ -8,18 +8,15 @@ _URL = "http://download.finance.yahoo.com/d/quotes.csv?"
 
 def _get_data(idx_sym):  # pragma: no cover
     """
-    Returns DataFrame containing list of component information for
-    index represented in idx_sym from yahoo. Includes component symbol
-    (ticker), exchange, and name.
+    Returns DataFrame containing list of component information for index represented in idx_sym from
+    yahoo. Includes component symbol (ticker), exchange, and name.
 
     Parameters
     ----------
     idx_sym : str
         Stock index symbol
         Examples:
-        '^DJI' (Dow Jones Industrial Average)
-        '^NYA' (NYSE Composite)
-        '^IXIC' (NASDAQ Composite)
+        '^DJI' (Dow Jones Industrial Average) '^NYA' (NYSE Composite) '^IXIC' (NASDAQ Composite)
 
         See: http://finance.yahoo.com/indices for other index symbols
 

@@ -31,7 +31,7 @@ class OECDReader(_BaseReader):
 
         Returns
         -------
-        DataFrame
+        df : DataFrame
         """
         df = read_jsdmx(out)
         try:

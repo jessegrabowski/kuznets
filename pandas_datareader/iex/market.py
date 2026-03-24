@@ -13,8 +13,7 @@ class MarketReader(IEX):
 
     Notes
     -----
-    Market data is captured by the IEX system between approximately 7:45 a.m.
-    and 5:15 p.m. ET.
+    Market data is captured by the IEX system between approximately 7:45 a.m. and 5:15 p.m. ET.
     """
 
     def __init__(
@@ -45,7 +44,7 @@ class MarketReader(IEX):
 
         Returns
         -------
-        dict
+        params : dict
             Empty dict.
         """
         return {}

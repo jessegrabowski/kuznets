@@ -11,9 +11,8 @@ def get_tiingo_symbols() -> pd.DataFrame:
 
     Returns
     -------
-    DataFrame
-        DataFrame with symbols (ticker), exchange, asset type, currency and
-        start and end dates.
+    df : DataFrame
+        DataFrame with symbols (ticker), exchange, asset type, currency and start and end dates.
 
     Notes
     -----
@@ -24,36 +23,7 @@ def get_tiingo_symbols() -> pd.DataFrame:
 
 
 class TiingoIEXHistoricalReader(_BaseReader):
-    """
-    Historical IEX data from Tiingo on equities, ETFs and mutual funds.
-
-    This query is limited to the last 1,000 bars based on the *endDate*.
-    The *startDate* is moved automatically if it goes past the limit.
-
-    Parameters
-    ----------
-    symbols : str or list of str
-        String symbol or list of symbols.
-    start : str, int, date, datetime, or Timestamp, optional
-        Starting date. Defaults to 5 years before current date.
-    end : str, int, date, datetime, or Timestamp, optional
-        Ending date.
-    retry_count : int, default 3
-        Number of times to retry query request.
-    pause : float, default 0.1
-        Time, in seconds, of the pause between retries.
-    timeout : float, default 30
-        Time, in seconds, to wait for server response.
-    session : Session, optional
-        ``requests.sessions.Session`` instance to be used.
-    freq : str, optional
-        Re-sample frequency. Format is ``#`` + ``min`` or ``hour``; e.g.
-        ``"15min"`` or ``"4hour"``. Defaults to ``"5min"``. Minimum is
-        ``"1min"``.
-    api_key : str, optional
-        Tiingo API key. If not provided the environmental variable
-        ``TIINGO_API_KEY`` is read. The API key is *required*.
-    """
+    """Historical IEX data from Tiingo on equities, ETFs and mutual funds."""
 
     def __init__(
         self,
@@ -67,6 +37,32 @@ class TiingoIEXHistoricalReader(_BaseReader):
         freq: str | None = None,
         api_key: str | None = None,
     ) -> None:
+        """
+        Initialize the reader.
+
+        Parameters
+        ----------
+        symbols : str or list of str
+            String symbol or list of symbols.
+        start : str, int, date, datetime, or Timestamp, optional
+            Starting date. Defaults to 5 years before current date.
+        end : str, int, date, datetime, or Timestamp, optional
+            Ending date.
+        retry_count : int, default 3
+            Number of times to retry query request.
+        pause : float, default 0.1
+            Time, in seconds, of the pause between retries.
+        timeout : float, default 30
+            Time, in seconds, to wait for server response.
+        session : Session, optional
+            ``requests.sessions.Session`` instance to be used.
+        freq : str, optional
+            Re-sample frequency. Format is ``#`` + ``min`` or ``hour``; e.g. ``"15min"`` or
+            ``"4hour"``. Defaults to ``"5min"``. Minimum is ``"1min"``.
+        api_key : str, optional
+            Tiingo API key. If not provided the environmental variable ``TIINGO_API_KEY`` is read.
+            The API key is *required*.
+        """
         super().__init__(symbols, start, end, retry_count, pause, timeout, session, freq)
 
         if isinstance(self.symbols, str):
@@ -115,7 +111,7 @@ class TiingoIEXHistoricalReader(_BaseReader):
 
         Returns
         -------
-        DataFrame
+        df : DataFrame
         """
         headers = {
             "Content-Type": "application/json",
@@ -134,7 +130,7 @@ class TiingoIEXHistoricalReader(_BaseReader):
 
         Returns
         -------
-        DataFrame
+        df : DataFrame
         """
         df = pd.DataFrame(out)
         df["symbol"] = self._symbol
@@ -147,7 +143,7 @@ class TiingoIEXHistoricalReader(_BaseReader):
 
         Returns
         -------
-        DataFrame
+        df : DataFrame
         """
         dfs = []
         for symbol in self.symbols:
@@ -160,31 +156,7 @@ class TiingoIEXHistoricalReader(_BaseReader):
 
 
 class TiingoDailyReader(_BaseReader):
-    """
-    Historical daily data from Tiingo on equities, ETFs and mutual funds.
-
-    Parameters
-    ----------
-    symbols : str or list of str
-        String symbol or list of symbols.
-    start : str, int, date, datetime, or Timestamp, optional
-        Starting date. Default is 5 years before current date.
-    end : str, int, date, datetime, or Timestamp, optional
-        Ending date.
-    retry_count : int, default 3
-        Number of times to retry query request.
-    pause : float, default 0.1
-        Time, in seconds, of the pause between retries.
-    timeout : float, default 30
-        Time, in seconds, to wait for server response.
-    session : Session, optional
-        ``requests.sessions.Session`` instance to be used.
-    freq : str, optional
-        Not used.
-    api_key : str, optional
-        Tiingo API key. If not provided the environmental variable
-        ``TIINGO_API_KEY`` is read. The API key is *required*.
-    """
+    """Historical daily data from Tiingo on equities, ETFs and mutual funds."""
 
     def __init__(
         self,
@@ -198,6 +170,31 @@ class TiingoDailyReader(_BaseReader):
         freq: str | None = None,
         api_key: str | None = None,
     ) -> None:
+        """
+        Initialize the reader.
+
+        Parameters
+        ----------
+        symbols : str or list of str
+            String symbol or list of symbols.
+        start : str, int, date, datetime, or Timestamp, optional
+            Starting date. Default is 5 years before current date.
+        end : str, int, date, datetime, or Timestamp, optional
+            Ending date.
+        retry_count : int, default 3
+            Number of times to retry query request.
+        pause : float, default 0.1
+            Time, in seconds, of the pause between retries.
+        timeout : float, default 30
+            Time, in seconds, to wait for server response.
+        session : Session, optional
+            ``requests.sessions.Session`` instance to be used.
+        freq : str, optional
+            Not used.
+        api_key : str, optional
+            Tiingo API key. If not provided the environmental variable ``TIINGO_API_KEY`` is read.
+            The API key is *required*.
+        """
         super().__init__(symbols, start, end, retry_count, pause, timeout, session, freq)
         if isinstance(self.symbols, str):
             self.symbols = [self.symbols]
@@ -244,7 +241,7 @@ class TiingoDailyReader(_BaseReader):
 
         Returns
         -------
-        DataFrame
+        df : DataFrame
         """
         headers = {
             "Content-Type": "application/json",
@@ -263,7 +260,7 @@ class TiingoDailyReader(_BaseReader):
 
         Returns
         -------
-        DataFrame
+        df : DataFrame
         """
         df = pd.DataFrame(out)
         df["symbol"] = self._symbol
@@ -276,7 +273,7 @@ class TiingoDailyReader(_BaseReader):
 
         Returns
         -------
-        DataFrame
+        df : DataFrame
         """
         dfs = []
         for symbol in self.symbols:
@@ -289,31 +286,7 @@ class TiingoDailyReader(_BaseReader):
 
 
 class TiingoMetaDataReader(TiingoDailyReader):
-    """
-    Read metadata about symbols from Tiingo.
-
-    Parameters
-    ----------
-    symbols : str or list of str
-        String symbol or list of symbols.
-    start : str, int, date, datetime, or Timestamp, optional
-        Not used.
-    end : str, int, date, datetime, or Timestamp, optional
-        Not used.
-    retry_count : int, default 3
-        Number of times to retry query request.
-    pause : float, default 0.1
-        Time, in seconds, of the pause between retries.
-    timeout : float, default 30
-        Time, in seconds, to wait for server response.
-    session : Session, optional
-        ``requests.sessions.Session`` instance to be used.
-    freq : str, optional
-        Not used.
-    api_key : str, optional
-        Tiingo API key. If not provided the environmental variable
-        ``TIINGO_API_KEY`` is read. The API key is *required*.
-    """
+    """Read metadata about symbols from Tiingo."""
 
     def __init__(
         self,
@@ -327,6 +300,31 @@ class TiingoMetaDataReader(TiingoDailyReader):
         freq: str | None = None,
         api_key: str | None = None,
     ) -> None:
+        """
+        Initialize the reader.
+
+        Parameters
+        ----------
+        symbols : str or list of str
+            String symbol or list of symbols.
+        start : str, int, date, datetime, or Timestamp, optional
+            Not used.
+        end : str, int, date, datetime, or Timestamp, optional
+            Not used.
+        retry_count : int, default 3
+            Number of times to retry query request.
+        pause : float, default 0.1
+            Time, in seconds, of the pause between retries.
+        timeout : float, default 30
+            Time, in seconds, to wait for server response.
+        session : Session, optional
+            ``requests.sessions.Session`` instance to be used.
+        freq : str, optional
+            Not used.
+        api_key : str, optional
+            Tiingo API key. If not provided the environmental variable ``TIINGO_API_KEY`` is read.
+            The API key is *required*.
+        """
         super().__init__(symbols, start, end, retry_count, pause, timeout, session, freq, api_key)
         self._concat_axis = 1
 
@@ -351,7 +349,7 @@ class TiingoMetaDataReader(TiingoDailyReader):
 
         Returns
         -------
-        Series
+        df : Series
         """
         s = pd.Series(out)
         s.name = self._symbol
@@ -359,32 +357,7 @@ class TiingoMetaDataReader(TiingoDailyReader):
 
 
 class TiingoQuoteReader(TiingoDailyReader):
-    """
-    Read quotes (latest prices) from Tiingo.
-
-    This is a special case of the daily reader which automatically selects
-    the latest data available for each symbol.
-
-    Parameters
-    ----------
-    symbols : str or list of str
-        String symbol or list of symbols.
-    start : str, int, date, datetime, or Timestamp, optional
-        Not used.
-    end : str, int, date, datetime, or Timestamp, optional
-        Not used.
-    retry_count : int, default 3
-        Number of times to retry query request.
-    pause : float, default 0.1
-        Time, in seconds, of the pause between retries.
-    session : Session, optional
-        ``requests.sessions.Session`` instance to be used.
-    freq : str, optional
-        Not used.
-    api_key : str, optional
-        Tiingo API key. If not provided the environmental variable
-        ``TIINGO_API_KEY`` is read. The API key is *required*.
-    """
+    """Read quotes (latest prices) from Tiingo."""
 
     @property
     def params(self) -> None:

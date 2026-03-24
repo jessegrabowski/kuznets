@@ -7,41 +7,7 @@ from pandas_datareader.base import _DailyBaseReader
 
 
 class QuandlReader(_DailyBaseReader):
-    """
-    Get historical stock prices from Quandl.
-
-    .. versionadded:: 0.5.0
-
-    Parameters
-    ----------
-    symbols : str
-        Possible formats:
-
-        1. ``DB/SYM`` — the Quandl "codes": ``DB`` is the database name,
-           ``SYM`` is a ticker-symbol-like Quandl abbreviation for a
-           particular security.
-        2. ``SYM.CC`` — ``SYM`` is the same symbol and ``CC`` is an ISO
-           country code.  Will try to map to the best single Quandl database
-           for that country.  Beware of ambiguous symbols (different securities
-           per country)!
-
-        Only a single string is accepted.
-    start : str, int, date, datetime, or Timestamp, optional
-        Starting date. Defaults to 20 years before current date.
-    end : str, int, date, datetime, or Timestamp, optional
-        Ending date.
-    retry_count : int, default 3
-        Number of times to retry query request.
-    pause : float, default 0.1
-        Time, in seconds, to pause between consecutive queries of chunks.
-    chunksize : int, default 25
-        Number of symbols to download consecutively before initiating pause.
-    session : Session, optional
-        ``requests.sessions.Session`` instance to be used.
-    api_key : str, optional
-        Quandl API key. If not provided the environmental variable
-        ``QUANDL_API_KEY`` is read. The API key is *required*.
-    """
+    """Get historical stock prices from Quandl."""
 
     _BASE_URL = "https://www.quandl.com/api/v3/datasets/"
 
@@ -56,6 +22,37 @@ class QuandlReader(_DailyBaseReader):
         chunksize: int = 25,
         api_key: str | None = None,
     ) -> None:
+        """
+        Initialize the reader.
+
+        Parameters
+        ----------
+        symbols : str
+            Possible formats:
+
+            1. ``DB/SYM`` — the Quandl "codes": ``DB`` is the database name,
+               ``SYM`` is a ticker-symbol-like Quandl abbreviation for a particular security.
+            2. ``SYM.CC`` — ``SYM`` is the same symbol and ``CC`` is an ISO
+               country code. Will try to map to the best single Quandl database for that country.
+               Beware of ambiguous symbols (different securities per country)!
+
+            Only a single string is accepted.
+        start : str, int, date, datetime, or Timestamp, optional
+            Starting date. Defaults to 20 years before current date.
+        end : str, int, date, datetime, or Timestamp, optional
+            Ending date.
+        retry_count : int, default 3
+            Number of times to retry query request.
+        pause : float, default 0.1
+            Time, in seconds, to pause between consecutive queries of chunks.
+        chunksize : int, default 25
+            Number of symbols to download consecutively before initiating pause.
+        session : Session, optional
+            ``requests.sessions.Session`` instance to be used.
+        api_key : str, optional
+            Quandl API key. If not provided the environmental variable ``QUANDL_API_KEY`` is read.
+            The API key is *required*.
+        """
         super().__init__(symbols, start, end, retry_count, pause, session, chunksize)
         if api_key is None:
             api_key = os.getenv("QUANDL_API_KEY")
@@ -143,7 +140,7 @@ class QuandlReader(_DailyBaseReader):
 
         Returns
         -------
-        str
+        db : str
             Quandl dataset name.
         """
         assert code in self._COUNTRYCODE_TO_DATASET, f"No Quandl dataset known for country code '{code}'"
@@ -159,7 +156,7 @@ class QuandlReader(_DailyBaseReader):
 
         Returns
         -------
-        dict
+        params : dict
             Empty dict.
         """
         return {}
@@ -169,19 +166,21 @@ class QuandlReader(_DailyBaseReader):
 
         Returns
         -------
-        DataFrame
+        df : DataFrame
             Columns are cleaned (whitespace, punctuation removed).
         """
         df = super().read()
         df.rename(
-            columns=lambda n: n.replace(" ", "")
-            .replace(".", "")
-            .replace("/", "")
-            .replace("%", "")
-            .replace("(", "")
-            .replace(")", "")
-            .replace("'", "")
-            .replace("-", ""),
+            columns=lambda n: (
+                n.replace(" ", "")
+                .replace(".", "")
+                .replace("/", "")
+                .replace("%", "")
+                .replace("(", "")
+                .replace(")", "")
+                .replace("'", "")
+                .replace("-", "")
+            ),
             inplace=True,
         )
         return df

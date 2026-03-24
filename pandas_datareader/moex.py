@@ -8,34 +8,35 @@ from pandas_datareader.compat import is_list_like
 
 
 class MoexReader(_DailyBaseReader):
-    """
-    Get historical stock prices from the Moscow Exchange (MOEX).
-
-    Parameters
-    ----------
-    symbols : str, list of str, or DataFrame
-        A single stock symbol (secid), list of symbols, or a DataFrame
-        with an index containing stock symbols.
-    start : str, int, date, datetime, or Timestamp, optional
-        Starting date. Defaults to 20 years before current date.
-    end : str, int, date, datetime, or Timestamp, optional
-        Ending date.
-    retry_count : int, default 3
-        Number of times to retry query request.
-    pause : float, default 0.1
-        Time, in seconds, to pause between consecutive queries of chunks.
-    chunksize : int, default 25
-        Number of symbols to download consecutively before initiating pause.
-    session : Session, optional
-        ``requests.sessions.Session`` instance to be used.
-
-    Notes
-    -----
-    To avoid being penalized by MOEX servers, pauses more than 0.1s between
-    downloading 'chunks' of symbols can be specified.
-    """
+    """Get historical stock prices from the Moscow Exchange (MOEX)."""
 
     def __init__(self, *args, **kwargs):
+        """
+        Initialize the reader.
+
+        Parameters
+        ----------
+        symbols : str, list of str, or DataFrame
+            A single stock symbol (secid), list of symbols, or a DataFrame with an index containing
+            stock symbols.
+        start : str, int, date, datetime, or Timestamp, optional
+            Starting date. Defaults to 20 years before current date.
+        end : str, int, date, datetime, or Timestamp, optional
+            Ending date.
+        retry_count : int, default 3
+            Number of times to retry query request.
+        pause : float, default 0.1
+            Time, in seconds, to pause between consecutive queries of chunks.
+        chunksize : int, default 25
+            Number of symbols to download consecutively before initiating pause.
+        session : Session, optional
+            ``requests.sessions.Session`` instance to be used.
+
+        Notes
+        -----
+        To avoid being penalized by MOEX servers, pauses more than 0.1s between downloading 'chunks'
+        of symbols can be specified.
+        """
         super().__init__(*args, **kwargs)
         self.start = self.start.date()
         self.end_dt = self.end
@@ -134,7 +135,7 @@ class MoexReader(_DailyBaseReader):
 
         Returns
         -------
-        DataFrame
+        df : DataFrame
         """
         markets_n_engines, boards = self._get_metadata()
         try:
@@ -194,7 +195,7 @@ class MoexReader(_DailyBaseReader):
 
         Returns
         -------
-        DataFrame
+        df : DataFrame
         """
         markets_n_engines, boards = self._get_metadata()
         b = self.read_all_boards()
@@ -218,7 +219,7 @@ class MoexReader(_DailyBaseReader):
 
         Returns
         -------
-        str
+        text : str
         """
 
         response = self._get_response(url, params=params)
@@ -240,7 +241,7 @@ class MoexReader(_DailyBaseReader):
 
         Returns
         -------
-        DataFrame
+        df : DataFrame
         """
 
         return pd.read_csv(

@@ -13,24 +13,7 @@ from pandas_datareader.base import _BaseReader
 
 
 class IEX(_BaseReader):
-    """
-    Base class for all IEX API services.
-
-    Parameters
-    ----------
-    symbols : str or list of str, optional
-        String symbol or list of symbols.
-    start : str, int, date, datetime, or Timestamp, optional
-        Starting date.
-    end : str, int, date, datetime, or Timestamp, optional
-        Ending date.
-    retry_count : int, default 3
-        Number of times to retry query request.
-    pause : float, default 0.1
-        Time, in seconds, of the pause between retries.
-    session : Session, optional
-        ``requests.sessions.Session`` instance to be used.
-    """
+    """Base class for all IEX API services."""
 
     _format = "json"
 
@@ -43,6 +26,24 @@ class IEX(_BaseReader):
         pause: float = 0.1,
         session=None,
     ) -> None:
+        """
+        Initialize the reader.
+
+        Parameters
+        ----------
+        symbols : str or list of str, optional
+            String symbol or list of symbols.
+        start : str, int, date, datetime, or Timestamp, optional
+            Starting date.
+        end : str, int, date, datetime, or Timestamp, optional
+            Ending date.
+        retry_count : int, default 3
+            Number of times to retry query request.
+        pause : float, default 0.1
+            Time, in seconds, of the pause between retries.
+        session : Session, optional
+            ``requests.sessions.Session`` instance to be used.
+        """
         super().__init__(
             symbols=symbols,
             start=start,
@@ -68,7 +69,7 @@ class IEX(_BaseReader):
 
         Returns
         -------
-        DataFrame
+        df : DataFrame
         """
         df = super().read()
         if isinstance(df, pd.DataFrame):
@@ -87,7 +88,7 @@ class IEX(_BaseReader):
 
         Returns
         -------
-        dict
+        params : dict
         """
         p = {}
         if isinstance(symbols, list):
@@ -106,7 +107,7 @@ class IEX(_BaseReader):
 
         Returns
         -------
-        bool
+        stop : bool
         """
         try:
             content = json.loads(out.text)
@@ -128,7 +129,7 @@ class IEX(_BaseReader):
 
         Returns
         -------
-        DataFrame
+        df : DataFrame
         """
         # IEX will return a blank line for invalid tickers:
         if isinstance(out, list):

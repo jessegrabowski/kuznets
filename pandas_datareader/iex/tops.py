@@ -13,8 +13,8 @@ class TopsReader(IEX):
 
     Notes
     -----
-    IEX's aggregated best quoted bid and offer position for all securities
-    on IEX's displayed limit order book.
+    IEX's aggregated best quoted bid and offer position for all securities on IEX's displayed limit
+    order book.
     """
 
     def __init__(
@@ -47,8 +47,7 @@ class LastReader(IEX):
 
     Notes
     -----
-    Last provides trade data for executions on IEX. Provides last sale price,
-    size and time.
+    Last provides trade data for executions on IEX. Provides last sale price, size and time.
     """
 
     def __init__(

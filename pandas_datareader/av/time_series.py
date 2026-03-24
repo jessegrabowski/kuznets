@@ -6,34 +6,7 @@ from pandas_datareader.av import AlphaVantage
 
 
 class AVTimeSeriesReader(AlphaVantage):
-    """
-    Get data from Alpha Vantage Stock Time Series endpoints.
-
-    .. versionadded:: 0.7.0
-
-    Parameters
-    ----------
-    symbols : str, optional
-        Single stock symbol (ticker).
-    function : str, default "TIME_SERIES_DAILY"
-        Alpha Vantage time series function name.
-    start : str, int, date, datetime, or Timestamp, optional
-        Starting date. Defaults to 20 years before current date (3 days for
-        intraday).
-    end : str, int, date, datetime, or Timestamp, optional
-        Ending date.
-    retry_count : int, default 3
-        Number of times to retry query request.
-    pause : float, default 0.1
-        Time, in seconds, to pause between consecutive queries of chunks.
-    session : Session, optional
-        ``requests.sessions.Session`` instance to be used.
-    chunksize : int, default 25
-        Not used.
-    api_key : str, optional
-        Alpha Vantage API key. If not provided the environmental variable
-        ``ALPHAVANTAGE_API_KEY`` is read. The API key is *required*.
-    """
+    """Get data from Alpha Vantage Stock Time Series endpoints."""
 
     _FUNC_TO_DATA_KEY = {
         "TIME_SERIES_DAILY": "Time Series (Daily)",
@@ -58,6 +31,31 @@ class AVTimeSeriesReader(AlphaVantage):
         chunksize: int = 25,
         api_key: str | None = None,
     ) -> None:
+        """
+        Initialize the reader.
+
+        Parameters
+        ----------
+        symbols : str, optional
+            Single stock symbol (ticker).
+        function : str, default "TIME_SERIES_DAILY"
+            Alpha Vantage time series function name.
+        start : str, int, date, datetime, or Timestamp, optional
+            Starting date. Defaults to 20 years before current date (3 days for intraday).
+        end : str, int, date, datetime, or Timestamp, optional
+            Ending date.
+        retry_count : int, default 3
+            Number of times to retry query request.
+        pause : float, default 0.1
+            Time, in seconds, to pause between consecutive queries of chunks.
+        session : Session, optional
+            ``requests.sessions.Session`` instance to be used.
+        chunksize : int, default 25
+            Not used.
+        api_key : str, optional
+            Alpha Vantage API key. If not provided the environmental variable
+            ``ALPHAVANTAGE_API_KEY`` is read. The API key is *required*.
+        """
         self._func = function
         super().__init__(
             symbols=symbols,
@@ -96,9 +94,9 @@ class AVTimeSeriesReader(AlphaVantage):
 
         Returns
         -------
-        str
-            ``"compact"`` if the date range is less than 80 days and not
-            intraday, otherwise ``"full"``.
+        size : str
+            ``"compact"`` if the date range is less than 80 days and not intraday, otherwise
+            ``"full"``.
         """
         delta = dt.datetime.now() - self.start
         return "compact" if delta.days < 80 and not self.intraday else "full"
@@ -135,7 +133,7 @@ class AVTimeSeriesReader(AlphaVantage):
 
         Returns
         -------
-        DataFrame
+        df : DataFrame
         """
         data = super()._read_lines(out)
         # reverse since alphavantage returns descending by date

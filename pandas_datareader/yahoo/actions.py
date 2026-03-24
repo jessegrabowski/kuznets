@@ -6,8 +6,8 @@ from pandas_datareader.yahoo.daily import YahooDailyReader
 
 class YahooActionReader(YahooDailyReader):
     """
-    Get historical corporate actions (dividends and stock splits) from Yahoo
-    Finance. All dates correspond with dividend and stock split ex-dates.
+    Get historical corporate actions (dividends and stock splits) from Yahoo Finance. All dates
+    correspond with dividend and stock split ex-dates.
     """
 
     def read(self) -> DataFrame | dict[str, DataFrame]:
@@ -44,7 +44,7 @@ def _get_one_action(data: DataFrame) -> DataFrame:
 
     Returns
     -------
-    DataFrame
+    df : DataFrame
     """
     actions = DataFrame(columns=["action", "value"])
 
@@ -75,7 +75,7 @@ class YahooDivReader(YahooActionReader):
 
         Returns
         -------
-        DataFrame
+        df : DataFrame
         """
         data = super().read()
         return data[data["action"] == "DIVIDEND"]
@@ -89,7 +89,7 @@ class YahooSplitReader(YahooActionReader):
 
         Returns
         -------
-        DataFrame
+        df : DataFrame
         """
         data = super().read()
         return data[data["action"] == "SPLIT"]

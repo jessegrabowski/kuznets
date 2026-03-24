@@ -10,37 +10,7 @@ from pandas_datareader.iex import IEX
 
 
 class Deep(IEX):
-    """
-    Retrieve order book data from IEX.
-
-    Parameters
-    ----------
-    symbols : str or list of str, optional
-        String symbol or list of symbols (will be lower-cased).
-    service : str, optional
-        Sub-service to access (e.g. ``'book'``, ``'trades'``,
-        ``'trading-status'``).
-    start : str, int, date, datetime, or Timestamp, optional
-        Starting date.
-    end : str, int, date, datetime, or Timestamp, optional
-        Ending date.
-    retry_count : int, default 3
-        Number of times to retry query request.
-    pause : float, default 0.1
-        Time, in seconds, of the pause between retries.
-    session : Session, optional
-        ``requests.sessions.Session`` instance to be used.
-
-    Notes
-    -----
-    Real-time depth of book quotations direct from IEX. Returns aggregated
-    size of resting displayed orders at a price and side. Does not indicate
-    the size or number of individual orders at any price level. Non-displayed
-    orders and non-displayed portions of reserve orders are not counted.
-
-    Also provides last trade price and size information. Routed executions
-    are not reported.
-    """
+    """Retrieve order book data from IEX."""
 
     def __init__(
         self,
@@ -52,6 +22,35 @@ class Deep(IEX):
         pause: float = 0.1,
         session=None,
     ) -> None:
+        """
+        Initialize the reader.
+
+        Parameters
+        ----------
+        symbols : str or list of str, optional
+            String symbol or list of symbols (will be lower-cased).
+        service : str, optional
+            Sub-service to access (e.g. ``'book'``, ``'trades'``, ``'trading-status'``).
+        start : str, int, date, datetime, or Timestamp, optional
+            Starting date.
+        end : str, int, date, datetime, or Timestamp, optional
+            Ending date.
+        retry_count : int, default 3
+            Number of times to retry query request.
+        pause : float, default 0.1
+            Time, in seconds, of the pause between retries.
+        session : Session, optional
+            ``requests.sessions.Session`` instance to be used.
+
+        Notes
+        -----
+        Real-time depth of book quotations direct from IEX. Returns aggregated size of resting
+        displayed orders at a price and side. Does not indicate the size or number of individual
+        orders at any price level. Non-displayed orders and non-displayed portions of reserve orders
+        are not counted.
+
+        Also provides last trade price and size information. Routed executions are not reported.
+        """
         if isinstance(symbols, str):
             symbols = symbols.lower()
         else:
@@ -114,7 +113,7 @@ class Deep(IEX):
 
         Returns
         -------
-        dict
+        event : dict
         """
         # Map the response code to a string output per the API docs.
         # Per: https://www.iextrading.com/developer/docs/#system-event-message
@@ -146,7 +145,7 @@ class Deep(IEX):
 
         Returns
         -------
-        dict
+        status : dict
         """
         # Reference: https://www.iextrading.com/developer/docs/#trading-status
         smap = {
@@ -191,7 +190,7 @@ class Deep(IEX):
 
         Returns
         -------
-        dict
+        result : dict
         """
         # Searches for top-level timestamp attributes or within dictionaries
         if "timestamp" in out:

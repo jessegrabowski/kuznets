@@ -20,8 +20,8 @@ def _sanitize_dates(
 ) -> tuple[Timestamp, Timestamp]:
     """
     Return (timestamp_start, timestamp_end) tuple.
-    If start is None - default is 5 years before the current date.
-    If end is None - default is today.
+
+    If start is None, default is 5 years before the current date. If end is None, default is today.
 
     Parameters
     ----------
@@ -32,8 +32,10 @@ def _sanitize_dates(
 
     Returns
     -------
-    tuple of Timestamp
-        Sanitized (start, end) pair.
+    start : Timestamp
+        Sanitized start date.
+    end : Timestamp
+        Sanitized end date.
     """
     if is_number(start):
         # regard int as year
@@ -66,12 +68,11 @@ def _init_session(session: requests.Session | None) -> requests.Session:
     Parameters
     ----------
     session : Session or None
-        ``requests.sessions.Session`` instance to be used, or None to
-        create a new session.
+        ``requests.sessions.Session`` instance to be used, or ``None`` to create a new session.
 
     Returns
     -------
-    Session
+    session : Session
         The initialized session.
     """
     if session is None:

@@ -9,31 +9,7 @@ AV_BASE_URL = "https://www.alphavantage.co/query"
 
 
 class AlphaVantage(_BaseReader):
-    """
-    Base class for all Alpha Vantage queries.
-
-    Parameters
-    ----------
-    symbols : str or list of str, optional
-        String symbol or list of symbols.
-    start : str, int, date, datetime, or Timestamp, optional
-        Starting date.
-    end : str, int, date, datetime, or Timestamp, optional
-        Ending date.
-    retry_count : int, default 3
-        Number of times to retry query request.
-    pause : float, default 0.1
-        Time, in seconds, of the pause between retries.
-    session : Session, optional
-        ``requests.sessions.Session`` instance to be used.
-    api_key : str, optional
-        Alpha Vantage API key. If not provided the environmental variable
-        ``ALPHAVANTAGE_API_KEY`` is read. The API key is *required*.
-
-    Notes
-    -----
-    See `Alpha Vantage <https://www.alphavantage.co/>`__
-    """
+    """Base class for all Alpha Vantage queries."""
 
     _format = "json"
 
@@ -47,6 +23,31 @@ class AlphaVantage(_BaseReader):
         session=None,
         api_key: str | None = None,
     ) -> None:
+        """
+        Initialize the reader.
+
+        Parameters
+        ----------
+        symbols : str or list of str, optional
+            String symbol or list of symbols.
+        start : str, int, date, datetime, or Timestamp, optional
+            Starting date.
+        end : str, int, date, datetime, or Timestamp, optional
+            Ending date.
+        retry_count : int, default 3
+            Number of times to retry query request.
+        pause : float, default 0.1
+            Time, in seconds, of the pause between retries.
+        session : Session, optional
+            ``requests.sessions.Session`` instance to be used.
+        api_key : str, optional
+            Alpha Vantage API key. If not provided the environmental variable
+            ``ALPHAVANTAGE_API_KEY`` is read. The API key is *required*.
+
+        Notes
+        -----
+        See `Alpha Vantage <https://www.alphavantage.co/>`__
+        """
         super().__init__(
             symbols=symbols,
             start=start,
@@ -96,7 +97,7 @@ class AlphaVantage(_BaseReader):
 
         Returns
         -------
-        DataFrame
+        df : DataFrame
         """
         try:
             df = pd.DataFrame.from_dict(out[self.data_key], orient="index")

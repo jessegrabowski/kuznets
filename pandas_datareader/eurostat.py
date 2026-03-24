@@ -39,7 +39,8 @@ class EurostatReader(_BaseReader):
 
         Returns
         -------
-        DataFrame
+        data : DataFrame
+            Eurostat data for the requested symbol.
         """
         resp_dsd = self._get_response(self.dsd_url)
         dsd = _read_sdmx_dsd(resp_dsd.content)

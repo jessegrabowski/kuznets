@@ -9,30 +9,7 @@ from pandas_datareader.yahoo.daily import YahooDailyReader
 
 
 class YahooFXReader(YahooDailyReader):
-    """
-    Get historical prices for currency pairs from Yahoo Finance.
-
-    Parameters
-    ----------
-    symbols : str, list of str, or DataFrame
-        Single currency pair symbol, list of symbols, or DataFrame with
-        index containing symbols.
-    start : str, int, date, datetime, or Timestamp, optional
-        Starting date. Defaults to ``'1/1/2010'``.
-    end : str, int, date, datetime, or Timestamp, optional
-        Ending date. Defaults to today.
-    retry_count : int, default 3
-        Number of times to retry query request.
-    pause : float, default 0.1
-        Time, in seconds, to pause between consecutive queries.
-    session : Session, optional
-        ``requests.sessions.Session`` instance to be used.
-    chunksize : int, default 25
-        Not implemented.
-    interval : str, default "1d"
-        Valid values are ``'1d'``, ``'5d'``, ``'1mo'``, ``'3mo'``, ``'6mo'``,
-        ``'1y'``, ``'2y'``, ``'5y'``, ``'10y'``, ``'ytd'``, ``'max'``.
-    """
+    """Get historical prices for currency pairs from Yahoo Finance."""
 
     def _get_params(self, symbol: str) -> dict:
         """Build query parameters for a given symbol.
@@ -44,7 +21,7 @@ class YahooFXReader(YahooDailyReader):
 
         Returns
         -------
-        dict
+        params : dict
         """
         unix_start = int(time.mktime(self.start.timetuple()))
         day_end = self.end.replace(hour=23, minute=59, second=59)
@@ -66,7 +43,7 @@ class YahooFXReader(YahooDailyReader):
 
         Returns
         -------
-        DataFrame
+        df : DataFrame
         """
         try:
             # If a single symbol, (e.g., 'GOOG')
@@ -99,7 +76,7 @@ class YahooFXReader(YahooDailyReader):
 
         Returns
         -------
-        DataFrame
+        df : DataFrame
         """
         url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}=X"
         params = self._get_params(symbol)

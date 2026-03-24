@@ -9,36 +9,7 @@ from pandas_datareader.base import _DailyBaseReader
 
 
 class NaverDailyReader(_DailyBaseReader):
-    """
-    Fetch daily historical data from Naver Finance.
-
-    Parameters
-    ----------
-    symbols : str
-        A single stock symbol. Multiple symbols are not currently supported.
-    start : str, int, date, datetime, or Timestamp, optional
-        Starting date.
-    end : str, int, date, datetime, or Timestamp, optional
-        Ending date.
-    retry_count : int, default 3
-        Number of times to retry query request.
-    pause : float, default 0.1
-        Time, in seconds, to pause between retries.
-    session : Session, optional
-        ``requests.sessions.Session`` instance to be used.
-    adjust_price : bool, default False
-        Not implemented.
-    ret_index : bool, default False
-        Not implemented.
-    chunksize : int, default 1
-        Number of symbols to download consecutively before initiating pause.
-    interval : str, default "d"
-        Not implemented.
-    get_actions : bool, default False
-        Not implemented.
-    adjust_dividends : bool, default True
-        Not implemented.
-    """
+    """Fetch daily historical data from Naver Finance."""
 
     def __init__(
         self,
@@ -55,6 +26,36 @@ class NaverDailyReader(_DailyBaseReader):
         get_actions: bool = False,
         adjust_dividends: bool = True,
     ) -> None:
+        """
+        Initialize the reader.
+
+        Parameters
+        ----------
+        symbols : str
+            A single stock symbol. Multiple symbols are not currently supported.
+        start : str, int, date, datetime, or Timestamp, optional
+            Starting date.
+        end : str, int, date, datetime, or Timestamp, optional
+            Ending date.
+        retry_count : int, default 3
+            Number of times to retry query request.
+        pause : float, default 0.1
+            Time, in seconds, to pause between retries.
+        session : Session, optional
+            ``requests.sessions.Session`` instance to be used.
+        adjust_price : bool, default False
+            Not implemented.
+        ret_index : bool, default False
+            Not implemented.
+        chunksize : int, default 1
+            Number of symbols to download consecutively before initiating pause.
+        interval : str, default "d"
+            Not implemented.
+        get_actions : bool, default False
+            Not implemented.
+        adjust_dividends : bool, default True
+            Not implemented.
+        """
         if not isinstance(symbols, str):
             raise NotImplementedError("Bulk-fetching is not implemented")
 
@@ -94,7 +95,7 @@ class NaverDailyReader(_DailyBaseReader):
 
         Returns
         -------
-        dict
+        params : dict
         """
         # NOTE: The server does not take start, end dates as inputs; it only
         # takes the number of trading days as an input. To circumvent this
@@ -117,7 +118,7 @@ class NaverDailyReader(_DailyBaseReader):
 
         Returns
         -------
-        DataFrame
+        df : DataFrame
         """
         resp = self._get_response(url, params=params)
         parsed = self._parse_xml_response(resp.text)

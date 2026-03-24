@@ -7,9 +7,8 @@ import wrapt
 
 def skip_on_exception(exp):
     """
-    Skip a test if a specific Exception is raised. This is because
-    the Exception is raised for reasons beyond our control (e.g.
-    flakey 3rd-party API).
+    Skip a test if a specific Exception is raised. This is because the Exception is raised for
+    reasons beyond our control (e.g. flakey 3rd-party API).
 
     a signature-preserving decorator
 

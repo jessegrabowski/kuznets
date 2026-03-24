@@ -9,34 +9,7 @@ from pandas_datareader.exceptions import DEP_ERROR_MSG, ImmediateDeprecationErro
 
 
 class EnigmaReader(_BaseReader):
-    """
-    Collect current snapshot of Enigma data. **Immediately deprecated.**
-
-    Parameters
-    ----------
-    dataset_id : str, optional
-        Enigma dataset UUID.
-    api_key : str, optional
-        Enigma API key. If not provided, the environmental variable
-        ``ENIGMA_API_KEY`` is read.
-    retry_count : int, default 5
-        Number of times to retry query request.
-    pause : float, default 0.75
-        Time, in seconds, of the pause between retries.
-    session : Session, optional
-        ``requests.sessions.Session`` instance to be used.
-    base_url : str, optional
-        Alternative Enigma endpoint (defaults to
-        ``https://public.enigma.com/api``).
-
-    Examples
-    --------
-    Download current snapshot for the following Florida Inspections Dataset:
-    https://public.enigma.com/datasets/bedaf052-5fcd-4758-8d27-048ce8746c6a
-
-    >>> import pandas_datareader as pdr
-    >>> df = pdr.get_data_enigma("bedaf052-5fcd-4758-8d27-048ce8746c6a")
-    """
+    """Collect current snapshot of Enigma data. **Immediately deprecated.**"""
 
     def __init__(
         self,
@@ -47,6 +20,32 @@ class EnigmaReader(_BaseReader):
         session=None,
         base_url="https://public.enigma.com/api",
     ):
+        """
+        Initialize the reader.
+
+        Parameters
+        ----------
+        dataset_id : str, optional
+            Enigma dataset UUID.
+        api_key : str, optional
+            Enigma API key. If not provided, the environmental variable ``ENIGMA_API_KEY`` is read.
+        retry_count : int, default 5
+            Number of times to retry query request.
+        pause : float, default 0.75
+            Time, in seconds, of the pause between retries.
+        session : Session, optional
+            ``requests.sessions.Session`` instance to be used.
+        base_url : str, optional
+            Alternative Enigma endpoint (defaults to ``https://public.enigma.com/api``).
+
+        Examples
+        --------
+        Download current snapshot for the following Florida Inspections Dataset:
+        https://public.enigma.com/datasets/bedaf052-5fcd-4758-8d27-048ce8746c6a
+
+        >>> import pandas_datareader as pdr
+        >>> df = pdr.get_data_enigma("bedaf052-5fcd-4758-8d27-048ce8746c6a")
+        """
         raise ImmediateDeprecationError(DEP_ERROR_MSG.format("Enigma"))
 
         super().__init__(symbols=[], retry_count=retry_count, pause=pause, session=session)

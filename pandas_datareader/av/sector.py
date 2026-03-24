@@ -5,25 +5,7 @@ from pandas_datareader.av import AlphaVantage
 
 
 class AVSectorPerformanceReader(AlphaVantage):
-    """
-    Get Alpha Vantage Sector Performance data.
-
-    .. versionadded:: 0.7.0
-
-    Parameters
-    ----------
-    symbols : str or list of str, optional
-        Not used by this endpoint.
-    retry_count : int, default 3
-        Number of times to retry query request.
-    pause : float, default 0.1
-        Time, in seconds, to pause between consecutive queries.
-    session : Session, optional
-        ``requests.sessions.Session`` instance to be used.
-    api_key : str, optional
-        Alpha Vantage API key. If not provided the environmental variable
-        ``ALPHAVANTAGE_API_KEY`` is read. The API key is *required*.
-    """
+    """Get Alpha Vantage Sector Performance data."""
 
     @property
     def function(self) -> str:
@@ -40,7 +22,7 @@ class AVSectorPerformanceReader(AlphaVantage):
 
         Returns
         -------
-        DataFrame
+        df : DataFrame
         """
         if "Information" in out:
             raise RemoteDataError()

@@ -4,37 +4,9 @@ from pandas_datareader.base import _BaseReader
 
 
 class EcondbReader(_BaseReader):
-    """
-    Get data from the EconDB API.
+    """Get data from the EconDB API.
 
     .. versionadded:: 0.5.0
-
-    Parameters
-    ----------
-    symbols : str
-        Can be in two different formats:
-
-        1. ``'ticker=<code>'`` for fetching a single series, where ``<code>``
-           is, e.g., ``CPIUS`` for the series at
-           https://www.econdb.com/series/CPIUS/
-        2. ``'dataset=<dataset>&<params>'`` for fetching a full or filtered
-           subset of a dataset, like the one at
-           https://www.econdb.com/dataset/ABS_GDP. After choosing the desired
-           filters, the correctly formatted query string can be easily generated
-           from that dataset's page by using the Export function and choosing
-           Pandas Python3.
-    start : str, int, date, datetime, or Timestamp, optional
-        Starting date.
-    end : str, int, date, datetime, or Timestamp, optional
-        Ending date.
-    retry_count : int, default 3
-        Number of times to retry query request.
-    pause : float, default 0.1
-        Time, in seconds, to pause between consecutive queries of chunks.
-    session : Session, optional
-        ``requests.sessions.Session`` instance to be used.
-    freq : str, optional
-        Not used.
     """
 
     _URL = "https://www.econdb.com/api/series/"
@@ -51,6 +23,35 @@ class EcondbReader(_BaseReader):
         session=None,
         freq: str | None = None,
     ) -> None:
+        """
+        Initialize the reader.
+
+        Parameters
+        ----------
+        symbols : str
+            Can be in two different formats:
+
+            1. ``'ticker=<code>'`` for fetching a single series, where
+               ``<code>`` is, e.g., ``CPIUS`` for the series at
+               https://www.econdb.com/series/CPIUS/
+            2. ``'dataset=<dataset>&<params>'`` for fetching a full or
+               filtered subset of a dataset, like the one at
+               https://www.econdb.com/dataset/ABS_GDP. After choosing
+               the desired filters, the correctly formatted query string can be easily generated
+               from that dataset's page by using the Export function and choosing Pandas Python3.
+        start : str, int, date, datetime, or Timestamp, optional
+            Starting date.
+        end : str, int, date, datetime, or Timestamp, optional
+            Ending date.
+        retry_count : int, default 3
+            Number of times to retry query request.
+        pause : float, default 0.1
+            Time, in seconds, to pause between consecutive queries of chunks.
+        session : Session, optional
+            ``requests.sessions.Session`` instance to be used.
+        freq : str, optional
+            Not used.
+        """
         super().__init__(
             symbols=symbols,
             start=start,
@@ -75,11 +76,12 @@ class EcondbReader(_BaseReader):
         return f"{self._URL}?{self.symbols}&format=json&page_size=500&expand=both"
 
     def read(self) -> pd.DataFrame:
-        """Read one data from specified URL.
+        """Read data from the EconDB API.
 
         Returns
         -------
-        DataFrame
+        df : DataFrame
+            Requested time series data.
         """
         results = self.session.get(self.url).json()["results"]
         df = pd.DataFrame({"dates": []}).set_index("dates")

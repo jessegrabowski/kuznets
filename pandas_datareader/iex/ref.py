@@ -13,8 +13,7 @@ class SymbolsReader(IEX):
 
     Notes
     -----
-    Returns symbols IEX supports for trading. Updated daily as of 7:45 a.m.
-    ET.
+    Returns symbols IEX supports for trading. Updated daily as of 7:45 a.m. ET.
     """
 
     def __init__(
@@ -45,7 +44,7 @@ class SymbolsReader(IEX):
 
         Returns
         -------
-        dict
+        params : dict
             Empty dict.
         """
         return {}

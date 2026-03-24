@@ -5,24 +5,7 @@ from pandas_datareader.base import _BaseReader
 
 
 class TSPReader(_BaseReader):
-    """
-    Get historical TSP (Thrift Savings Plan) fund prices.
-
-    Parameters
-    ----------
-    symbols : str, list of str, or frozenset, optional
-        Single fund name, list of fund names, or default ``all_symbols``.
-    start : str, int, date, datetime, or Timestamp, optional
-        Starting date. Defaults to 5 years before current date.
-    end : str, int, date, datetime, or Timestamp, optional
-        Ending date.
-    retry_count : int, default 3
-        Number of times to retry query request.
-    pause : float, default 0.1
-        Time, in seconds, to pause between consecutive queries.
-    session : Session, optional
-        ``requests.sessions.Session`` instance to be used.
-    """
+    """Get historical TSP (Thrift Savings Plan) fund prices."""
 
     all_symbols = frozenset(
         (
@@ -53,6 +36,24 @@ class TSPReader(_BaseReader):
         pause: float = 0.1,
         session=None,
     ) -> None:
+        """
+        Initialize the reader.
+
+        Parameters
+        ----------
+        symbols : str, list of str, or frozenset, optional
+            Single fund name, list of fund names, or default ``all_symbols``.
+        start : str, int, date, datetime, or Timestamp, optional
+            Starting date. Defaults to 5 years before current date.
+        end : str, int, date, datetime, or Timestamp, optional
+            Ending date.
+        retry_count : int, default 3
+            Number of times to retry query request.
+        pause : float, default 0.1
+            Time, in seconds, to pause between consecutive queries.
+        session : Session, optional
+            ``requests.sessions.Session`` instance to be used.
+        """
         super().__init__(
             symbols=symbols,
             start=start,
@@ -73,7 +74,7 @@ class TSPReader(_BaseReader):
 
         Returns
         -------
-        DataFrame
+        df : DataFrame
         """
         df = super().read()
         df.columns = (x.strip() for x in df.columns)
@@ -102,7 +103,7 @@ class TSPReader(_BaseReader):
 
         Returns
         -------
-        str
+        content : str
         """
         text = response.text.strip()
         if text[-1] == ",":

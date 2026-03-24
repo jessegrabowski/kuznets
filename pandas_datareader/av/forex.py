@@ -5,25 +5,7 @@ from pandas_datareader.av import AlphaVantage
 
 
 class AVForexReader(AlphaVantage):
-    """
-    Get Alpha Vantage Foreign Exchange (FX) exchange rate data.
-
-    .. versionadded:: 0.7.0
-
-    Parameters
-    ----------
-    symbols : str or list of str, optional
-        Single currency pair (formatted ``'FROM/TO'``) or list of the same.
-    retry_count : int, default 3
-        Number of times to retry query request.
-    pause : float, default 0.1
-        Time, in seconds, to pause between consecutive queries.
-    session : Session, optional
-        ``requests.sessions.Session`` instance to be used.
-    api_key : str, optional
-        Alpha Vantage API key. If not provided the environmental variable
-        ``ALPHAVANTAGE_API_KEY`` is read. The API key is *required*.
-    """
+    """Get Alpha Vantage Foreign Exchange (FX) exchange rate data."""
 
     def __init__(
         self,
@@ -33,6 +15,23 @@ class AVForexReader(AlphaVantage):
         session=None,
         api_key: str | None = None,
     ) -> None:
+        """
+        Initialize the reader.
+
+        Parameters
+        ----------
+        symbols : str or list of str, optional
+            Single currency pair (formatted ``'FROM/TO'``) or list of the same.
+        retry_count : int, default 3
+            Number of times to retry query request.
+        pause : float, default 0.1
+            Time, in seconds, to pause between consecutive queries.
+        session : Session, optional
+            ``requests.sessions.Session`` instance to be used.
+        api_key : str, optional
+            Alpha Vantage API key. If not provided the environmental variable
+            ``ALPHAVANTAGE_API_KEY`` is read. The API key is *required*.
+        """
         super().__init__(
             symbols=symbols,
             start=None,
@@ -79,7 +78,7 @@ class AVForexReader(AlphaVantage):
 
         Returns
         -------
-        DataFrame
+        df : DataFrame
         """
         result = []
         for pair in self.symbols:
@@ -103,7 +102,7 @@ class AVForexReader(AlphaVantage):
 
         Returns
         -------
-        DataFrame
+        df : DataFrame
         """
         try:
             df = pd.DataFrame.from_dict(out[self.data_key], orient="index")

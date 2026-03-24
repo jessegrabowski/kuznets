@@ -55,7 +55,7 @@ class DailySummaryReader(IEX):
 
         Returns
         -------
-        dict
+        params : dict
         """
         p = {}
         if self.curr_date is not None:
@@ -67,7 +67,7 @@ class DailySummaryReader(IEX):
 
         Returns
         -------
-        DataFrame
+        df : DataFrame
         """
         tlen = self.end - self.start
         dfs = []
@@ -111,7 +111,7 @@ class MonthlySummaryReader(IEX):
 
         Returns
         -------
-        dict
+        params : dict
         """
         p = {}
         if self.curr_date is not None:
@@ -123,7 +123,7 @@ class MonthlySummaryReader(IEX):
 
         Returns
         -------
-        DataFrame
+        df : DataFrame
         """
         tlen = self.end - self.start
         dfs = []
@@ -181,7 +181,7 @@ class RecordsReader(IEX):
 
         Returns
         -------
-        dict
+        params : dict
             Empty dict.
         """
         return {}
@@ -234,7 +234,7 @@ class RecentReader(IEX):
 
         Returns
         -------
-        dict
+        params : dict
             Empty dict.
         """
         return {}

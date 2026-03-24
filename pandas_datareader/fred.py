@@ -17,9 +17,9 @@ class FredReader(_BaseReader):
 
         Returns
         -------
-        DataFrame
-            If multiple names are passed for "series" then the index of the
-            DataFrame is the outer join of the indices of each series.
+        df : DataFrame
+            If multiple names are passed for "series" then the index of the DataFrame is the outer
+            join of the indices of each series.
         """
         try:
             return self._read()

@@ -44,7 +44,7 @@ def _download_nasdaq_symbols(timeout: float) -> DataFrame:
 
     Returns
     -------
-    DataFrame
+    df : DataFrame
     """
     try:
         ftp_session = FTP(_NASDAQ_FTP_SERVER, timeout=timeout)
@@ -106,7 +106,7 @@ def get_nasdaq_symbols(
 
     Returns
     -------
-    DataFrame
+    df : DataFrame
         DataFrame with company tickers, names, and other properties.
     """
     global _ticker_cache

@@ -38,14 +38,12 @@ class Options(_OptionBaseReader):
 
     def get_options_data(self, month=None, year=None, expiry=None):
         """
-        Gets call/put data for the stock with the expiration data in the
-        given month and year
+        Gets call/put data for the stock with the expiration data in the given month and year
 
         Parameters
         ----------
         month : number, int, optional(default=None)
-            The month the options expire. This should be either 1 or 2
-            digits.
+            The month the options expire. This should be either 1 or 2 digits.
 
         year : number, int, optional(default=None)
             The year the options expire. This should be a 4 digit int.
@@ -88,19 +86,18 @@ class Options(_OptionBaseReader):
         Note: Format of returned DataFrame is dependent
               on Yahoo and may change.
 
-        When called, this function will add instance variables named
-        calls and puts. See the following example:
+        When called, this function will add instance variables named calls and puts. See the
+        following example:
 
             >>> aapl = Options("aapl", "yahoo")  # Create object
             >>> aapl.calls  # will give an AttributeError
             >>> aapl.get_options()  # Get data and set ivars
             >>> aapl.calls  # Doesn't throw AttributeError
 
-        Also note that aapl.calls and appl.puts will always be the calls
-        and puts for the next expiry. If the user calls this method with
-        a different expiry, the ivar will be named callsYYMMDD or putsYYMMDD,
-        where YY, MM and DD are, respectively, two digit representations of
-        the year, month and day for the expiry of the options.
+        Also note that aapl.calls and appl.puts will always be the calls and puts for the next
+        expiry. If the user calls this method with a different expiry, the ivar will be named
+        callsYYMMDD or putsYYMMDD, where YY, MM and DD are, respectively, two digit representations
+        of the year, month and day for the expiry of the options.
 
         """
         return concat([f(month, year, expiry) for f in (self.get_put_data, self.get_call_data)]).sort_index()
@@ -151,14 +148,12 @@ class Options(_OptionBaseReader):
 
     def get_call_data(self, month=None, year=None, expiry=None):
         """
-        Gets call/put data for the stock with the expiration data in the
-        given month and year
+        Gets call/put data for the stock with the expiration data in the given month and year
 
         Parameters
         ----------
         month : number, int, optional(default=None)
-            The month the options expire. This should be either 1 or 2
-            digits.
+            The month the options expire. This should be either 1 or 2 digits.
 
         year : number, int, optional(default=None)
             The year the options expire. This should be a 4 digit int.
@@ -201,33 +196,30 @@ class Options(_OptionBaseReader):
         Note: Format of returned DataFrame is dependent
               on Yahoo and may change.
 
-        When called, this function will add instance variables named
-        calls and puts. See the following example:
+        When called, this function will add instance variables named calls and puts. See the
+        following example:
 
             >>> aapl = Options("aapl", "yahoo")  # Create object
             >>> aapl.calls  # will give an AttributeError
             >>> aapl.get_call_data()  # Get data and set ivars
             >>> aapl.calls  # Doesn't throw AttributeError
 
-        Also note that aapl.calls will always be the calls for the next
-        expiry. If the user calls this method with a different month
-        or year, the ivar will be named callsYYMMDD where YY, MM and DD are,
-        respectively, two digit representations of the year, month and day
-        for the expiry of the options.
+        Also note that aapl.calls will always be the calls for the next expiry. If the user calls
+        this method with a different month or year, the ivar will be named callsYYMMDD where YY, MM
+        and DD are, respectively, two digit representations of the year, month and day for the
+        expiry of the options.
         """
         expiry = self._try_parse_dates(year, month, expiry)
         return self._get_data_in_date_range(expiry, call=True, put=False)
 
     def get_put_data(self, month=None, year=None, expiry=None):
         """
-        Gets put data for the stock with the expiration data in the
-        given month and year
+        Gets put data for the stock with the expiration data in the given month and year
 
         Parameters
         ----------
         month : number, int, optional(default=None)
-            The month the options expire. This should be either 1 or 2
-            digits.
+            The month the options expire. This should be either 1 or 2 digits.
 
         year : number, int, optional(default=None)
             The year the options expire. This should be a 4 digit int.
@@ -270,8 +262,8 @@ class Options(_OptionBaseReader):
         Note: Format of returned DataFrame is dependent
               on Yahoo and may change.
 
-        When called, this function will add instance variables named
-        puts. See the following example:
+        When called, this function will add instance variables named puts. See the following
+        example:
 
             >>> aapl = Options("aapl")  # Create object
             >>> aapl.puts  # will give an AttributeError
@@ -280,11 +272,10 @@ class Options(_OptionBaseReader):
 
                     return self.__setattr__(self, str(str(x) + str(y)))
 
-        Also note that aapl.puts will always be the puts for the next
-        expiry. If the user calls this method with a different month
-        or year, the ivar will be named putsYYMMDD where YY, MM and DD are,
-        respectively, two digit representations of the year, month and day
-        for the expiry of the options.
+        Also note that aapl.puts will always be the puts for the next expiry. If the user calls this
+        method with a different month or year, the ivar will be named putsYYMMDD where YY, MM and DD
+        are, respectively, two digit representations of the year, month and day for the expiry of
+        the options.
         """
         expiry = self._try_parse_dates(year, month, expiry)
         return self._get_data_in_date_range(expiry, put=True, call=False)
@@ -296,8 +287,7 @@ class Options(_OptionBaseReader):
         Parameters
         ----------
         above_below : number, int, optional (default=2)
-            The number of strike prices above and below the stock price that
-            should be taken
+            The number of strike prices above and below the stock price that should be taken
 
         call : bool
             Tells the function whether or not it should be using calls
@@ -306,8 +296,7 @@ class Options(_OptionBaseReader):
             Tells the function weather or not it should be using puts
 
         month : number, int, optional(default=None)
-            The month the options expire. This should be either 1 or 2
-            digits.
+            The month the options expire. This should be either 1 or 2 digits.
 
         year : number, int, optional(default=None)
             The year the options expire. This should be a 4 digit int.
@@ -319,9 +308,8 @@ class Options(_OptionBaseReader):
         Returns
         -------
         chopped: DataFrame
-            The resultant DataFrame chopped down to be 2 * above_below + 1 rows
-            desired. If there isn't data as far out as the user has asked for
-            then
+            The resultant DataFrame chopped down to be 2 * above_below + 1 rows desired. If there
+            isn't data as far out as the user has asked for then
 
             Index:
                 Strike: Option strike, int
@@ -380,8 +368,8 @@ class Options(_OptionBaseReader):
 
     def _try_parse_dates(self, year, month, expiry):
         """
-        Validates dates provided by user. Ensures the user either provided
-        both a month and a year or an expiry.
+        Validates dates provided by user. Ensures the user either provided both a month and a year
+        or an expiry.
 
         Parameters
         ----------
@@ -435,8 +423,7 @@ class Options(_OptionBaseReader):
         """
         Ensures that an expiry date has data available on Yahoo.
 
-        If the expiry date does not have options that expire on that day,
-        return next expiry.
+        If the expiry date does not have options that expire on that day, return next expiry.
         """
 
         expiry_dates = self.expiry_dates
@@ -452,14 +439,13 @@ class Options(_OptionBaseReader):
 
     def get_forward_data(self, months, call=True, put=False, near=False, above_below=2):  # pragma: no cover
         """
-        Gets either call, put, or both data for months starting in the current
-        month and going out in the future a specified amount of time.
+        Gets either call, put, or both data for months starting in the current month and going out
+        in the future a specified amount of time.
 
         Parameters
         ----------
         months : number, int
-            How many months to go out in the collection of the data. This is
-            inclusive.
+            How many months to go out in the collection of the data. This is inclusive.
 
         call : bool, optional (default=True)
             Whether or not to collect data for call options
@@ -468,12 +454,12 @@ class Options(_OptionBaseReader):
             Whether or not to collect data for put options.
 
         near : bool, optional (default=False)
-            Whether this function should get only the data near the
-            current stock price. Uses Options.get_near_stock_price
+            Whether this function should get only the data near the current stock price. Uses
+            Options.get_near_stock_price
 
         above_below : number, int, optional (default=2)
-            The number of strike prices above and below the stock price that
-            should be taken if the near option is set to True
+            The number of strike prices above and below the stock price that should be taken if the
+            near option is set to True
 
         Returns
         -------
@@ -518,8 +504,7 @@ class Options(_OptionBaseReader):
 
     def get_all_data(self, call=True, put=True):
         """
-        Gets either call, put, or both data for all available months starting
-        in the current month.
+        Gets either call, put, or both data for all available months starting in the current month.
 
         Parameters
         ----------
@@ -770,8 +755,8 @@ class Options(_OptionBaseReader):
         Parameters
         ----------
         exp_dates : tuple of datetimes, optional(default=None)
-            The expiry dates to load options data for. If none is specified,
-            uses all expiry dates available for the symbol.
+            The expiry dates to load options data for. If none is specified, uses all expiry dates
+            available for the symbol.
 
         Returns
         -------

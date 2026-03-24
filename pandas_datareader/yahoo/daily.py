@@ -10,40 +10,7 @@ from pandas_datareader.yahoo.headers import DEFAULT_HEADERS
 
 
 class YahooDailyReader(_DailyBaseReader):
-    """
-    Get historical stock prices from Yahoo Finance.
-
-    Parameters
-    ----------
-    symbols : str, list of str, or DataFrame
-        Single stock symbol (ticker), list of symbols, or DataFrame with
-        index containing stock symbols.
-    start : str, int, date, datetime, or Timestamp, optional
-        Starting date. Defaults to 5 years before current date.
-    end : str, int, date, datetime, or Timestamp, optional
-        Ending date.
-    retry_count : int, default 3
-        Number of times to retry query request.
-    pause : float, default 0.1
-        Time, in seconds, to pause between consecutive queries of chunks.
-    session : Session, optional
-        ``requests.sessions.Session`` instance to be used.
-    adjust_price : bool, default False
-        If True, adjusts all prices ('Open', 'High', 'Low', 'Close') based
-        on 'Adj Close'. Adds 'Adj_Ratio' column and drops 'Adj Close'.
-    ret_index : bool, default False
-        If True, includes a simple return index 'Ret_Index'.
-    chunksize : int, default 1
-        Number of symbols to download consecutively before initiating pause.
-    interval : str, default "d"
-        Time interval code. Valid values are ``'d'`` for daily, ``'wk'`` for
-        weekly, ``'mo'`` for monthly (``'w'`` and ``'m'`` accepted for
-        backward compatibility).
-    get_actions : bool, default False
-        If True, adds Dividend and Split columns to the DataFrame.
-    adjust_dividends : bool, default True
-        If True, adjusts dividends for splits.
-    """
+    """Get historical stock prices from Yahoo Finance."""
 
     def __init__(
         self,
@@ -60,6 +27,39 @@ class YahooDailyReader(_DailyBaseReader):
         get_actions=False,
         adjust_dividends=True,
     ):
+        """
+        Initialize the reader.
+
+        Parameters
+        ----------
+        symbols : str, list of str, or DataFrame
+            Single stock symbol (ticker), list of symbols, or DataFrame with index containing stock
+            symbols.
+        start : str, int, date, datetime, or Timestamp, optional
+            Starting date. Defaults to 5 years before current date.
+        end : str, int, date, datetime, or Timestamp, optional
+            Ending date.
+        retry_count : int, default 3
+            Number of times to retry query request.
+        pause : float, default 0.1
+            Time, in seconds, to pause between consecutive queries of chunks.
+        session : Session, optional
+            ``requests.sessions.Session`` instance to be used.
+        adjust_price : bool, default False
+            If True, adjusts all prices ('Open', 'High', 'Low', 'Close') based on 'Adj Close'. Adds
+            'Adj_Ratio' column and drops 'Adj Close'.
+        ret_index : bool, default False
+            If True, includes a simple return index 'Ret_Index'.
+        chunksize : int, default 1
+            Number of symbols to download consecutively before initiating pause.
+        interval : str, default "d"
+            Time interval code. Valid values are ``'d'`` for daily, ``'wk'`` for weekly, ``'mo'``
+            for monthly (``'w'`` and ``'m'`` accepted for backward compatibility).
+        get_actions : bool, default False
+            If True, adds Dividend and Split columns to the DataFrame.
+        adjust_dividends : bool, default True
+            If True, adjusts dividends for splits.
+        """
         super().__init__(
             symbols=symbols,
             start=start,
@@ -219,8 +219,8 @@ class YahooDailyReader(_DailyBaseReader):
 
 def _adjust_prices(hist_data, price_list=None):
     """
-    Return modifed DataFrame with adjusted prices based on
-    'Adj Close' price. Adds 'Adj_Ratio' column.
+    Return modifed DataFrame with adjusted prices based on 'Adj Close' price. Adds 'Adj_Ratio'
+    column.
     """
     if price_list is None:
         price_list = "Open", "High", "Low", "Close"
@@ -236,8 +236,8 @@ def _adjust_prices(hist_data, price_list=None):
 
 def _calc_return_index(price_df):
     """
-    Return a returns index from a input price df or series. Initial value
-    (typically NaN) is set to 1.
+    Return a returns index from a input price df or series. Initial value (typically NaN) is set to
+    1.
     """
     df = price_df.pct_change().add(1).cumprod()
     mask = notnull(df.iloc[1]) & isnull(df.iloc[0])

@@ -143,8 +143,8 @@ def get_sector_performance_av(*args, **kwargs) -> DataFrame:
 
 def get_markets_iex(*args, **kwargs) -> DataFrame:
     """
-    Return near-real time volume data across markets segregated by tape
-    and including a percentage of overall volume during the session.
+    Return near-real time volume data across markets segregated by tape and including a percentage
+    of overall volume during the session.
 
     This endpoint does not accept any parameters.
 
@@ -152,7 +152,8 @@ def get_markets_iex(*args, **kwargs) -> DataFrame:
 
     Returns
     -------
-    DataFrame
+    df : DataFrame
+        Market volume data.
     """
     from pandas_datareader.iex.market import MarketReader
 
@@ -161,8 +162,8 @@ def get_markets_iex(*args, **kwargs) -> DataFrame:
 
 def get_dailysummary_iex(*args, **kwargs) -> DataFrame:
     """
-    Return a summary of daily market volume statistics. Without parameters,
-    this will return the most recent trading session by default.
+    Return a summary of daily market volume statistics. Without parameters, this will return the
+    most recent trading session by default.
 
     Parameters
     ----------
@@ -175,7 +176,8 @@ def get_dailysummary_iex(*args, **kwargs) -> DataFrame:
 
     Returns
     -------
-    DataFrame
+    df : DataFrame
+        Daily summary statistics.
     """
     from pandas_datareader.iex.stats import DailySummaryReader
 
@@ -184,10 +186,10 @@ def get_dailysummary_iex(*args, **kwargs) -> DataFrame:
 
 def get_summary_iex(*args, **kwargs) -> DataFrame:
     """
-    Return an aggregated monthly summary of market volume and a variety of
-    related metrics for trades by lot size, security market cap, and venue.
-    In the absence of parameters, this will return month-to-date statistics.
-    For ranges spanning multiple months, this will return one row per month.
+    Return an aggregated monthly summary of market volume and a variety of related metrics for
+    trades by lot size, security market cap, and venue. In the absence of parameters, this will
+    return month-to-date statistics. For ranges spanning multiple months, this will return one row
+    per month.
 
     Parameters
     ----------
@@ -198,7 +200,8 @@ def get_summary_iex(*args, **kwargs) -> DataFrame:
 
     Returns
     -------
-    DataFrame
+    df : DataFrame
+        Monthly summary statistics.
     """
     from pandas_datareader.iex.stats import MonthlySummaryReader
 
@@ -207,15 +210,16 @@ def get_summary_iex(*args, **kwargs) -> DataFrame:
 
 def get_records_iex(*args, **kwargs) -> DataFrame:
     """
-    Return the record value, record date, recent value, and 30-day average for
-    market volume, # of symbols traded, # of routed trades and notional value.
-    This function accepts no additional parameters.
+    Return the record value, record date, recent value, and 30-day average for market volume, # of
+    symbols traded, # of routed trades and notional value. This function accepts no additional
+    parameters.
 
     Reference: https://www.iextrading.com/developer/docs/#records
 
     Returns
     -------
-    DataFrame
+    df : DataFrame
+        Record statistics.
     """
     from pandas_datareader.iex.stats import RecordsReader
 
@@ -224,15 +228,15 @@ def get_records_iex(*args, **kwargs) -> DataFrame:
 
 def get_recent_iex(*args, **kwargs) -> DataFrame:
     """
-    Return market volume and trade routing statistics for recent sessions.
-    Also reports IEX's relative market share, lit share volume and a boolean
-    halfday indicator.
+    Return market volume and trade routing statistics for recent sessions. Also reports IEX's
+    relative market share, lit share volume and a boolean halfday indicator.
 
     Reference: https://www.iextrading.com/developer/docs/#recent
 
     Returns
     -------
-    DataFrame
+    df : DataFrame
+        Recent session statistics.
     """
     from pandas_datareader.iex.stats import RecentReader
 
@@ -241,14 +245,15 @@ def get_recent_iex(*args, **kwargs) -> DataFrame:
 
 def get_iex_symbols(*args, **kwargs) -> DataFrame:
     """
-    Return a list of all equity symbols available for trading on IEX. Accepts
-    no additional parameters.
+    Return a list of all equity symbols available for trading on IEX. Accepts no additional
+    parameters.
 
     Reference: https://www.iextrading.com/developer/docs/#symbols
 
     Returns
     -------
-    DataFrame
+    df : DataFrame
+        Available IEX symbols.
     """
     from pandas_datareader.iex.ref import SymbolsReader
 
@@ -257,8 +262,8 @@ def get_iex_symbols(*args, **kwargs) -> DataFrame:
 
 def get_iex_book(*args, **kwargs) -> DataFrame:
     """
-    Return an array of dictionaries with depth of book data from IEX for up to
-    10 securities at a time. Returns a dictionary of the bid and ask books.
+    Return an array of dictionaries with depth of book data from IEX for up to 10 securities at a
+    time. Returns a dictionary of the bid and ask books.
 
     Parameters
     ----------
@@ -268,17 +273,24 @@ def get_iex_book(*args, **kwargs) -> DataFrame:
         One of:
 
         - 'book': Live depth of book data
-        - 'op-halt-status': Checks to see if the exchange has instituted a halt
+        - 'op-halt-status': Checks to see if the exchange has
+          instituted a halt
         - 'security-event': Denotes individual security related event
-        - 'ssr-status': Short Sale Price Test restrictions, per reg 201 of SHO
-        - 'system-event': Relays current feed status (i.e. market open)
-        - 'trades': Retrieves recent executions, trade size/price and flags
-        - 'trade-breaks': Lists execution breaks for the current trading session
-        - 'trading-status': Returns status and cause codes for securities
+        - 'ssr-status': Short Sale Price Test restrictions, per
+          reg 201 of SHO
+        - 'system-event': Relays current feed status (i.e. market
+          open)
+        - 'trades': Retrieves recent executions, trade size/price
+          and flags
+        - 'trade-breaks': Lists execution breaks for the current
+          trading session
+        - 'trading-status': Returns status and cause codes for
+          securities
 
     Returns
     -------
-    DataFrame
+    df : DataFrame
+        Depth of book data.
     """
     return IEXDeep(*args, **kwargs).read()
 
@@ -296,14 +308,13 @@ def DataReader(
     """
     Import data from a number of online sources.
 
-    Currently supports Google Finance, St. Louis FED (FRED),
-    and Kenneth French's data library, among others.
+    Currently supports Google Finance, St. Louis FED (FRED), and Kenneth French's data library,
+    among others.
 
     Parameters
     ----------
     name : str or list of str
-        The name of the dataset. Some data sources (IEX, fred) will
-        accept a list of names.
+        The name of the dataset. Some data sources (IEX, fred) will accept a list of names.
     data_source : str, optional
         The data source ("iex", "fred", "ff").
     start : str, int, date, datetime, or Timestamp, optional
@@ -313,8 +324,8 @@ def DataReader(
     retry_count : int, default 3
         Number of times to retry query request.
     pause : float, default 0.1
-        Time, in seconds, to pause between consecutive queries of chunks. If
-        single value given for symbol, represents the pause between retries.
+        Time, in seconds, to pause between consecutive queries of chunks. If single value given for
+        symbol, represents the pause between retries.
     session : Session, default None
         ``requests.sessions.Session`` instance to be used.
     api_key : str, optional
@@ -322,7 +333,8 @@ def DataReader(
 
     Returns
     -------
-    DataFrame
+    df : DataFrame
+        Data from the specified source.
 
     Examples
     --------

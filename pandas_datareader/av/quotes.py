@@ -6,23 +6,7 @@ from pandas_datareader.exceptions import DEP_ERROR_MSG, ImmediateDeprecationErro
 
 
 class AVQuotesReader(AlphaVantage):
-    """
-    Get Alpha Vantage realtime stock quotes. **Immediately deprecated.**
-
-    Parameters
-    ----------
-    symbols : str, list of str, or DataFrame, optional
-        Single stock symbol (ticker), list of symbols, or DataFrame with
-        index containing stock symbols.
-    retry_count : int, default 3
-        Number of times to retry query request.
-    pause : float, default 0.1
-        Time, in seconds, to pause between consecutive queries.
-    session : Session, optional
-        ``requests.sessions.Session`` instance to be used.
-    api_key : str, optional
-        Alpha Vantage API key.
-    """
+    """Get Alpha Vantage realtime stock quotes. **Immediately deprecated.**"""
 
     def __init__(
         self,
@@ -32,6 +16,23 @@ class AVQuotesReader(AlphaVantage):
         session=None,
         api_key: str | None = None,
     ) -> None:
+        """
+        Initialize the reader.
+
+        Parameters
+        ----------
+        symbols : str, list of str, or DataFrame, optional
+            Single stock symbol (ticker), list of symbols, or DataFrame with index containing stock
+            symbols.
+        retry_count : int, default 3
+            Number of times to retry query request.
+        pause : float, default 0.1
+            Time, in seconds, to pause between consecutive queries.
+        session : Session, optional
+            ``requests.sessions.Session`` instance to be used.
+        api_key : str, optional
+            Alpha Vantage API key.
+        """
         raise ImmediateDeprecationError(DEP_ERROR_MSG.format("AVQuotesReader"))
 
         if isinstance(symbols, str):
@@ -80,7 +81,7 @@ class AVQuotesReader(AlphaVantage):
 
         Returns
         -------
-        DataFrame
+        df : DataFrame
         """
         result = []
         quotes = out[self.data_key]
