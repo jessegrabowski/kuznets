@@ -1,113 +1,42 @@
-# pylint: disable-msg=E1101,W0613,W0603
-
-
-from collections import OrderedDict
-import itertools
-import re
-
-import numpy as np
-import pandas as pd
-
-from pandas_datareader.io.util import _read_content
+from pandas_datareader.io.util import (
+    TIME_IDS,
+    _load_json,
+    _pivot_observations,
+)
 
 
 def read_jsdmx(path_or_buf):
-    """
-    Convert a SDMX-JSON string to pandas object
+    """Convert an SDMX-JSON 2.0 data message to a pandas DataFrame.
+
+    Expects the message to have been requested with ``dimensionAtObservation=AllDimensions``.
 
     Parameters
     ----------
-    path_or_buf : a valid SDMX-JSON string or file-like
-        https://github.com/sdmx-twg/sdmx-json
+    path_or_buf : str or file-like
+        A valid SDMX-JSON 2.0 string or file-like object. See
+        https://github.com/sdmx-twg/sdmx-json.
 
     Returns
     -------
-    results : Series, DataFrame, or dictionary of Series or DataFrame.
+    df : DataFrame
+        Time-indexed data with the remaining dimensions forming the columns.
     """
+    data = _load_json(path_or_buf)
 
-    jdata = _read_content(path_or_buf)
+    payload = data["data"]
+    dims = payload["structures"][0]["dimensions"]["observation"]
+    dim_names = [d["name"] for d in dims]
+    cat_codes = [[v["id"] for v in d["values"]] for d in dims]
+    label_maps = [{v["id"]: v["name"] for v in d["values"]} for d in dims]
+    time_pos = next((i for i, d in enumerate(dims) if d["id"] in TIME_IDS), len(dims) - 1)
 
-    try:
-        import simplejson as json
-    except ImportError:
-        import json
+    observations = payload["dataSets"][0]["observations"]
+    records = []
+    for key, value in observations.items():
+        if value[0] is None:
+            continue
+        pos = (int(x) for x in key.split(":"))
+        codes = tuple(dim_codes[p] for dim_codes, p in zip(cat_codes, pos, strict=True))
+        records.append((codes, value[0]))
 
-    if isinstance(jdata, dict):
-        data = jdata
-    else:
-        data = json.loads(jdata, object_pairs_hook=OrderedDict)
-
-    structure = data["structure"]
-    index = _parse_dimensions(structure["dimensions"]["observation"])
-    columns = _parse_dimensions(structure["dimensions"]["series"])
-
-    dataset = data["dataSets"]
-    if len(dataset) != 1:
-        raise ValueError("length of 'dataSets' must be 1")
-    dataset = dataset[0]
-    values = _parse_values(dataset, index=index, columns=columns)
-
-    df = pd.DataFrame(values, columns=columns, index=index)
-    return df
-
-
-def _get_indexer(index):
-    if index.nlevels == 1:
-        return [str(i) for i in range(len(index))]
-    else:
-        it = itertools.product(*[range(len(level)) for level in index.levels])
-        return [":".join(map(str, i)) for i in it]
-
-
-def _fix_quarter_values(value):
-    """Make raw quarter values Pandas-friendly (e.g. 'Q4-2018' -> '2018Q4')."""
-    m = re.match(r"Q([1-4])-(\d\d\d\d)", value)
-    if not m:
-        return value
-    quarter, year = m.groups()
-    value = f"{quarter}Q{year}"
-    return value
-
-
-def _parse_values(dataset, index, columns):
-    size = len(index)
-    series = dataset["series"]
-
-    values = []
-    # for s_key, s_value in iteritems(series):
-    for s_key in _get_indexer(columns):
-        try:
-            observations = series[s_key]["observations"]
-            observed = []
-            for o_key in _get_indexer(index):
-                try:
-                    observed.append(observations[o_key][0])
-                except KeyError:
-                    observed.append(np.nan)
-        except KeyError:
-            observed = [np.nan] * size
-
-        values.append(observed)
-
-    return np.transpose(np.array(values))
-
-
-def _parse_dimensions(dimensions):
-    arrays = []
-    names = []
-    for key in dimensions:
-        values = [v["name"] for v in key["values"]]
-
-        role = key.get("role", None)
-        if role in ("time", "TIME_PERIOD"):
-            values = [_fix_quarter_values(v) for v in values]
-            values = pd.DatetimeIndex(values)
-
-        arrays.append(values)
-        names.append(key["name"])
-    midx = pd.MultiIndex.from_product(arrays, names=names)
-    if len(arrays) == 1 and isinstance(midx, pd.MultiIndex):
-        # Fix for pandas >= 0.21
-        midx = midx.levels[0]
-
-    return midx
+    return _pivot_observations(records, dim_names, label_maps, time_pos)
