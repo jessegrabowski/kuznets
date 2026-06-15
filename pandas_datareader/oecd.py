@@ -1,47 +1,58 @@
-import pandas as pd
-from pandas import DataFrame
+from pandas import DataFrame, DatetimeIndex
 
 from pandas_datareader.base import _BaseReader
 from pandas_datareader.io import read_jsdmx
 
 
 class OECDReader(_BaseReader):
-    """Get data for the given name from OECD."""
+    """Get data for the given dataflow from the OECD SDMX API.
+
+    The ``symbols`` argument is a fully-qualified dataflow reference, ``AGENCY,DATAFLOW,VERSION``,
+    optionally followed by a ``/`` and a key selecting specific series, e.g.
+    ``"OECD.ELS.SAE,DSD_TUD_CBC@DF_TUD,1.0"`` or
+    ``"OECD.ELS.SAE,DSD_TUD_CBC@DF_TUD,1.0/AUS+USA"``. Browse available dataflows at
+    https://sdmx.oecd.org/public/rest/dataflow/all/all/latest.
+    """
 
     _format = "json"
+    _URL = "https://sdmx.oecd.org/public/rest/data"
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.headers = {"Accept": "application/vnd.sdmx.data+json"}
 
     @property
     def url(self) -> str:
         """API URL."""
-        url = "https://stats.oecd.org/SDMX-JSON/data"
-
         if not isinstance(self.symbols, str):
             raise ValueError("data name must be string")
+        flow, _, key = self.symbols.partition("/")
+        return f"{self._URL}/{flow}/{key}"
 
-        # API: https://data.oecd.org/api/sdmx-json-documentation/
-        return f"{url}/{self.symbols}/all/all"
+    @property
+    def params(self) -> dict:
+        """Query parameters requesting a flat all-dimensions JSON cube for the year range."""
+        return {
+            "startPeriod": self.start.year,
+            "endPeriod": self.end.year,
+            "dimensionAtObservation": "AllDimensions",
+        }
 
     def _read_lines(self, out: dict) -> DataFrame:
-        """Parse OECD JSON-SDMX response.
+        """Parse the OECD SDMX-JSON response into a DataFrame.
 
         Parameters
         ----------
         out : dict
-            Parsed JSON response.
+            Parsed SDMX-JSON response.
 
         Returns
         -------
         df : DataFrame
+            OECD data for the requested dataflow, indexed by time.
         """
         df = read_jsdmx(out)
-        try:
-            idx_name = df.index.name  # hack for pandas 0.16.2
-            df.index = pd.to_datetime(df.index, errors="coerce")
-            for col in df:
-                df[col] = pd.to_numeric(df[col], errors="coerce")
-            df = df.sort_index()
+        # Non-calendar period codes stay as a string index and can't be sliced by datetime bounds.
+        if isinstance(df.index, DatetimeIndex):
             df = df.truncate(self.start, self.end)
-            df.index.name = idx_name
-        except ValueError:
-            pass
         return df

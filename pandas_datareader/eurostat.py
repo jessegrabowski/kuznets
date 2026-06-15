@@ -1,62 +1,48 @@
-import pandas as pd
-from pandas import DataFrame
+from pandas import DataFrame, DatetimeIndex
 
 from pandas_datareader.base import _BaseReader
-from pandas_datareader.io.sdmx import _read_sdmx_dsd, read_sdmx
+from pandas_datareader.io import read_jstat
 
 
 class EurostatReader(_BaseReader):
     """Get data for the given name from Eurostat."""
 
-    _URL = "http://ec.europa.eu/eurostat/SDMX/diss-web/rest"
+    _format = "json"
+    _URL = "https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data"
 
     @property
     def url(self) -> str:
         """API URL."""
         if not isinstance(self.symbols, str):
             raise ValueError("data name must be string")
-
-        q = "{0}/data/{1}/?startperiod={2}&endperiod={3}"
-        return q.format(self._URL, self.symbols, self.start.year, self.end.year)
+        return f"{self._URL}/{self.symbols}"
 
     @property
-    def dsd_url(self) -> str:
-        """API DSD URL."""
-        if not isinstance(self.symbols, str):
-            raise ValueError("data name must be string")
+    def params(self) -> dict:
+        """Query parameters bounding the request to the requested year range."""
+        return {
+            "format": "JSON",
+            "lang": "EN",
+            "sinceTimePeriod": self.start.year,
+            "untilTimePeriod": self.end.year,
+        }
 
-        return f"{self._URL}/datastructure/ESTAT/DSD_{self.symbols}"
-
-    def _read_one_data(self, url: str, params: dict | None) -> DataFrame:
-        """Read one data from specified URL.
+    def _read_lines(self, out: dict) -> DataFrame:
+        """Parse the Eurostat JSON-stat response into a DataFrame.
 
         Parameters
         ----------
-        url : str
-            Target URL.
-        params : dict, optional
-            Not used.
+        out : dict
+            Parsed JSON-stat response.
 
         Returns
         -------
-        data : DataFrame
-            Eurostat data for the requested symbol.
+        df : DataFrame
+            Eurostat data for the requested symbol, indexed by time.
         """
-        resp_dsd = self._get_response(self.dsd_url)
-        dsd = _read_sdmx_dsd(resp_dsd.content)
-
-        resp = self._get_response(url)
-        data = read_sdmx(resp.content, dsd=dsd)
-
-        try:
-            data.index = pd.to_datetime(data.index)
-            data = data.sort_index()
-        except ValueError:
-            pass
-
-        try:
-            data = data.truncate(self.start, self.end)
-        except TypeError:
-            pass
-
-        return data
+        df = read_jstat(out)
+        # Non-calendar period codes (e.g. semesters) stay as a string index and can't be sliced
+        # against datetime bounds; the server-side year filter already constrains those.
+        if isinstance(df.index, DatetimeIndex):
+            df = df.truncate(self.start, self.end)
+        return df
