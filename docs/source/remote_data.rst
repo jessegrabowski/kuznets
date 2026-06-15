@@ -660,54 +660,46 @@ See docstrings for more info.
 OECD
 ====
 
-.. warning::
+`OECD Statistics <https://sdmx.oecd.org/>`__ are available via ``DataReader``.
 
-    The OECD reader is currently not working. PRs to fix are welcome.
+The OECD now serves data through an SDMX 2.1 API, which identifies each table by a
+fully-qualified *dataflow reference* of the form ``AGENCY,DATAFLOW,VERSION`` rather than the
+short codes used by the retired ``stats.oecd.org`` service. Browse the available dataflows at
+`<https://sdmx.oecd.org/public/rest/dataflow/all/all/latest>`__. The reference may optionally be
+followed by ``/`` and a key selecting specific series.
 
-
-`OECD Statistics <http://stats.oecd.org/>`__ are available via ``DataReader``.
-You have to specify OECD's data set code.
-
-To confirm data set code, access to ``each data -> Export -> SDMX Query``. Following
-example is to download 'Trade Union Density' data which set code is 'TUD'.
-
+The following example downloads 'Trade Union Density' data.
 
 .. ipython:: python
    :okexcept:
 
     import pandas_datareader.data as web
-    import datetime
 
-    df = web.DataReader('TUD', 'oecd')
+    df = web.DataReader('OECD.ELS.SAE,DSD_TUD_CBC@DF_TUD,1.0', 'oecd')
 
     df.columns
 
-    df[['Japan', 'United States']]
+    df.xs('Australia', axis=1, level='Reference area')
 
 .. _remote_data.eurostat:
 
 Eurostat
 ========
 
-.. warning::
+`Eurostat <https://ec.europa.eu/eurostat/>`__ data is available via ``DataReader``, served by the
+Eurostat dissemination JSON-stat API. The result is a ``DataFrame`` with a ``DatetimeIndex`` as
+index and a ``MultiIndex`` of attributes or countries as columns.
 
-    The Eurostat reader is currently not working. PRs to fix are welcome.
-
-
-`Eurostat <http://ec.europa.eu/eurostat/>`__ are available via ``DataReader``.
-
-Get `Rail accidents by type of accident (ERA data) <http://appsso.eurostat.ec.europa.eu/nui/show.do?dataset=tran_sf_railac&lang=en>`_ data. The result will be a ``DataFrame`` which has ``DatetimeIndex`` as index and ``MultiIndex`` of attributes or countries as column. The target URL is:
-
-* http://appsso.eurostat.ec.europa.eu/nui/show.do?dataset=tran_sf_railac&lang=en
-
-You can specify dataset ID 'tran_sf_railac' to get corresponding data via ``DataReader``.
+Specify a Eurostat dataset ID to get the corresponding data. The example below downloads
+`Former euro area national currencies vs. euro/ECU <https://ec.europa.eu/eurostat/databrowser/view/ert_h_eur_a/default/table>`__
+(dataset ``ert_h_eur_a``).
 
 .. ipython:: python
    :okexcept:
 
     import pandas_datareader.data as web
 
-    df = web.DataReader('tran_sf_railac', 'eurostat')
+    df = web.DataReader('ert_h_eur_a', 'eurostat')
     df
 
 .. _remote_data.tsp:
