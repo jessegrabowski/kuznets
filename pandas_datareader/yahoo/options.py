@@ -9,10 +9,8 @@ from pandas.tseries.offsets import MonthEnd
 
 from pandas_datareader._utils import RemoteDataError
 from pandas_datareader.base import _OptionBaseReader
+from pandas_datareader.yahoo._auth import fetch_crumb
 from pandas_datareader.yahoo.headers import DEFAULT_HEADERS
-
-_CRUMB_URL = "https://query1.finance.yahoo.com/v1/test/getcrumb"
-_COOKIE_URL = "https://fc.yahoo.com"
 
 # Items needed for options class
 CUR_MONTH = dt.datetime.now().month
@@ -46,14 +44,12 @@ class Options(_OptionBaseReader):
         self._crumb = None
 
     def _get_crumb(self) -> str:
-        """Prime the session cookie and return a cached Yahoo API crumb.
+        """Return a cached Yahoo API crumb, fetching one on first use.
 
-        The v7 options endpoint rejects requests without a cookie/crumb pair. Fetch a cookie from
-        Yahoo once, exchange it for a crumb, and reuse it across the per-expiry requests.
+        The crumb is reused across the per-expiry requests of a single load.
         """
         if self._crumb is None:
-            self.session.get(_COOKIE_URL, headers=self.headers, timeout=self.timeout)
-            self._crumb = self.session.get(_CRUMB_URL, headers=self.headers, timeout=self.timeout).text
+            self._crumb = fetch_crumb(self.session, self.headers, self.timeout)
         return self._crumb
 
     def get_options_data(self, month=None, year=None, expiry=None):
