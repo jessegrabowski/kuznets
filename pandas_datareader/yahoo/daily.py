@@ -103,7 +103,7 @@ class YahooDailyReader(_DailyBaseReader):
         """API URL."""
         return "https://query1.finance.yahoo.com/v8/finance/chart/{}"
 
-    def _get_params(self, symbol):
+    def _get_params(self, symbol: str) -> dict:
         day_end = self.end.replace(hour=23, minute=59, second=59)
         return {
             "period1": int(time.mktime(self.start.timetuple())),
@@ -114,7 +114,7 @@ class YahooDailyReader(_DailyBaseReader):
             "symbol": symbol,
         }
 
-    def _read_one_data(self, url, params):
+    def _read_one_data(self, url: str, params: dict) -> DataFrame:
         """Read price history for a single symbol from the Yahoo v8 chart API."""
         symbol = params.pop("symbol")
         resp = self._get_response(url.format(symbol), params=params, headers=self.headers)
@@ -135,7 +135,7 @@ class YahooDailyReader(_DailyBaseReader):
                 "Volume": quote["volume"],
                 "Adj Close": adjclose,
             },
-            index=to_datetime(to_datetime(Series(result["timestamp"]), unit="s").dt.date),
+            index=_date_index(result["timestamp"]),
         )
         prices.index.name = "Date"
         prices = prices.sort_index().dropna(how="all")
@@ -164,12 +164,12 @@ class YahooDailyReader(_DailyBaseReader):
 
         if dividends:
             divs = DataFrame(list(dividends.values()))
-            divs.index = to_datetime(to_datetime(divs["date"], unit="s").dt.date)
+            divs.index = _date_index(divs["date"])
             prices = prices.join(divs["amount"].rename("Dividends"), how="outer")
 
         if splits:
             spl = DataFrame(list(splits.values()))
-            spl.index = to_datetime(to_datetime(spl["date"], unit="s").dt.date)
+            spl.index = _date_index(spl["date"])
             # The split column is denominator/numerator (e.g. 1/7 for a 7:1 split); a non-positive
             # numerator denotes a symbol change rather than a real split.
             ratio = (spl["denominator"] / spl["numerator"]).where(spl["numerator"] > 0, 1.0)
@@ -181,6 +181,11 @@ class YahooDailyReader(_DailyBaseReader):
                 prices["Dividends"] = prices["Dividends"] / adj
 
         return prices
+
+
+def _date_index(seconds):
+    """Convert a sequence of Unix timestamps to a calendar-date DatetimeIndex (time dropped)."""
+    return to_datetime(to_datetime(Series(seconds), unit="s").dt.date)
 
 
 def _adjust_prices(hist_data, price_list=None):
