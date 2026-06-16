@@ -1,9 +1,8 @@
-import os
-
 import pandas as pd
 
 from pandas_datareader._utils import RemoteDataError
 from pandas_datareader.base import _BaseReader
+from pandas_datareader.config import get_api_key
 
 AV_BASE_URL = "https://www.alphavantage.co/query"
 
@@ -18,8 +17,8 @@ class AlphaVantage(_BaseReader):
         symbols: str | list[str] | None = None,
         start=None,
         end=None,
-        retry_count: int = 3,
-        pause: float = 0.1,
+        retry_count: int | None = None,
+        pause: float | None = None,
         session=None,
         api_key: str | None = None,
     ) -> None:
@@ -34,15 +33,16 @@ class AlphaVantage(_BaseReader):
             Starting date.
         end : str, int, date, datetime, or Timestamp, optional
             Ending date.
-        retry_count : int, default 3
-            Number of times to retry query request.
-        pause : float, default 0.1
-            Time, in seconds, of the pause between retries.
+        retry_count : int, optional
+            Number of times to retry query request. Falls back to the configured default.
+        pause : float, optional
+            Time, in seconds, of the pause between retries. Falls back to the configured default.
         session : Session, optional
             ``requests.sessions.Session`` instance to be used.
         api_key : str, optional
-            Alpha Vantage API key. If not provided the environmental variable
-            ``ALPHAVANTAGE_API_KEY`` is read. The API key is *required*.
+            Alpha Vantage API key. Resolved through :func:`pandas_datareader.config.get_api_key`
+            (argument, ``options.api_keys['alphavantage']``, ``ALPHAVANTAGE_API_KEY``, then the
+            config file). The API key is *required*.
 
         Notes
         -----
@@ -56,16 +56,7 @@ class AlphaVantage(_BaseReader):
             pause=pause,
             session=session,
         )
-        if api_key is None:
-            api_key = os.getenv("ALPHAVANTAGE_API_KEY")
-        if not api_key or not isinstance(api_key, str):
-            raise ValueError(
-                "The AlphaVantage API key must be provided "
-                "either through the api_key variable or "
-                "through the environment variable "
-                "ALPHAVANTAGE_API_KEY"
-            )
-        self.api_key = api_key
+        self.api_key = get_api_key("alphavantage", api_key)
 
     @property
     def url(self) -> str:

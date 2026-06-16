@@ -1,10 +1,10 @@
-import os
 import time
 
 import pandas as pd
 
 from pandas_datareader.base import _BaseReader
 from pandas_datareader.compat import StringIO
+from pandas_datareader.config import get_api_key
 from pandas_datareader.exceptions import DEP_ERROR_MSG, ImmediateDeprecationError
 
 
@@ -49,17 +49,7 @@ class EnigmaReader(_BaseReader):
         raise ImmediateDeprecationError(DEP_ERROR_MSG.format("Enigma"))
 
         super().__init__(symbols=[], retry_count=retry_count, pause=pause, session=session)
-        if api_key is None:
-            self._api_key = os.getenv("ENIGMA_API_KEY")
-            if self._api_key is None:
-                raise ValueError(
-                    "Please provide an Enigma API key or set "
-                    "the ENIGMA_API_KEY environment variable\n"
-                    "If you do not have an API key, you can get "
-                    "one here: http://public.enigma.com/signup"
-                )
-        else:
-            self._api_key = api_key
+        self._api_key = get_api_key("enigma", api_key)
 
         self._dataset_id = dataset_id
         if not isinstance(self._dataset_id, str):
