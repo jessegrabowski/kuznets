@@ -40,7 +40,6 @@ The following sources may not be working since they require an API key for testi
     - :ref:`Alpha Vantage<remote_data.alphavantage>`
     - :ref:`Quandl<remote_data.quandl>`
     - :ref:`Tiingo<remote_data.tiingo>`
-    - :ref:`IEX<remote_data.iex>`
 
 The following sources have been previously supported but are fully working in the current version:
 
@@ -78,58 +77,6 @@ writing).
           2014-03-31 00:00:00+00:00  556.97  567.00  556.93  566.890   10800    556.97   567.00  556.93  566.890      10800      0.0          1.0
           2014-04-01 00:00:00+00:00  567.16  568.45  558.71  558.710    7900    567.16   568.45  558.71  558.710       7900      0.0          1.0
           2014-04-02 00:00:00+00:00  567.00  604.83  562.19  565.106  146700    567.00   604.83  562.19  565.106     146700      0.0          1.0
-
-.. _remote_data.iex:
-
-IEX
-===
-
-.. warning:: Usage of all IEX readers now requires an API key. See
-             below for additional information.
-
-The Investors Exchange (IEX) provides a wide range of data through an
-`API <https://iexcloud.io/api/docs/>`__.  Historical stock
-prices are available for up to 15 years. The usage of these readers requires the publishable API key from IEX Cloud Console, which can be stored in the ``IEX_API_KEY`` environment variable.
-
-.. code-block:: ipython
-
-    In [1]: import pandas_datareader.data as web
-
-    In [2]: from datetime import datetime
-
-    In [3]: start = datetime(2016, 9, 1)
-
-    In [4]: end = datetime(2018, 9, 1)
-
-    In [5]: f = web.DataReader('F', 'iex', start, end)
-
-    In [6]: f.loc['2018-08-31']
-    Out[6]:
-    open             9.64
-    high             9.68
-    low              9.40
-    close            9.48
-    volume    76424884.00
-    Name: 2018-08-31, dtype: float64
-
-.. note::
-
-   You must provide an API Key when using IEX. You can do this using
-   ``os.environ["IEX_API_KEY"] = "pk_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"``
-   or by exporting the key before starting the IPython session.
-
-There are additional interfaces to this API that are
-directly exposed: tops (`'iex-tops'`) and last (`'iex-lasts'`).
-A third interface to the deep API is exposed through
-`Deep` class or the `get_iex_book` function.
-
-.. todo:: Execute block when markets are open
-
-.. code-block:: ipython
-
-    import pandas_datareader.data as web
-    f = web.DataReader('gs', 'iex-tops')
-    f[:10]
 
 
 .. _remote_data.alphavantage:
@@ -244,30 +191,6 @@ Multiple pairs are are allowable:
     Time Zone                            UTC                  UTC
     Bid Price                   108.17000000       72226.26407700
     Ask Price                   108.17000000       72230.02554000
-
-
-
-Sector Performance
-^^^^^^^^^^^^^^^^^^
-
-`Alpha Vantage <https://www.alphavantage.co/documentation>`__ provides sector
-performances through the top-level function ``get_sector_performance_av``.
-
-.. code-block:: ipython
-
-    In [1]: import os
-
-    In [2]: import pandas_datareader.data as web
-
-    In [3]: web.get_sector_performance_av().head()
-    Out[4]:
-                     RT      1D      5D      1M     3M     YTD       1Y      3Y       5Y      10Y
-    Energy        3.29%   3.29%   4.82%  11.69%  3.37%   9.07%  -15.26%  -7.69%  -32.31%   12.15%
-    Real Estate   1.02%   1.02%  -1.39%   1.26%  3.49%  24.95%   16.55%     NaN      NaN      NaN
-    Utilities     0.08%   0.08%   0.72%   2.77%  3.72%  18.16%   16.09%  27.95%   48.41%  113.09%
-    Industrials  -0.15%  -0.15%   2.42%   8.59%  5.10%  22.70%    0.50%  34.50%   43.53%  183.47%
-    Health Care  -0.23%  -0.23%   0.88%   1.91%  0.09%   5.20%   -2.38%  26.37%   43.43%  216.01%
-
 
 
 .. _remote_data.econdb:

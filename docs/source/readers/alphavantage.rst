@@ -13,10 +13,3 @@ AlphaVantage
 .. autoclass:: AVTimeSeriesReader
 	:members:
 	:inherited-members:
-
-
-.. py:module:: pandas_datareader.av.sector
-
-.. autoclass:: AVSectorPerformanceReader
-	:members:
-	:inherited-members:
