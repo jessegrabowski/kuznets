@@ -1,8 +1,7 @@
-import os
-
 import pandas as pd
 
 from pandas_datareader.base import _BaseReader
+from pandas_datareader.config import get_api_key
 
 
 def get_tiingo_symbols() -> pd.DataFrame:
@@ -30,9 +29,9 @@ class TiingoIEXHistoricalReader(_BaseReader):
         symbols: str | list[str],
         start=None,
         end=None,
-        retry_count: int = 3,
-        pause: float = 0.1,
-        timeout: float = 30,
+        retry_count: int | None = None,
+        pause: float | None = None,
+        timeout: float | None = None,
         session=None,
         freq: str | None = None,
         api_key: str | None = None,
@@ -48,35 +47,28 @@ class TiingoIEXHistoricalReader(_BaseReader):
             Starting date. Defaults to 5 years before current date.
         end : str, int, date, datetime, or Timestamp, optional
             Ending date.
-        retry_count : int, default 3
-            Number of times to retry query request.
-        pause : float, default 0.1
-            Time, in seconds, of the pause between retries.
-        timeout : float, default 30
-            Time, in seconds, to wait for server response.
+        retry_count : int, optional
+            Number of times to retry query request. Falls back to the configured default.
+        pause : float, optional
+            Time, in seconds, of the pause between retries. Falls back to the configured default.
+        timeout : float, optional
+            Time, in seconds, to wait for server response. Falls back to the configured default.
         session : Session, optional
             ``requests.sessions.Session`` instance to be used.
         freq : str, optional
             Re-sample frequency. Format is ``#`` + ``min`` or ``hour``; e.g. ``"15min"`` or
             ``"4hour"``. Defaults to ``"5min"``. Minimum is ``"1min"``.
         api_key : str, optional
-            Tiingo API key. If not provided the environmental variable ``TIINGO_API_KEY`` is read.
-            The API key is *required*.
+            Tiingo API key. Resolved through :func:`pandas_datareader.config.get_api_key` (argument,
+            ``options.api_keys['tiingo']``, ``TIINGO_API_KEY``, then the config file). The API key
+            is *required*.
         """
         super().__init__(symbols, start, end, retry_count, pause, timeout, session, freq)
 
         if isinstance(self.symbols, str):
             self.symbols = [self.symbols]
         self._symbol = ""
-        if api_key is None:
-            api_key = os.getenv("TIINGO_API_KEY")
-        if not api_key or not isinstance(api_key, str):
-            raise ValueError(
-                "The tiingo API key must be provided either "
-                "through the api_key variable or through the "
-                "environmental variable TIINGO_API_KEY."
-            )
-        self.api_key = api_key
+        self.api_key = get_api_key("tiingo", api_key)
         self._concat_axis = 0
 
     @property
@@ -163,9 +155,9 @@ class TiingoDailyReader(_BaseReader):
         symbols: str | list[str],
         start=None,
         end=None,
-        retry_count: int = 3,
-        pause: float = 0.1,
-        timeout: float = 30,
+        retry_count: int | None = None,
+        pause: float | None = None,
+        timeout: float | None = None,
         session=None,
         freq: str | None = None,
         api_key: str | None = None,
@@ -181,33 +173,26 @@ class TiingoDailyReader(_BaseReader):
             Starting date. Default is 5 years before current date.
         end : str, int, date, datetime, or Timestamp, optional
             Ending date.
-        retry_count : int, default 3
-            Number of times to retry query request.
-        pause : float, default 0.1
-            Time, in seconds, of the pause between retries.
-        timeout : float, default 30
-            Time, in seconds, to wait for server response.
+        retry_count : int, optional
+            Number of times to retry query request. Falls back to the configured default.
+        pause : float, optional
+            Time, in seconds, of the pause between retries. Falls back to the configured default.
+        timeout : float, optional
+            Time, in seconds, to wait for server response. Falls back to the configured default.
         session : Session, optional
             ``requests.sessions.Session`` instance to be used.
         freq : str, optional
             Not used.
         api_key : str, optional
-            Tiingo API key. If not provided the environmental variable ``TIINGO_API_KEY`` is read.
-            The API key is *required*.
+            Tiingo API key. Resolved through :func:`pandas_datareader.config.get_api_key` (argument,
+            ``options.api_keys['tiingo']``, ``TIINGO_API_KEY``, then the config file). The API key
+            is *required*.
         """
         super().__init__(symbols, start, end, retry_count, pause, timeout, session, freq)
         if isinstance(self.symbols, str):
             self.symbols = [self.symbols]
         self._symbol = ""
-        if api_key is None:
-            api_key = os.getenv("TIINGO_API_KEY")
-        if not api_key or not isinstance(api_key, str):
-            raise ValueError(
-                "The tiingo API key must be provided either "
-                "through the api_key variable or through the "
-                "environmental variable TIINGO_API_KEY."
-            )
-        self.api_key = api_key
+        self.api_key = get_api_key("tiingo", api_key)
         self._concat_axis = 0
 
     @property
@@ -293,9 +278,9 @@ class TiingoMetaDataReader(TiingoDailyReader):
         symbols: str | list[str],
         start=None,
         end=None,
-        retry_count: int = 3,
-        pause: float = 0.1,
-        timeout: float = 30,
+        retry_count: int | None = None,
+        pause: float | None = None,
+        timeout: float | None = None,
         session=None,
         freq: str | None = None,
         api_key: str | None = None,
@@ -311,19 +296,20 @@ class TiingoMetaDataReader(TiingoDailyReader):
             Not used.
         end : str, int, date, datetime, or Timestamp, optional
             Not used.
-        retry_count : int, default 3
-            Number of times to retry query request.
-        pause : float, default 0.1
-            Time, in seconds, of the pause between retries.
-        timeout : float, default 30
-            Time, in seconds, to wait for server response.
+        retry_count : int, optional
+            Number of times to retry query request. Falls back to the configured default.
+        pause : float, optional
+            Time, in seconds, of the pause between retries. Falls back to the configured default.
+        timeout : float, optional
+            Time, in seconds, to wait for server response. Falls back to the configured default.
         session : Session, optional
             ``requests.sessions.Session`` instance to be used.
         freq : str, optional
             Not used.
         api_key : str, optional
-            Tiingo API key. If not provided the environmental variable ``TIINGO_API_KEY`` is read.
-            The API key is *required*.
+            Tiingo API key. Resolved through :func:`pandas_datareader.config.get_api_key` (argument,
+            ``options.api_keys['tiingo']``, ``TIINGO_API_KEY``, then the config file). The API key
+            is *required*.
         """
         super().__init__(symbols, start, end, retry_count, pause, timeout, session, freq, api_key)
         self._concat_axis = 1

@@ -6,6 +6,7 @@ from dateutil.relativedelta import relativedelta
 import pandas as pd
 
 from pandas_datareader.base import _DailyBaseReader
+from pandas_datareader.config import get_api_key
 
 # Data provided for free by IEX
 # Data is furnished in compliance with the guidelines promulgated in the IEX
@@ -22,8 +23,8 @@ class IEXDailyReader(_DailyBaseReader):
         symbols: str | list[str] | None = None,
         start=None,
         end=None,
-        retry_count: int = 3,
-        pause: float = 0.1,
+        retry_count: int | None = None,
+        pause: float | None = None,
         session=None,
         chunksize: int = 25,
         api_key: str | None = None,
@@ -40,32 +41,22 @@ class IEXDailyReader(_DailyBaseReader):
             Starting date. Defaults to 15 years before current date.
         end : str, int, date, datetime, or Timestamp, optional
             Ending date.
-        retry_count : int, default 3
-            Number of times to retry query request.
-        pause : float, default 0.1
-            Time, in seconds, to pause between consecutive queries.
+        retry_count : int, optional
+            Number of times to retry query request. Falls back to the configured default.
+        pause : float, optional
+            Time, in seconds, to pause between consecutive queries. Falls back to the configured
+            default.
         session : Session, optional
             ``requests.sessions.Session`` instance to be used.
         chunksize : int, default 25
             Number of symbols to download consecutively before initiating pause.
         api_key : str, optional
-            IEX Cloud Secret Token. If not provided the environmental variable ``IEX_API_KEY`` is
-            read. The API key is *required*.
+            IEX Cloud Secret Token. Resolved through :func:`pandas_datareader.config.get_api_key`
+            (argument, ``options.api_keys['iex']``, ``IEX_API_KEY``, then the config file). The API
+            key is *required*.
         """
-        if api_key is None:
-            api_key = os.getenv("IEX_API_KEY")
-        if not api_key or not isinstance(api_key, str):
-            raise ValueError(
-                "The IEX Cloud API key must be provided either "
-                "through the api_key variable or through the "
-                " environment variable IEX_API_KEY"
-            )
-        # Support for sandbox environment (testing purposes)
-        if os.getenv("IEX_SANDBOX") == "enable":
-            self.sandbox = True
-        else:
-            self.sandbox = False
-        self.api_key = api_key
+        self.api_key = get_api_key("iex", api_key)
+        self.sandbox = os.getenv("IEX_SANDBOX") == "enable"
         super().__init__(
             symbols=symbols,
             start=start,

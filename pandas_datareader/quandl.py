@@ -1,9 +1,9 @@
-import os
 import re
 
 from pandas import DataFrame
 
 from pandas_datareader.base import _DailyBaseReader
+from pandas_datareader.config import get_api_key
 
 
 class QuandlReader(_DailyBaseReader):
@@ -16,8 +16,8 @@ class QuandlReader(_DailyBaseReader):
         symbols: str,
         start=None,
         end=None,
-        retry_count: int = 3,
-        pause: float = 0.1,
+        retry_count: int | None = None,
+        pause: float | None = None,
         session=None,
         chunksize: int = 25,
         api_key: str | None = None,
@@ -41,28 +41,22 @@ class QuandlReader(_DailyBaseReader):
             Starting date. Defaults to 20 years before current date.
         end : str, int, date, datetime, or Timestamp, optional
             Ending date.
-        retry_count : int, default 3
-            Number of times to retry query request.
-        pause : float, default 0.1
-            Time, in seconds, to pause between consecutive queries of chunks.
+        retry_count : int, optional
+            Number of times to retry query request. Falls back to the configured default.
+        pause : float, optional
+            Time, in seconds, to pause between consecutive queries of chunks. Falls back to the
+            configured default.
         chunksize : int, default 25
             Number of symbols to download consecutively before initiating pause.
         session : Session, optional
             ``requests.sessions.Session`` instance to be used.
         api_key : str, optional
-            Quandl API key. If not provided the environmental variable ``QUANDL_API_KEY`` is read.
-            The API key is *required*.
+            Quandl API key. Resolved through :func:`pandas_datareader.config.get_api_key` (argument,
+            ``options.api_keys['quandl']``, ``QUANDL_API_KEY``, then the config file). The API key
+            is *required*.
         """
         super().__init__(symbols, start, end, retry_count, pause, session, chunksize)
-        if api_key is None:
-            api_key = os.getenv("QUANDL_API_KEY")
-        if not api_key or not isinstance(api_key, str):
-            raise ValueError(
-                "The Quandl API key must be provided either "
-                "through the api_key variable or through the "
-                "environmental variable QUANDL_API_KEY."
-            )
-        self.api_key = api_key
+        self.api_key = get_api_key("quandl", api_key)
 
     @property
     def url(self) -> str:
