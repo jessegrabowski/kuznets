@@ -39,6 +39,7 @@ Contents:
    :maxdepth: 1
 
    remote_data.rst
+   configuration.rst
    cache.rst
    see-also.rst
    readers/index

@@ -2,6 +2,24 @@ import os
 
 import pytest
 
+from pandas_datareader import config
+
+
+@pytest.fixture(autouse=True)
+def isolate_config(monkeypatch):
+    """Reset global config state so tests never read the developer's ``~/.config`` or leak options.
+
+    Resets ``options`` and points the config file at a nonexistent path. API-key environment
+    variables are deliberately left intact so live API tests can still read keys from the
+    environment; tests that need a clean environment clear specific vars themselves.
+    """
+    config.options.reset()
+    monkeypatch.setenv("PANDAS_DATAREADER_CONFIG", "/nonexistent/pandas-datareader.toml")
+    config.reload_config()
+    yield
+    config.options.reset()
+    config.reload_config()
+
 
 def pytest_addoption(parser):
     parser.addoption("--only-stable", action="store_true", help="run only stable tests")
