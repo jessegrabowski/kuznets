@@ -1,7 +1,6 @@
 from collections.abc import Generator
 import datetime
 from io import StringIO
-import time
 from urllib.parse import urlencode
 import warnings
 
@@ -33,6 +32,7 @@ class _BaseReader:
         timeout: float = 30,
         session: requests.Session | None = None,
         freq: str | None = None,
+        headers: dict | None = None,
     ) -> None:
         """
         Initialize the reader.
@@ -56,6 +56,10 @@ class _BaseReader:
             ``requests.sessions.Session`` instance to be used.
         freq : str, optional
             Frequency to use in select readers.
+        headers : dict, optional
+            Headers applied to every request, overriding the defaults. Pass a ``User-Agent`` here to
+            identify as something other than ``pandas-datareader`` when a host blocks the default
+            agent.
         """
         self.symbols = symbols
 
@@ -68,8 +72,7 @@ class _BaseReader:
         self.retry_count = retry_count
         self.pause = pause
         self.timeout = timeout
-        self.pause_multiplier = 1
-        self.session = _init_session(session)
+        self.session = _init_session(session, retry_count, pause, headers)
         self.freq = freq
         self.headers = None
 
@@ -203,54 +206,35 @@ class _BaseReader:
             If the request fails after all retries.
         """
         headers = headers or self.headers
-        pause = self.pause
-        last_response_text = ""
-        for _ in range(self.retry_count + 1):
-            response = self.session.get(url, params=params, headers=headers, timeout=self.timeout)
-            if response.status_code == requests.codes.ok:
-                return response
+        # The session's Retry adapter handles retry counting, backoff, and Retry-After; a non-ok
+        # status here means urllib3 already exhausted its retries (or the status isn't retryable).
+        response = self.session.get(url, params=params, headers=headers, timeout=self.timeout)
+        if response.status_code == requests.codes.ok:
+            return response
 
-            if response.encoding:
-                last_response_text = response.text.encode(response.encoding)
-            time.sleep(pause)
-
-            # Increase time between subsequent requests, per subclass.
-            pause *= self.pause_multiplier
-            # Get a new breadcrumb if necessary, in case ours is invalidated
-            if isinstance(params, list) and "crumb" in params:
-                params["crumb"] = self._get_crumb(self.retry_count)
-
-            # If our output error function returns True, exit the loop.
-            if self._output_error(response):
-                break
+        # Let a subclass surface a response-specific error (e.g. an error payload) before falling
+        # back to a generic one.
+        self._output_error(response)
 
         if params is not None and len(params) > 0:
             url = url + "?" + urlencode(params)
         msg = f"Unable to read URL: {url}"
-        if last_response_text:
-            msg += f"\nResponse Text:\n{last_response_text}"
+        if response.encoding:
+            msg += f"\nResponse Text:\n{response.text.encode(response.encoding)}"
 
         raise RemoteDataError(msg)
 
-    def _get_crumb(self, *args) -> str:
-        """To be implemented by subclass."""
-        raise NotImplementedError("Subclass has not implemented method.")
+    def _output_error(self, out: requests.Response) -> None:
+        """Inspect a non-ok response and raise a source-specific error if recognized.
 
-    def _output_error(self, out: requests.Response) -> bool:
-        """Interpret non-200 HTTP responses. Override in subclass
-        if needed.
+        The base implementation does nothing; subclasses override to translate an error payload
+        into a meaningful exception.
 
         Parameters
         ----------
         out : Response
-            The raw output from an HTTP request.
-
-        Returns
-        -------
-        stop : bool
-            If True, stop retrying.
+            The raw output from a failed HTTP request.
         """
-        return False
 
     def _read_lines(self, out: StringIO) -> DataFrame:
         """Parse CSV content from a StringIO into a DataFrame.

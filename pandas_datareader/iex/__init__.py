@@ -97,17 +97,13 @@ class IEX(_BaseReader):
             p["symbols"] = symbols
         return p
 
-    def _output_error(self, out) -> bool:
-        """Interpret non-200 IEX responses.
+    def _output_error(self, out) -> None:
+        """Raise the error reported in a non-200 IEX response.
 
         Parameters
         ----------
         out : Response
-            The raw output from an HTTP request.
-
-        Returns
-        -------
-        stop : bool
+            The raw output from a failed HTTP request.
         """
         try:
             content = json.loads(out.text)

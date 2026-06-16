@@ -70,9 +70,6 @@ class YahooDailyReader(_DailyBaseReader):
             chunksize=chunksize,
         )
 
-        # Ladder up the wait time between subsequent requests to improve
-        # probability of a successful retry
-        self.pause_multiplier = 2.5
         if session is None:
             self.headers = DEFAULT_HEADERS
         else:
