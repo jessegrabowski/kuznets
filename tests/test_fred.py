@@ -7,8 +7,22 @@ import pytest
 
 from pandas_datareader import data as web
 from pandas_datareader._utils import RemoteDataError
+from pandas_datareader.fred import FRED_API_URL, FRED_CSV_URL, FredReader
 
 pytestmark = pytest.mark.stable
+
+
+class TestFredEndpointSelection:
+    def test_csv_endpoint_without_key(self, monkeypatch):
+        monkeypatch.delenv("FRED_API_KEY", raising=False)
+        assert FredReader("GDP").url == FRED_CSV_URL
+
+    def test_api_endpoint_with_explicit_key(self):
+        assert FredReader("GDP", api_key="abc").url == FRED_API_URL
+
+    def test_api_key_from_environment(self, monkeypatch):
+        monkeypatch.setenv("FRED_API_KEY", "abc")
+        assert FredReader("GDP").url == FRED_API_URL
 
 
 class TestFred:
