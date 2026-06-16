@@ -25,12 +25,6 @@ Yahoo Finance
    :members:
    :inherited-members:
 
-.. py:module:: pandas_datareader.yahoo.components
-
-.. autoclass:: _get_data
-   :members:
-   :inherited-members:
-
 .. py:module:: pandas_datareader.yahoo.actions
 
 .. autoclass:: YahooActionReader

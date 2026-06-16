@@ -9,7 +9,6 @@ API_KEY_ENV_VARS = {
     "alphavantage": "ALPHAVANTAGE_API_KEY",
     "quandl": "QUANDL_API_KEY",
     "tiingo": "TIINGO_API_KEY",
-    "enigma": "ENIGMA_API_KEY",
     "iex": "IEX_API_KEY",
 }
 

@@ -68,5 +68,4 @@ Alpha Vantage ``ALPHAVANTAGE_API_KEY``
 Quandl        ``QUANDL_API_KEY``
 Tiingo        ``TIINGO_API_KEY``
 IEX           ``IEX_API_KEY``
-Enigma        ``ENIGMA_API_KEY``
 ============  ==========================

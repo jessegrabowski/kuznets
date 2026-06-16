@@ -11,7 +11,7 @@ from pandas_datareader import data as web
 
 @pytest.fixture
 def aapl():
-    aapl = web.Options("aapl", "yahoo")
+    aapl = web.Options("aapl")
     yield aapl
     aapl.close()
 
@@ -132,7 +132,7 @@ class TestYahooOptions:
         self.assert_option_result(options)
 
     def test_options_is_not_none(self):
-        option = web.Options("aapl", "yahoo")
+        option = web.Options("aapl")
         assert option is not None
 
     def test_get_call_data(self, aapl, expiry):
@@ -171,7 +171,7 @@ class TestYahooOptions:
 
     def test_get_underlying_price(self, aapl):
         # see gh-7
-        options_object = web.Options("^spxpm", "yahoo")
+        options_object = web.Options("^spxpm")
         quote_price = options_object.underlying_price
 
         assert isinstance(quote_price, float)

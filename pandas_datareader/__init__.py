@@ -8,11 +8,9 @@ from pandas_datareader.config import options
 from pandas_datareader.data import (
     DataReader,
     Options,
-    get_components_yahoo,
     get_dailysummary_iex,
     get_data_alphavantage,
     get_data_econdb,
-    get_data_enigma,
     get_data_famafrench,
     get_data_fred,
     get_data_moex,
@@ -39,9 +37,7 @@ PKG = os.path.dirname(__file__)
 __all__ = [
     "__version__",
     "options",
-    "get_components_yahoo",
     "get_data_econdb",
-    "get_data_enigma",
     "get_data_famafrench",
     "get_data_yahoo",
     "get_data_yahoo_actions",

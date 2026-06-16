@@ -3,20 +3,16 @@ Module contains tools for collecting data from various remote sources.
 """
 
 import datetime
-import warnings
 
 from pandas import DataFrame, Timestamp
 import requests
 
 from pandas_datareader.av.forex import AVForexReader
-from pandas_datareader.av.quotes import AVQuotesReader
 from pandas_datareader.av.sector import AVSectorPerformanceReader
 from pandas_datareader.av.time_series import AVTimeSeriesReader
 from pandas_datareader.bankofcanada import BankOfCanadaReader
 from pandas_datareader.econdb import EcondbReader
-from pandas_datareader.enigma import EnigmaReader
 from pandas_datareader.eurostat import EurostatReader
-from pandas_datareader.exceptions import DEP_ERROR_MSG, ImmediateDeprecationError
 from pandas_datareader.famafrench import FamaFrenchReader
 from pandas_datareader.fred import FredReader
 from pandas_datareader.iex.daily import IEXDailyReader
@@ -34,15 +30,12 @@ from pandas_datareader.tiingo import (
     TiingoQuoteReader,
 )
 from pandas_datareader.yahoo.actions import YahooActionReader, YahooDivReader
-from pandas_datareader.yahoo.components import _get_data as get_components_yahoo
 from pandas_datareader.yahoo.daily import YahooDailyReader
-from pandas_datareader.yahoo.options import Options as YahooOptions
+from pandas_datareader.yahoo.options import Options
 from pandas_datareader.yahoo.quotes import YahooQuotesReader
 
 __all__ = [
-    "get_components_yahoo",
     "get_data_econdb",
-    "get_data_enigma",
     "get_data_famafrench",
     "get_data_fred",
     "get_data_moex",
@@ -62,6 +55,7 @@ __all__ = [
     "get_dailysummary_iex",
     "get_data_stooq",
     "DataReader",
+    "Options",
 ]
 
 
@@ -83,14 +77,6 @@ def get_data_yahoo(*args, **kwargs) -> DataFrame:
 
 def get_data_econdb(*args, **kwargs) -> DataFrame:
     return EcondbReader(*args, **kwargs).read()
-
-
-def get_data_enigma(*args, **kwargs) -> DataFrame:
-    return EnigmaReader(*args, **kwargs).read()
-
-
-def get_quote_av(*args, **kwargs) -> DataFrame:
-    return AVQuotesReader(*args, **kwargs).read()
 
 
 def get_data_yahoo_actions(*args, **kwargs) -> DataFrame:
@@ -373,7 +359,6 @@ def DataReader(
         "bankofcanada",
         "stooq",
         "iex-book",
-        "enigma",
         "fred",
         "famafrench",
         "oecd",
@@ -476,9 +461,6 @@ def DataReader(
             pause=pause,
             session=session,
         ).read()
-
-    elif data_source == "enigma":
-        return EnigmaReader(dataset_id=name, api_key=api_key).read()
 
     elif data_source == "fred":
         return FredReader(
@@ -706,22 +688,3 @@ def DataReader(
     else:
         msg = f"data_source={data_source!r} is not implemented"
         raise NotImplementedError(msg)
-
-
-def Options(
-    symbol: str,
-    data_source: str | None = None,
-    session: requests.Session | None = None,
-) -> YahooOptions:
-    if data_source is None:
-        warnings.warn(
-            "Options(symbol) is deprecated, use Options(symbol, data_source) instead",
-            FutureWarning,
-            stacklevel=2,
-        )
-        data_source = "yahoo"
-    if data_source == "yahoo":
-        raise ImmediateDeprecationError(DEP_ERROR_MSG.format("Yahoo Options"))
-        return YahooOptions(symbol, session=session)
-    else:
-        raise NotImplementedError("currently only yahoo supported")

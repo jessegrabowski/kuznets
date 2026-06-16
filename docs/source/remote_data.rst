@@ -30,7 +30,6 @@ Currently the following sources are supported and tested:
     - :ref:`St.Louis FED (FRED)<remote_data.fred>`
     - :ref:`Kenneth French's data library<remote_data.ff>`
     - :ref:`Stooq<remote_data.stooq>`
-    - :ref:`Enigma<remote_data.enigma>`
     - :ref:`MOEX<remote_data.moex>`
     - :ref:`Nasdaq Trader symbol definitions<remote_data.nasdaq_symbols>`
     - :ref:`Naver Finance<remote_data.naver>`
@@ -188,33 +187,6 @@ The top-level function ``get_data_alphavantage`` is also provided. This
 function will
 return the ``TIME_SERIES_DAILY`` endpoint for the symbol and date range
 provided.
-
-Quotes
-^^^^^^
-
-`Alpha Vantage <https://www.alphavantage.co/documentation>`__ Batch Stock Quotes
-endpoint allows the retrieval of realtime stock quotes for up to 100 symbols at
-once. These quotes are accessible through the top-level function
-``get_quote_av``.
-
-.. code-block:: ipython
-
-    In [1]: import os
-
-    In [2]: from datetime import datetime
-
-    In [3]: import pandas_datareader.data as web
-
-    In [4]: web.get_quote_av(["AAPL", "TSLA"])
-    Out[4]:
-             price  volume            timestamp
-    symbol
-    AAPL    219.87     NaN  2019-09-16 15:59:59
-    TSLA    242.80     NaN  2019-09-16 15:59:57
-
-
-
-.. note:: Most quotes are only available during market hours.
 
 Forex
 ^^^^^
@@ -380,38 +352,6 @@ and can be conveniently converted to a ``dict`` as demonstrated below
 Datasets can be located through Econdb's `search <https://www.econdb.com/search>`__
 engine, or discovered by exploring the `tree <https://www.econdb.com/tree/>`__
 of available statistical sources.
-
-
-.. _remote_data.enigma:
-
-Enigma
-======
-
-Access datasets from `Enigma <https://public.enigma.com>`__,
-the world's largest repository of structured public data. Note that the Enigma
-URL has changed from `app.enigma.io <https://app.enigma.io>`__ as of release
-``0.6.0``, as the old API deprecated.
-
-Datasets are unique identified by the ``uuid4`` at the end of a dataset's web address.
-For example, the following code downloads from  `USDA Food Recalls 1996 Data <https://public.enigma.com/datasets/292129b0-1275-44c8-a6a3-2a0881f24fe1>`__.
-
-.. code-block:: ipython
-
-    In [1]: import os
-
-    In [2]: import pandas_datareader as pdr
-
-    In [3]: df = pdr.get_data_enigma('292129b0-1275-44c8-a6a3-2a0881f24fe1', os.getenv('ENIGMA_API_KEY'))
-
-    In [4]: df.columns
-    Out[4]:
-    Index(['case_number', 'recall_notification_report_number',
-           'recall_notification_report_url', 'date_opened', 'date_closed',
-           'recall_class', 'press_release', 'domestic_est_number', 'company_name',
-           'imported_product', 'foreign_estab_number', 'city', 'state', 'country',
-           'product', 'problem', 'description', 'total_pounds_recalled',
-           'pounds_recovered'],
-          dtype='object')
 
 
 .. _remote_data.quandl:

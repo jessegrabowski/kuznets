@@ -9,7 +9,6 @@ Data Readers
    famafrench
    bank-of-canada
    econdb
-   enigma
    eurostat
    iex
    moex
