@@ -1,9 +1,21 @@
 import datetime as dt
+from importlib.metadata import PackageNotFoundError, version
 
 from pandas import Timestamp, to_datetime
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util import Retry
 
 from pandas_datareader.compat import is_number
+
+try:
+    DEFAULT_USER_AGENT = f"pandas-datareader/{version('pandas-datareader')}"
+except PackageNotFoundError:  # pragma: no cover
+    DEFAULT_USER_AGENT = "pandas-datareader"
+
+# Transient statuses worth retrying. Other 4xx (e.g. 404) won't recover, so they fall straight
+# through to the caller. 429 and 503 carry a ``Retry-After`` that the Retry strategy honors.
+RETRYABLE_STATUS_CODES = (413, 429, 500, 502, 503, 504)
 
 
 class SymbolWarning(UserWarning):
@@ -61,14 +73,31 @@ def _sanitize_dates(
     return start, end
 
 
-def _init_session(session: requests.Session | None) -> requests.Session:
+def _init_session(
+    session: requests.Session | None,
+    retry_count: int = 3,
+    pause: float = 0.1,
+    headers: dict | None = None,
+) -> requests.Session:
     """
-    Initialize a requests session.
+    Initialize a requests session with a retry strategy.
+
+    Mount an :class:`~urllib3.util.Retry`-backed adapter so urllib3 handles retry counting,
+    exponential backoff, and ``Retry-After`` for transient failures. ``raise_on_status`` is left
+    off so the exhausted response flows back to :meth:`~pandas_datareader.base._BaseReader._get_response`,
+    which raises a ``RemoteDataError`` carrying the response body.
 
     Parameters
     ----------
     session : Session or None
         ``requests.sessions.Session`` instance to be used, or ``None`` to create a new session.
+    retry_count : int, optional
+        Maximum number of retries for transient failures. Default 3.
+    pause : float, optional
+        Backoff factor, in seconds, between retries. The nth retry waits ``pause * 2 ** (n - 1)``
+        seconds. Default 0.1.
+    headers : dict, optional
+        Headers to apply to the session, taking precedence over the defaults.
 
     Returns
     -------
@@ -77,8 +106,23 @@ def _init_session(session: requests.Session | None) -> requests.Session:
     """
     if session is None:
         session = requests.Session()
-        # do not set requests max_retries here to support arbitrary pause
-    else:
-        if not isinstance(session, requests.Session):
-            raise TypeError("session must be a request.Session")
+        # Identify ourselves so hosts can throttle politely rather than blocking the anonymous
+        # ``python-requests`` agent that requests sets by default.
+        session.headers["User-Agent"] = DEFAULT_USER_AGENT
+    elif not isinstance(session, requests.Session):
+        raise TypeError("session must be a request.Session")
+
+    if headers:
+        session.headers.update(headers)
+
+    retry = Retry(
+        total=retry_count,
+        backoff_factor=pause,
+        status_forcelist=RETRYABLE_STATUS_CODES,
+        respect_retry_after_header=True,
+        raise_on_status=False,
+    )
+    adapter = HTTPAdapter(max_retries=retry)
+    session.mount("https://", adapter)
+    session.mount("http://", adapter)
     return session
