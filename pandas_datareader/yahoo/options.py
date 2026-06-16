@@ -9,6 +9,10 @@ from pandas.tseries.offsets import MonthEnd
 
 from pandas_datareader._utils import RemoteDataError
 from pandas_datareader.base import _OptionBaseReader
+from pandas_datareader.yahoo.headers import DEFAULT_HEADERS
+
+_CRUMB_URL = "https://query1.finance.yahoo.com/v1/test/getcrumb"
+_COOKIE_URL = "https://fc.yahoo.com"
 
 # Items needed for options class
 CUR_MONTH = dt.datetime.now().month
@@ -35,6 +39,22 @@ class Options(_OptionBaseReader):
     """
 
     _OPTIONS_BASE_URL = "https://query1.finance.yahoo.com/v7/finance/options/{sym}"
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.headers = DEFAULT_HEADERS
+        self._crumb = None
+
+    def _get_crumb(self) -> str:
+        """Prime the session cookie and return a cached Yahoo API crumb.
+
+        The v7 options endpoint rejects requests without a cookie/crumb pair. Fetch a cookie from
+        Yahoo once, exchange it for a crumb, and reuse it across the per-expiry requests.
+        """
+        if self._crumb is None:
+            self.session.get(_COOKIE_URL, headers=self.headers, timeout=self.timeout)
+            self._crumb = self.session.get(_CRUMB_URL, headers=self.headers, timeout=self.timeout).text
+        return self._crumb
 
     def get_options_data(self, month=None, year=None, expiry=None):
         """
@@ -341,7 +361,7 @@ class Options(_OptionBaseReader):
         """
         expiry = self._try_parse_dates(year, month, expiry)
         data = self._get_data_in_date_range(expiry, call=call, put=put)
-        underlying_price = data.Underlying_Price[0]
+        underlying_price = data.Underlying_Price.iloc[0]
         return self._chop_data(data, above_below, underlying_price)
 
     def _chop_data(self, df, above_below=2, underlying_price=None):
@@ -557,8 +577,10 @@ class Options(_OptionBaseReader):
         types = list(to_ret)
 
         df_filtered_by_type = df[df.index.map(lambda x: x[2] in types).tolist()]
-        df_filtered_by_expiry = df_filtered_by_type[df_filtered_by_type.index.get_level_values("Expiry").isin(dates)]
-        return df_filtered_by_expiry
+        # The Expiry index holds Timestamps while *dates* are ``datetime.date``; compare on the
+        # normalized date so ``isin`` matches.
+        expiry = df_filtered_by_type.index.get_level_values("Expiry").normalize()
+        return df_filtered_by_type[expiry.isin(to_datetime(list(dates)))]
 
     @property
     def underlying_price(self):
@@ -569,7 +591,7 @@ class Options(_OptionBaseReader):
             underlying_price = self._underlying_price
         except AttributeError:
             data = self.get_options_data()
-            underlying_price = data.Underlying_Price[0]
+            underlying_price = data.Underlying_Price.iloc[0]
         return underlying_price
 
     @property
@@ -581,7 +603,7 @@ class Options(_OptionBaseReader):
             quote_time = self._quote_time
         except AttributeError:
             data = self.get_options_data()
-            quote_time = data.Quote_Time[0]
+            quote_time = data.Quote_Time.iloc[0]
         return quote_time
 
     @property
@@ -630,7 +652,8 @@ class Options(_OptionBaseReader):
         -------
         A JSON object
         """
-        jd = json.loads(self._read_url_as_StringIO(url).read())
+        params = {"crumb": self._get_crumb()} if url.startswith("http") else None
+        jd = json.loads(self._read_url_as_StringIO(url, params=params).read())
         if jd is None:  # pragma: no cover
             raise RemoteDataError(f"Parsed URL {url!r} is not a valid json object")
         return jd
