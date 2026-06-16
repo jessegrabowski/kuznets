@@ -300,10 +300,11 @@ def DataReader(
     data_source: str | None = None,
     start: str | int | datetime.date | datetime.datetime | Timestamp | None = None,
     end: str | int | datetime.date | datetime.datetime | Timestamp | None = None,
-    retry_count: int = 3,
-    pause: float = 0.1,
+    retry_count: int | None = None,
+    pause: float | None = None,
     session: requests.Session | None = None,
     api_key: str | None = None,
+    headers: dict | None = None,
 ) -> DataFrame:
     """
     Import data from a number of online sources.
@@ -321,15 +322,21 @@ def DataReader(
         Left boundary for range (defaults to 1/1/2010).
     end : str, int, date, datetime, or Timestamp, optional
         Right boundary for range (defaults to today).
-    retry_count : int, default 3
-        Number of times to retry query request.
-    pause : float, default 0.1
+    retry_count : int, optional
+        Number of times to retry query request. Falls back to ``options.retry_count``, the config
+        file, then 3.
+    pause : float, optional
         Time, in seconds, to pause between consecutive queries of chunks. If single value given for
-        symbol, represents the pause between retries.
+        symbol, represents the pause between retries. Falls back to the configured default.
     session : Session, default None
         ``requests.sessions.Session`` instance to be used.
     api_key : str, optional
-        Optional parameter to specify an API key for certain data sources.
+        Optional parameter to specify an API key for certain data sources. Each keyed reader also
+        resolves keys from ``options.api_keys``, environment variables, and the config file.
+    headers : dict, optional
+        Headers applied to every request, merged over ``options.headers`` and the config file. Pass
+        a ``User-Agent`` here to identify as something other than ``pandas-datareader`` when a host
+        blocks the default agent.
 
     Returns
     -------
@@ -481,6 +488,8 @@ def DataReader(
             retry_count=retry_count,
             pause=pause,
             session=session,
+            api_key=api_key,
+            headers=headers,
         ).read()
 
     elif data_source == "famafrench":
