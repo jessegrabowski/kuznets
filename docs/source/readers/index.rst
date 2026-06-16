@@ -10,7 +10,6 @@ Data Readers
    bank-of-canada
    econdb
    eurostat
-   iex
    moex
    nasdaq-trader
    naver
