@@ -14,6 +14,7 @@ from pandas_datareader._utils import (
     _init_session,
     _sanitize_dates,
 )
+from pandas_datareader.config import get_headers, get_setting
 
 
 class _BaseReader:
@@ -27,9 +28,9 @@ class _BaseReader:
         symbols: str | list[str],
         start: str | int | datetime.date | datetime.datetime | Timestamp | None = None,
         end: str | int | datetime.date | datetime.datetime | Timestamp | None = None,
-        retry_count: int = 3,
-        pause: float = 0.1,
-        timeout: float = 30,
+        retry_count: int | None = None,
+        pause: float | None = None,
+        timeout: float | None = None,
         session: requests.Session | None = None,
         freq: str | None = None,
         headers: dict | None = None,
@@ -46,20 +47,23 @@ class _BaseReader:
             ``'JAN-01-2010'``, ``'1/1/10'``, ``'Jan, 1, 1980'``).
         end : str, int, date, datetime, or Timestamp, optional
             Ending date.
-        retry_count : int, default 3
-            Number of times to retry query request.
-        pause : float, default 0.1
-            Time, in seconds, of the pause between retries.
-        timeout : float, default 30
-            Time, in seconds, to wait for server response.
+        retry_count : int, optional
+            Number of times to retry query request. Falls back to ``options.retry_count``, the
+            config file, then 3.
+        pause : float, optional
+            Time, in seconds, of the pause between retries. Falls back to ``options.pause``, the
+            config file, then 0.1.
+        timeout : float, optional
+            Time, in seconds, to wait for server response. Falls back to ``options.timeout``, the
+            config file, then 30.
         session : Session, optional
             ``requests.sessions.Session`` instance to be used.
         freq : str, optional
             Frequency to use in select readers.
         headers : dict, optional
-            Headers applied to every request, overriding the defaults. Pass a ``User-Agent`` here to
-            identify as something other than ``pandas-datareader`` when a host blocks the default
-            agent.
+            Headers applied to every request, merged over ``options.headers`` and the config file.
+            Pass a ``User-Agent`` here to identify as something other than ``pandas-datareader``
+            when a host blocks the default agent.
         """
         self.symbols = symbols
 
@@ -67,12 +71,15 @@ class _BaseReader:
         self.start = start
         self.end = end
 
+        retry_count = get_setting("retry_count", retry_count)
+        pause = get_setting("pause", pause)
+        timeout = get_setting("timeout", timeout)
         if not isinstance(retry_count, int) or retry_count < 0:
             raise ValueError("'retry_count' must be integer larger than 0")
         self.retry_count = retry_count
         self.pause = pause
         self.timeout = timeout
-        self.session = _init_session(session, retry_count, pause, headers)
+        self.session = _init_session(session, retry_count, pause, get_headers(headers))
         self.freq = freq
         self.headers = None
 
@@ -275,8 +282,8 @@ class _DailyBaseReader(_BaseReader):
         symbols: str | list[str] | DataFrame | None = None,
         start: str | int | datetime.date | datetime.datetime | Timestamp | None = None,
         end: str | int | datetime.date | datetime.datetime | Timestamp | None = None,
-        retry_count: int = 3,
-        pause: float = 0.1,
+        retry_count: int | None = None,
+        pause: float | None = None,
         session: requests.Session | None = None,
         chunksize: int = 25,
     ) -> None:
@@ -291,10 +298,10 @@ class _DailyBaseReader(_BaseReader):
             Starting date.
         end : str, int, date, datetime, or Timestamp, optional
             Ending date.
-        retry_count : int, default 3
-            Number of times to retry query request.
-        pause : float, default 0.1
-            Time, in seconds, of the pause between retries.
+        retry_count : int, optional
+            Number of times to retry query request. Falls back to the configured default.
+        pause : float, optional
+            Time, in seconds, of the pause between retries. Falls back to the configured default.
         session : Session, optional
             ``requests.sessions.Session`` instance to be used.
         chunksize : int, default 25
