@@ -2,6 +2,7 @@ from pandas import DataFrame
 
 from pandas_datareader._utils import RemoteDataError
 from pandas_datareader.base import _BaseReader
+from pandas_datareader.yahoo._auth import fetch_crumb
 from pandas_datareader.yahoo.headers import DEFAULT_HEADERS
 
 _DEFAULT_PARAMS = {
@@ -9,8 +10,6 @@ _DEFAULT_PARAMS = {
     "corsDomain": "finance.yahoo.com",
     ".tsrc": "finance",
 }
-_CRUMB_URL = "https://query1.finance.yahoo.com/v1/test/getcrumb"
-_COOKIE_URL = "https://fc.yahoo.com"
 
 
 class YahooQuotesReader(_BaseReader):
@@ -49,7 +48,8 @@ class YahooQuotesReader(_BaseReader):
             One row per symbol, indexed by ticker.
         """
         symbols = [self.symbols] if isinstance(self.symbols, str) else list(self.symbols)
-        params = {"symbols": ",".join(symbols), "crumb": self._get_crumb(), **_DEFAULT_PARAMS}
+        crumb = fetch_crumb(self.session, self.headers, self.timeout)
+        params = {"symbols": ",".join(symbols), "crumb": crumb, **_DEFAULT_PARAMS}
         results = self._get_response(self.url, params=params, headers=self.headers).json()
         results = results["quoteResponse"]["result"]
         if not results:
@@ -58,12 +58,3 @@ class YahooQuotesReader(_BaseReader):
         df = DataFrame(results).set_index("symbol")
         df["price"] = df["regularMarketPrice"]
         return df
-
-    def _get_crumb(self, *args) -> str:
-        """Prime the session cookie and return a Yahoo API crumb.
-
-        The v7 quote endpoint rejects requests without a cookie/crumb pair. Fetch a cookie from
-        Yahoo, then exchange it for a crumb that authorizes the quote request.
-        """
-        self.session.get(_COOKIE_URL, headers=self.headers, timeout=self.timeout)
-        return self.session.get(_CRUMB_URL, headers=self.headers, timeout=self.timeout).text
