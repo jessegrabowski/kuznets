@@ -373,14 +373,14 @@ class _DailyBaseReader(_BaseReader):
         if len(passed) == 0:
             msg = "No data fetched using {0!r}"
             raise RemoteDataError(msg.format(self.__class__.__name__))
+        if len(failed) > 0:
+            df_na = stocks[passed[0]].copy()
+            df_na[:] = np.nan
+            for sym in failed:
+                stocks[sym] = df_na
         try:
-            if len(stocks) > 0 and len(failed) > 0 and len(passed) > 0:
-                df_na = stocks[passed[0]].copy()
-                df_na[:] = np.nan
-                for sym in failed:
-                    stocks[sym] = df_na
-                result = concat(stocks, sort=True).unstack(level=0)
-                result.columns.names = ["Attributes", "Symbols"]
+            result = concat(stocks, sort=True).unstack(level=0)
+            result.columns.names = ["Attributes", "Symbols"]
             return result
         except AttributeError as exc:
             # cannot construct a panel with just 1D nans indicating no data
