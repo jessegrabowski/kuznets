@@ -83,7 +83,9 @@ class EcondbReader(_BaseReader):
         df : DataFrame
             Requested time series data.
         """
-        results = self.session.get(self.url).json()["results"]
+        # Route through _get_response so a non-200 (e.g. the 401 the API now returns without
+        # credentials) raises RemoteDataError instead of a confusing KeyError on ``["results"]``.
+        results = self._get_response(self.url).json()["results"]
         df = pd.DataFrame({"dates": []}).set_index("dates")
 
         if self._show == "labels":
