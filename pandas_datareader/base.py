@@ -374,7 +374,8 @@ class _DailyBaseReader(_BaseReader):
             msg = "No data fetched using {0!r}"
             raise RemoteDataError(msg.format(self.__class__.__name__))
         if len(failed) > 0:
-            df_na = stocks[passed[0]].copy()
+            # Cast to float first: an integer column (e.g. Volume) can't hold NaN under pandas >= 3.
+            df_na = stocks[passed[0]].astype("float64")
             df_na[:] = np.nan
             for sym in failed:
                 stocks[sym] = df_na
