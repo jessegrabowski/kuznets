@@ -18,6 +18,11 @@ CUR_YEAR = dt.datetime.now().year
 CUR_DAY = dt.datetime.now().day
 
 
+def _utc_naive(timestamp: float) -> dt.datetime:
+    """Convert a Unix timestamp to a naive UTC ``datetime`` (Yahoo reports epoch seconds in UTC)."""
+    return dt.datetime.fromtimestamp(timestamp, dt.UTC).replace(tzinfo=None)
+
+
 def _parse_options_data(jd):
     return read_json(jd)
 
@@ -625,9 +630,7 @@ class Options(_OptionBaseReader):
         url = self._OPTIONS_BASE_URL.format(sym=self.symbol)
         jd = self._parse_url(url)
 
-        expiry_dates = [
-            dt.datetime.utcfromtimestamp(ts).date() for ts in jd["optionChain"]["result"][0]["expirationDates"]
-        ]
+        expiry_dates = [_utc_naive(ts).date() for ts in jd["optionChain"]["result"][0]["expirationDates"]]
 
         if len(expiry_dates) == 0:
             raise RemoteDataError("Data not available")  # pragma: no cover
@@ -749,18 +752,18 @@ class Options(_OptionBaseReader):
                     elif quote["marketState"] == "POSTPOST" and "postMarketPrice" in quote:
                         d["Underlying_Price"] = quote["postMarketPrice"]
                         quote_unix_time = quote["postMarketTime"]
-                    d["Quote_Time"] = dt.datetime.utcfromtimestamp(quote_unix_time)
+                    d["Quote_Time"] = _utc_naive(quote_unix_time)
 
                     self._underlying_price = d["Underlying_Price"]
                     self._quote_time = d["Quote_Time"]
 
-                    d["Last_Trade_Date"] = dt.datetime.utcfromtimestamp(d["Last_Trade_Date"])
+                    d["Last_Trade_Date"] = _utc_naive(d["Last_Trade_Date"])
 
                     rows_list.append(d)
                     index.append(
                         (
                             float(option_by_strike["strike"]),
-                            dt.datetime.utcfromtimestamp(option_by_strike["expiration"]),
+                            _utc_naive(option_by_strike["expiration"]),
                             typ.replace("s", ""),
                             option_by_strike["contractSymbol"],
                         )
@@ -783,7 +786,7 @@ class Options(_OptionBaseReader):
             A DataFrame with requested options data.
         """
         data = []
-        epoch = dt.datetime.utcfromtimestamp(0)
+        epoch = _utc_naive(0)
 
         try:
             if exp_dates is None:
