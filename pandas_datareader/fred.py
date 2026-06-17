@@ -66,7 +66,7 @@ class FredReader(_BaseReader):
                 time.sleep(self.pause)
             series.append(fetch(name))
 
-        return concat(series, axis=1, join="outer")
+        return concat(series, axis=1, join="outer", sort=True)
 
     def _fetch_csv(self, name: str) -> DataFrame:
         """Fetch a single series from the public ``fredgraph.csv`` endpoint."""
