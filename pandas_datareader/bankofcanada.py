@@ -43,5 +43,7 @@ class BankOfCanadaReader(_BaseReader):
         cleaned : str
             Cleaned text between OBSERVATIONS and ERRORS sections.
         """
-        data = response.text.split("OBSERVATIONS")[1]
-        return data.split("ERRORS")[0].strip()
+        # Split on the quoted section markers so the closing quote of ``"OBSERVATIONS"`` isn't left
+        # dangling on the first CSV line (which corrupts the parsed index name).
+        data = response.text.split('"OBSERVATIONS"')[1]
+        return data.split('"ERRORS"')[0].strip()
