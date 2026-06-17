@@ -97,15 +97,16 @@ class TestConfigFile:
 
     def test_path_override_env(self, monkeypatch):
         monkeypatch.setenv("PANDAS_DATAREADER_CONFIG", "/some/where/x.toml")
-        assert str(config.config_path()) == "/some/where/x.toml"
+        # as_posix() normalizes separators so the assertion holds on Windows too.
+        assert config.config_path().as_posix() == "/some/where/x.toml"
 
     def test_path_default_xdg(self, monkeypatch):
         monkeypatch.delenv("PANDAS_DATAREADER_CONFIG", raising=False)
         monkeypatch.setenv("XDG_CONFIG_HOME", "/cfg")
-        assert str(config.config_path()) == "/cfg/pandas-datareader/config.toml"
+        assert config.config_path().as_posix() == "/cfg/pandas-datareader/config.toml"
 
     def test_path_default_home(self, monkeypatch):
         monkeypatch.delenv("PANDAS_DATAREADER_CONFIG", raising=False)
         monkeypatch.delenv("XDG_CONFIG_HOME", raising=False)
         monkeypatch.setattr(config.Path, "home", classmethod(lambda cls: config.Path("/home/me")))
-        assert str(config.config_path()) == "/home/me/.config/pandas-datareader/config.toml"
+        assert config.config_path().as_posix() == "/home/me/.config/pandas-datareader/config.toml"
