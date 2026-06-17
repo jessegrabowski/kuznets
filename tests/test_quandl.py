@@ -10,7 +10,11 @@ TEST_API_KEY = os.getenv("QUANDL_API_KEY")
 # Ensure blank TEST_API_KEY not used in pull request
 TEST_API_KEY = None if not TEST_API_KEY else TEST_API_KEY
 
+# These are live tests against the keyed Quandl API: deselected by default (like every other
+# network test) and additionally skipped when no key is configured. Run with ``-m network`` and
+# QUANDL_API_KEY set; the weekly refresh workflow records fixtures when the secret is present.
 pytestmark = [
+    pytest.mark.network,
     pytest.mark.requires_api_key,
     pytest.mark.quandl,
     pytest.mark.skipif(TEST_API_KEY is None, reason="QUANDL_API_KEY not set"),
