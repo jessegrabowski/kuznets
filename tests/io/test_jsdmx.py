@@ -1,5 +1,3 @@
-import os
-
 import pandas as pd
 import pytest
 
@@ -15,7 +13,7 @@ def dirpath(datapath):
 
 def test_read_oecd_sdmx_json(dirpath):
     # OECD trade union density, captured from the SDMX 2.1 API as SDMX-JSON 2.0.
-    result = read_jsdmx(os.path.join(dirpath, "jsdmx", "oecd_tud.json"))
+    result = read_jsdmx(dirpath / "jsdmx" / "oecd_tud.json")
     assert isinstance(result, pd.DataFrame)
 
     assert isinstance(result.index, pd.DatetimeIndex)

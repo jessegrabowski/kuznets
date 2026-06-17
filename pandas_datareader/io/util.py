@@ -1,5 +1,5 @@
 from collections import OrderedDict
-import os
+from pathlib import Path
 
 import pandas as pd
 
@@ -82,15 +82,15 @@ def _read_content(path_or_buf):
 
     filepath_or_buffer = get_filepath_or_buffer(path_or_buf)[0]
 
-    if isinstance(filepath_or_buffer, str):
+    if isinstance(filepath_or_buffer, str | Path):
         try:
-            exists = os.path.exists(filepath_or_buffer)
-        except (TypeError, ValueError):
+            exists = Path(filepath_or_buffer).exists()
+        except (TypeError, ValueError, OSError):
+            # A raw JSON string (not a path) or an over-long name isn't a file.
             exists = False
 
         if exists:
-            with open(filepath_or_buffer) as fh:
-                data = fh.read()
+            data = Path(filepath_or_buffer).read_text()
         else:
             data = filepath_or_buffer
     elif hasattr(filepath_or_buffer, "read"):
