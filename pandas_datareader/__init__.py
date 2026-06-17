@@ -1,5 +1,5 @@
 from importlib.metadata import version
-import os
+from pathlib import Path
 import sys
 
 __version__ = version("pandas-datareader")
@@ -23,7 +23,7 @@ from pandas_datareader.data import (
     get_quote_yahoo,
 )
 
-PKG = os.path.dirname(__file__)
+PKG = Path(__file__).parent
 
 __all__ = [
     "__version__",
@@ -66,7 +66,7 @@ def test(extra_args=None):
         if not isinstance(extra_args, list):
             extra_args = [extra_args]
         cmd = extra_args
-    cmd += [PKG]
+    cmd += [str(PKG)]
     joined = " ".join(cmd)
     print(f"running: pytest {joined}")
     sys.exit(pytest.main(cmd))

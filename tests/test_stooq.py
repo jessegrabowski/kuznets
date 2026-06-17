@@ -1,5 +1,3 @@
-from pathlib import Path
-
 import pytest
 
 from pandas_datareader import data as web
@@ -28,7 +26,7 @@ class TestStooqOffline:
     def test_failed_symbol_warns_and_fills_nan(self, monkeypatch, datapath):
         # Stooq sends every symbol to the same URL (only the query string differs), so dispatch on
         # the ``s`` param: a real CSV for SPY, an empty body for the bad symbol.
-        spy = Path(datapath("data", "stooq", "spy.csv")).read_bytes()
+        spy = datapath("data", "stooq", "spy.csv").read_bytes()
 
         def handler(url, params=None, **kwargs):
             return make_response(b"") if "BADSYM" in (params or {}).get("s", "") else make_response(spy)
