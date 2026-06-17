@@ -74,3 +74,34 @@ git clone https://github.com/pydata/pandas-datareader.git
 cd pandas-datareader
 python setup.py install
 ```
+
+### Running the tests
+
+The test suite runs fully offline by default: each reader is replayed against a **recorded real
+response** stored under `tests/data/`, so no third-party service is contacted.
+
+``` shell
+pytest
+```
+
+Tests marked `network` are deselected by default. Each one runs a reader against the live service
+and asserts the *shape* of the result (columns, dtypes, non-empty) — an API-drift detector that
+skips gracefully when a service is unreachable:
+
+``` shell
+pytest -m network
+```
+
+The offline fixtures are recordings, not hand-written mocks. To regenerate them from the live
+services, run the `network` tests in record mode:
+
+``` shell
+RECORD=1 pytest -m network
+```
+
+This rewrites `tests/data/` from the real responses (and a wrong parser fails here, at record time,
+rather than being hidden by a fixture built to match it). A weekly GitHub Actions workflow
+(`refresh-fixtures`) does this automatically and opens a PR when a fixture changes, failing if an
+upstream shape breaks. A few services can't be recorded and are documented in their tests: Stooq
+serves an anti-bot challenge to scripted clients, and the keyed readers (AlphaVantage, Quandl,
+Tiingo) need API keys.
