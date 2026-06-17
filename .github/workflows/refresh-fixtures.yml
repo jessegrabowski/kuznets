@@ -1,0 +1,64 @@
+name: Refresh test fixtures
+
+# Re-records the offline test fixtures from the live services and verifies their shape. Runs weekly
+# (and on demand). Push/PR CI stays fully offline; only this job touches the network.
+on:
+  schedule:
+    - cron: "0 6 * * 1"  # Mondays 06:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  refresh:
+    name: Record fixtures and open PR on drift
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # needed for hatch-vcs
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install package and dev dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+
+      - name: Record fixtures from live services
+        id: record
+        continue-on-error: true
+        env:
+          RECORD: "1"
+          # Optional: set these as repo secrets to also record the keyed readers.
+          ALPHAVANTAGE_API_KEY: ${{ secrets.ALPHAVANTAGE_API_KEY }}
+          QUANDL_API_KEY: ${{ secrets.QUANDL_API_KEY }}
+          TIINGO_API_KEY: ${{ secrets.TIINGO_API_KEY }}
+        run: pytest -m network -o addopts="" -rs
+
+      - name: Verify offline suite replays the refreshed fixtures
+        run: pytest
+
+      - name: Open PR with refreshed fixtures
+        if: always()
+        uses: peter-evans/create-pull-request@v6
+        with:
+          branch: bot/refresh-fixtures
+          title: "test: refresh recorded fixtures"
+          commit-message: "test: refresh recorded fixtures from live services"
+          body: |
+            Automated weekly refresh of the recorded responses under `tests/data/`.
+
+            If this PR is empty, the live responses still match. If the live-recording step
+            failed, an upstream API shape changed — review the diff and the failed run before merging.
+          add-paths: tests/data
+
+      - name: Fail the run if live recording detected drift
+        if: steps.record.outcome == 'failure'
+        run: |
+          echo "Live recording reported a failure (likely an upstream API shape change)."
+          exit 1
