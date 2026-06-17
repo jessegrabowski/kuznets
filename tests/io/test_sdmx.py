@@ -1,7 +1,5 @@
 # pylint: disable-msg=E1101,W0613,W0603
 
-import os
-
 import numpy as np
 import pandas as pd
 from pandas import testing as tm
@@ -21,8 +19,8 @@ def test_tourism(dirpath):
     # Eurostat
     # Employed doctorate holders in non managerial and non professional
     # occupations by fields of science (%)
-    dsd = _read_sdmx_dsd(os.path.join(dirpath, "sdmx", "DSD_cdh_e_fos.xml"))
-    df = read_sdmx(os.path.join(dirpath, "sdmx", "cdh_e_fos.xml"), dsd=dsd)
+    dsd = _read_sdmx_dsd(dirpath / "sdmx" / "DSD_cdh_e_fos.xml")
+    df = read_sdmx(dirpath / "sdmx" / "cdh_e_fos.xml", dsd=dsd)
 
     assert isinstance(df, pd.DataFrame)
     assert df.shape == (2, 336)

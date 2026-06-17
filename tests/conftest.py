@@ -1,4 +1,4 @@
-import os
+from pathlib import Path
 
 import pytest
 
@@ -54,18 +54,19 @@ def datapath(request):
 
     Returns
     -------
-    path : path including ``tests/``.
+    path : Path
+        Path including ``tests/``.
 
     Raises
     ------
     ValueError
         If the path doesn't exist and the --strict-data-files option is set.
     """
-    BASE_PATH = os.path.dirname(__file__)
+    base_path = Path(__file__).parent
 
     def deco(*args):
-        path = os.path.join(BASE_PATH, *args)
-        if not os.path.exists(path):
+        path = base_path.joinpath(*args)
+        if not path.exists():
             if request.config.getoption("--strict-data-files"):
                 msg = "Could not find file {} and --strict-data-files is set."
                 raise ValueError(msg.format(path))

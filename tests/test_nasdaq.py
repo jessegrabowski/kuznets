@@ -1,5 +1,4 @@
 import ftplib
-from pathlib import Path
 
 import pytest
 
@@ -41,9 +40,7 @@ def clear_ticker_cache(monkeypatch):
 
 class TestNasdaqOffline:
     def test_symbols_are_parsed(self, monkeypatch, datapath):
-        lines = datapath("data", "nasdaq", "nasdaqtraded.txt")
-        with open(lines) as fh:
-            text = fh.read().splitlines()
+        text = datapath("data", "nasdaq", "nasdaqtraded.txt").read_text().splitlines()
         monkeypatch.setattr(nasdaq_trader, "FTP", _FakeFTP(text))
 
         symbols = web.DataReader("symbols", "nasdaq")
@@ -81,4 +78,4 @@ class TestNasdaqLive:
             sample = [lines[0]]
             sample += [line for line in lines[1:-1] if line.split("|")[1] in _SAMPLE_SYMBOLS]
             sample.append(lines[-1])
-            Path(datapath("data", "nasdaq", "nasdaqtraded.txt")).write_text("\n".join(sample) + "\n")
+            datapath("data", "nasdaq", "nasdaqtraded.txt").write_text("\n".join(sample) + "\n")
