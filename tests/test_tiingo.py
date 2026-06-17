@@ -26,6 +26,7 @@ def symbols(request):
     return request.param
 
 
+@pytest.mark.network
 @pytest.mark.skipif(TEST_API_KEY is None, reason="TIINGO_API_KEY not set")
 def test_tiingo_quote(symbols):
     df = TiingoQuoteReader(symbols=symbols).read()
@@ -35,6 +36,7 @@ def test_tiingo_quote(symbols):
     assert df.shape[0] == len(symbols)
 
 
+@pytest.mark.network
 @pytest.mark.skipif(TEST_API_KEY is None, reason="TIINGO_API_KEY not set")
 def test_tiingo_historical(symbols):
     df = TiingoDailyReader(symbols=symbols).read()
@@ -44,6 +46,7 @@ def test_tiingo_historical(symbols):
     assert df.index.levels[0].shape[0] == len(symbols)
 
 
+@pytest.mark.network
 @pytest.mark.skipif(TEST_API_KEY is None, reason="TIINGO_API_KEY not set")
 def test_tiingo_iex_historical(symbols):
     df = TiingoIEXHistoricalReader(symbols=symbols).read()
@@ -54,6 +57,7 @@ def test_tiingo_iex_historical(symbols):
     assert df.index.levels[0].shape[0] == len(symbols)
 
 
+@pytest.mark.network
 @pytest.mark.skipif(TEST_API_KEY is None, reason="TIINGO_API_KEY not set")
 def test_tiingo_metadata(symbols):
     df = TiingoMetaDataReader(symbols=symbols).read()
@@ -76,7 +80,8 @@ def test_tiingo_no_api_key(symbols):
             TiingoMetaDataReader(symbols=symbols)
 
 
-@pytest.mark.skipif(pd.__version__ == "0.19.2", reason="pandas 0.19.2 does not like this file format")
+@pytest.mark.network
 def test_tiingo_stock_symbols():
+    # Keyless endpoint; deselected by default so the offline suite never reaches the network.
     sym = get_tiingo_symbols()
     assert isinstance(sym, pd.DataFrame)

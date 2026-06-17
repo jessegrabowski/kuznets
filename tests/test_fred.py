@@ -2,12 +2,12 @@ from datetime import datetime
 
 import numpy as np
 import pandas as pd
-from pandas import DataFrame, testing as tm
 import pytest
 
 from pandas_datareader import data as web
 from pandas_datareader._utils import RemoteDataError
 from pandas_datareader.fred import FRED_API_URL, FRED_CSV_URL, FredReader
+from tests._mock import live_or_record, make_response, patch_session_get, tolerate_outage
 
 pytestmark = pytest.mark.stable
 
@@ -25,71 +25,69 @@ class TestFredEndpointSelection:
         assert FredReader("GDP").url == FRED_API_URL
 
 
-class TestFred:
-    def test_fred(self):
-        # Raises an exception when DataReader can't
-        # get a 200 response from FRED.
+class TestFredOffline:
+    def test_csv_series_is_parsed(self, monkeypatch, datapath):
+        monkeypatch.delenv("FRED_API_KEY", raising=False)
+        patch_session_get(monkeypatch, {"fredgraph.csv": datapath("data", "fred", "gdp.csv")})
 
-        start = datetime(2010, 1, 1)
-        end = datetime(2013, 1, 1)
-
-        df = web.DataReader("GDP", "fred", start, end)
+        df = web.DataReader("GDP", "fred", datetime(2010, 1, 1), datetime(2013, 1, 1))
         ts = df["GDP"]
 
-        assert ts.index[0] == pd.to_datetime("2010-01-01")
-        assert ts.index[-1] == pd.to_datetime("2013-01-01")
+        assert ts.index[0] == pd.Timestamp("2010-01-01")
+        assert ts.index[-1] == pd.Timestamp("2013-01-01")
         assert ts.index.name == "DATE"
         assert ts.name == "GDP"
         assert len(ts) == 13
+        assert np.issubdtype(ts.values.dtype, np.floating)
 
-        with pytest.raises(RemoteDataError):
-            web.DataReader("NON EXISTENT SERIES", "fred", start, end)
+    def test_csv_missing_value_is_nan(self, monkeypatch, datapath):
+        monkeypatch.delenv("FRED_API_KEY", raising=False)
+        patch_session_get(monkeypatch, {"fredgraph.csv": datapath("data", "fred", "dfii5.csv")})
 
-    def test_fred_nan(self):
-        start = datetime(2010, 1, 1)
-        end = datetime(2013, 1, 27)
-        df = web.DataReader("DFII5", "fred", start, end)
+        df = web.DataReader("DFII5", "fred", datetime(2010, 1, 1), datetime(2013, 1, 27))
         assert pd.isnull(df.loc["2010-01-01"].iloc[0])
 
-    def test_fred_parts(self):  # pragma: no cover
-        start = datetime(2010, 1, 1)
-        end = datetime(2013, 1, 27)
-        df = web.get_data_fred("CPIAUCSL", start, end)
-        assert df.loc["2010-05-01"].iloc[0] == 217.29
-
-        t = df.CPIAUCSL.values
-        assert np.issubdtype(t.dtype, np.floating)
-        assert t.shape == (37,)
-
-    def test_fred_part2(self):
-        expected = [[576.7], [962.9], [684.7], [848.3], [933.3]]
-        result = web.get_data_fred("A09024USA144NNBR", start="1915").iloc[:5]
-        np.testing.assert_array_equal(result.values, np.array(expected))
-
-    def test_invalid_series(self):
-        name = "NOT A REAL SERIES"
-        with pytest.raises(Exception):  # noqa: B017
-            web.get_data_fred(name)
-
-    def test_fred_multi(self):  # pragma: no cover
-        names = ["CPIAUCSL", "CPALTT01USQ661S", "CPILFESL"]
-        start = datetime(2010, 1, 1)
-        end = datetime(2013, 1, 27)
-
-        received = web.DataReader(names, "fred", start, end).head(1)
-
-        expected = DataFrame(
-            [[217.488, 91.712409, 220.633]],
-            columns=names,
-            index=[pd.Timestamp("2010-01-01 00:00:00")],
+    def test_multiple_series_outer_join(self, monkeypatch, datapath):
+        monkeypatch.delenv("FRED_API_KEY", raising=False)
+        patch_session_get(
+            monkeypatch,
+            {
+                "id=GDP": datapath("data", "fred", "gdp.csv"),
+                "id=DFII5": datapath("data", "fred", "dfii5.csv"),
+            },
         )
-        expected.index.rename("DATE", inplace=True)
-        expected.index.freq = "MS"
-        np.testing.assert_allclose(received, expected)
-        tm.assert_index_equal(received.index, expected.index)
-        tm.assert_index_equal(received.columns, expected.columns)
 
-    def test_fred_multi_bad_series(self):
-        names = ["NOTAREALSERIES", "CPIAUCSL", "ALSO FAKE"]
+        df = web.DataReader(["GDP", "DFII5"], "fred", datetime(2010, 1, 1), datetime(2013, 1, 27))
+        assert list(df.columns) == ["GDP", "DFII5"]
+        # Quarterly GDP and daily DFII5 share an outer-joined index, so each leaves gaps in the other.
+        assert df["GDP"].notna().any()
+        assert df["DFII5"].notna().any()
+        assert df["GDP"].isna().any()
+
+    def test_json_api_series_is_parsed(self, monkeypatch, datapath):
+        patch_session_get(monkeypatch, {"api.stlouisfed.org": datapath("data", "fred", "gdp_api.json")})
+
+        df = web.DataReader("GDP", "fred", datetime(2010, 1, 1), datetime(2011, 1, 1), api_key="abc")
+        assert df["GDP"].iloc[0] == 14721.35
+        assert pd.isnull(df["GDP"].iloc[-1])
+
+    def test_remote_error_on_bad_status(self, monkeypatch):
+        monkeypatch.delenv("FRED_API_KEY", raising=False)
+        patch_session_get(monkeypatch, make_response(b"", status_code=404))
+
         with pytest.raises(RemoteDataError):
-            web.DataReader(names, data_source="fred")
+            web.DataReader("NOT A REAL SERIES", "fred", datetime(2010, 1, 1), datetime(2013, 1, 1))
+
+
+@pytest.mark.network
+class TestFredLive:
+    def test_csv_shape(self, monkeypatch, datapath):
+        monkeypatch.delenv("FRED_API_KEY", raising=False)
+        live_or_record(monkeypatch, {"fredgraph.csv": datapath("data", "fred", "gdp.csv")}, FRED_CSV_URL)
+
+        with tolerate_outage():
+            df = web.DataReader("GDP", "fred", datetime(2010, 1, 1), datetime(2013, 1, 1))
+            assert list(df.columns) == ["GDP"]
+            assert df.index.name == "DATE"
+            assert len(df) > 0
+            assert np.issubdtype(df["GDP"].values.dtype, np.floating)

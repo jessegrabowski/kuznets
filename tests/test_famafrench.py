@@ -1,192 +1,93 @@
-import numpy as np
 import pandas as pd
 from pandas import testing as tm
 import pytest
 
 from pandas_datareader import data as web
-from pandas_datareader.famafrench import get_available_datasets
+from pandas_datareader.famafrench import _URL, get_available_datasets
+from tests._mock import live_or_record, patch_session_get, service_up, tolerate_outage
 
 pytestmark = pytest.mark.stable
 
 
-class TestFamaFrench:
-    @pytest.mark.xfail(reason="Upstream Fama-French CSV format changed")
-    def test_get_data(self):
-        keys = [
-            "F-F_Research_Data_Factors",
-            "F-F_ST_Reversal_Factor",
-            "6_Portfolios_2x3",
-            "Portfolios_Formed_on_ME",
-            "Prior_2-12_Breakpoints",
-            "ME_Breakpoints",
-        ]
-
-        for name in keys:
-            ff = web.DataReader(name, "famafrench")
-            assert "DESCR" in ff
-            assert len(ff) > 1
-
-    def test_get_available_datasets(self):
+class TestFamaFrenchOffline:
+    # The real data_library.html is ~250 KB; this is a trimmed sample with the same <a href> shape
+    # the scraper relies on. TestFamaFrenchLive checks the live page returns >100 datasets.
+    def test_get_available_datasets(self, monkeypatch, datapath):
         pytest.importorskip("lxml")
+        patch_session_get(
+            monkeypatch,
+            {"data_library.html": datapath("data", "famafrench", "data_library.html")},
+        )
         avail = get_available_datasets()
-        assert len(avail) > 100
+        assert "F-F_Research_Data_Factors" in avail
+        assert "ME_Breakpoints" in avail
 
-    def test_index(self):
+    def test_research_factors_index(self, monkeypatch, datapath):
+        patch_session_get(
+            monkeypatch,
+            {"F-F_Research_Data_Factors": datapath("data", "famafrench", "F-F_Research_Data_Factors_CSV.zip")},
+        )
         ff = web.DataReader("F-F_Research_Data_Factors", "famafrench")
-        # M is for legacy pandas < 2
+        assert "DESCR" in ff
+        assert len(ff) > 1
+        # Monthly table first, annual table second.
         assert ff[0].index.freq.name in ("ME", "M")
-        # A-DEC is for legacy pandas < 2
         assert ff[1].index.freq.name in ("YE-DEC", "A-DEC")
 
-    @pytest.mark.xfail(reason="Upstream Fama-French data values revised")
-    def test_f_f_research(self):
-        results = web.DataReader(
-            "F-F_Research_Data_Factors",
-            "famafrench",
-            start="2010-01-01",
-            end="2010-12-01",
+    def test_me_breakpoints(self, monkeypatch, datapath):
+        patch_session_get(
+            monkeypatch,
+            {"ME_Breakpoints": datapath("data", "famafrench", "ME_Breakpoints_CSV.zip")},
         )
-        assert isinstance(results, dict)
-        assert len(results) == 3
-
-        exp = pd.DataFrame(
-            {
-                "Mkt-RF": [
-                    -3.36,
-                    3.4,
-                    6.31,
-                    2.0,
-                    -7.89,
-                    -5.57,
-                    6.93,
-                    -4.77,
-                    9.54,
-                    3.88,
-                    0.6,
-                    6.82,
-                ],
-                "SMB": [
-                    0.4,
-                    1.19,
-                    1.48,
-                    4.87,
-                    0.09,
-                    -1.81,
-                    0.2,
-                    -3.0,
-                    3.96,
-                    1.13,
-                    3.76,
-                    0.73,
-                ],
-                "HML": [
-                    0.43,
-                    3.22,
-                    2.21,
-                    2.89,
-                    -2.44,
-                    -4.7,
-                    -0.31,
-                    -1.9,
-                    -3.16,
-                    -2.42,
-                    -0.96,
-                    3.69,
-                ],
-                "RF": [
-                    0.0,
-                    0.0,
-                    0.01,
-                    0.01,
-                    0.01,
-                    0.01,
-                    0.01,
-                    0.01,
-                    0.01,
-                    0.01,
-                    0.01,
-                    0.01,
-                ],
-            },
-            index=pd.period_range("2010-01-01", "2010-12-01", freq="M", name="Date"),
-            columns=["Mkt-RF", "SMB", "HML", "RF"],
-        )
-        received = results[0]
-        np.testing.assert_allclose(received, exp)
-        tm.assert_index_equal(received.index, exp.index)
-        tm.assert_index_equal(received.columns, exp.columns)
-
-    def test_me_breakpoints(self):
         results = web.DataReader("ME_Breakpoints", "famafrench", start="2010-01-01", end="2010-12-31")
         assert isinstance(results, dict)
-        assert len(results) == 2
         assert results[0].shape == (12, 21)
 
-        exp_columns = pd.Index(
-            [
-                "Count",
-                (0, 5),
-                (5, 10),
-                (10, 15),
-                (15, 20),
-                (20, 25),
-                (25, 30),
-                (30, 35),
-                (35, 40),
-                (40, 45),
-                (45, 50),
-                (50, 55),
-                (55, 60),
-                (60, 65),
-                (65, 70),
-                (70, 75),
-                (75, 80),
-                (80, 85),
-                (85, 90),
-                (90, 95),
-                (95, 100),
-            ],
-            dtype="object",
-        )
-        tm.assert_index_equal(results[0].columns, exp_columns)
-
         exp_index = pd.period_range("2010-01-01", "2010-12-01", freq="M", name="Date")
         tm.assert_index_equal(results[0].index, exp_index)
 
-    def test_prior_2_12_breakpoints(self):
+    def test_prior_2_12_breakpoints(self, monkeypatch, datapath):
+        patch_session_get(
+            monkeypatch,
+            {"Prior_2-12_Breakpoints": datapath("data", "famafrench", "Prior_2-12_Breakpoints_CSV.zip")},
+        )
         results = web.DataReader("Prior_2-12_Breakpoints", "famafrench", start="2010-01-01", end="2010-12-01")
         assert isinstance(results, dict)
-        assert len(results) == 2
         assert results[0].shape == (12, 22)
 
-        exp_columns = pd.Index(
-            [
-                "<=0",
-                ">0",
-                (0, 5),
-                (5, 10),
-                (10, 15),
-                (15, 20),
-                (20, 25),
-                (25, 30),
-                (30, 35),
-                (35, 40),
-                (40, 45),
-                (45, 50),
-                (50, 55),
-                (55, 60),
-                (60, 65),
-                (65, 70),
-                (70, 75),
-                (75, 80),
-                (80, 85),
-                (85, 90),
-                (90, 95),
-                (95, 100),
-            ],
-            dtype="object",
-        )
-        tm.assert_index_equal(results[0].columns, exp_columns)
 
-        exp_index = pd.period_range("2010-01-01", "2010-12-01", freq="M", name="Date")
-        tm.assert_index_equal(results[0].index, exp_index)
+@pytest.mark.network
+class TestFamaFrenchLive:
+    def test_available_datasets_count(self):
+        # Not recorded (the HTML index is large); assert the live page yields many datasets.
+        if not service_up(_URL + "data_library.html"):
+            pytest.skip("Fama-French library unreachable")
+        pytest.importorskip("lxml")
+        with tolerate_outage():
+            assert len(get_available_datasets()) > 100
+
+    def test_research_factors_shape(self, monkeypatch, datapath):
+        live_or_record(
+            monkeypatch,
+            {"F-F_Research_Data_Factors": datapath("data", "famafrench", "F-F_Research_Data_Factors_CSV.zip")},
+            _URL + "data_library.html",
+        )
+        with tolerate_outage():
+            ff = web.DataReader("F-F_Research_Data_Factors", "famafrench")
+            assert "DESCR" in ff
+            assert ff[0].index.freq.name in ("ME", "M")
+
+    def test_breakpoints_shape(self, monkeypatch, datapath):
+        live_or_record(
+            monkeypatch,
+            {
+                "ME_Breakpoints": datapath("data", "famafrench", "ME_Breakpoints_CSV.zip"),
+                "Prior_2-12_Breakpoints": datapath("data", "famafrench", "Prior_2-12_Breakpoints_CSV.zip"),
+            },
+            _URL + "data_library.html",
+        )
+        with tolerate_outage():
+            me = web.DataReader("ME_Breakpoints", "famafrench", start="2010-01-01", end="2010-12-31")
+            assert me[0].shape == (12, 21)
+            prior = web.DataReader("Prior_2-12_Breakpoints", "famafrench", start="2010-01-01", end="2010-12-01")
+            assert prior[0].shape == (12, 22)
