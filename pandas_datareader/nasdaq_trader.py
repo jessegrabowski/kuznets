@@ -1,6 +1,5 @@
 from ftplib import FTP, all_errors
 import time
-import warnings
 
 from pandas import DataFrame, read_csv
 
@@ -64,21 +63,18 @@ def _download_nasdaq_symbols(timeout: float) -> DataFrame:
     if not lines[-1].startswith("File Creation Time:"):
         raise RemoteDataError(f"Missing expected footer. Found {lines[-1]!r}")
 
-    # Convert Y/N to True/False.
+    # Y/N columns are parsed into bools by converters; the rest get an explicit dtype. read_csv
+    # rejects a converter and a dtype on the same column, so the two maps must stay disjoint.
     converter_map = {col: _bool_converter for col, t in _TICKER_DTYPE if t is bool}
+    dtype_map = {col: t for col, t in _TICKER_DTYPE if t is not bool}
 
-    # For pandas >= 0.20.0, the Python parser issues a warning if
-    # both a converter and dtype are specified for the same column.
-    # However, this measure is probably temporary until the read_csv
-    # behavior is better formalized.
-    with warnings.catch_warnings(record=True):
-        data = read_csv(
-            StringIO("\n".join(lines[:-1])),
-            sep="|",
-            dtype=_TICKER_DTYPE,
-            converters=converter_map,
-            index_col=1,
-        )
+    data = read_csv(
+        StringIO("\n".join(lines[:-1])),
+        sep="|",
+        dtype=dtype_map,
+        converters=converter_map,
+        index_col=1,
+    )
 
     # Properly cast enumerations
     for cat in _CATEGORICAL:
@@ -88,8 +84,8 @@ def _download_nasdaq_symbols(timeout: float) -> DataFrame:
 
 
 def get_nasdaq_symbols(
-    retry_count: int = 3,
-    timeout: float = 30,
+    retry_count: int | None = 3,
+    timeout: float | None = 30,
     pause: float | None = None,
 ) -> DataFrame:
     """
@@ -97,10 +93,10 @@ def get_nasdaq_symbols(
 
     Parameters
     ----------
-    retry_count : int, default 3
-        Number of times to retry query request.
-    timeout : float, default 30
-        Time, in seconds, to wait for the FTP connection.
+    retry_count : int, optional
+        Number of times to retry query request. ``None`` falls back to 3.
+    timeout : float, optional
+        Time, in seconds, to wait for the FTP connection. ``None`` falls back to 30.
     pause : float, optional
         Time, in seconds, to pause between retries. Defaults to timeout / 3.
 
@@ -110,6 +106,12 @@ def get_nasdaq_symbols(
         DataFrame with company tickers, names, and other properties.
     """
     global _ticker_cache
+
+    # DataReader forwards its own None defaults; restore the documented fallbacks.
+    if retry_count is None:
+        retry_count = 3
+    if timeout is None:
+        timeout = 30
 
     if timeout < 0:
         raise ValueError(f"timeout must be >= 0, not {timeout!r}")
