@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="EUC-KR" ?>
+<protocol>
+	<chartdata symbol="005930" name="Samsung" count="5" timeframe="day" precision="0" origintime="19900103">
+		<item data="20191001|49000|49600|48700|49150|9871235" />
+		<item data="20191002|48900|49250|48450|48600|11234567" />
+		<item data="20191004|48350|48900|48100|48750|8765432" />
+		<item data="20191007|48800|49100|48500|48900|7654321" />
+	</chartdata>
+</protocol>

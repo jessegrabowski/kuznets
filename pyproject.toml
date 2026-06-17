@@ -99,13 +99,14 @@ docstring-code-format = true
 
 [tool.pytest.ini_options]
 minversion = "6.0"
-addopts = "-ra -q"
+addopts = "-ra -q -m 'not network' --strict-data-files --strict-markers"
 testpaths = ["tests"]
 markers = [
     "stable: mark a test as applying to a stable reader",
     "requires_api_key: mark a test as requiring an API key",
     "alpha_vantage: mark a test of the AlphaVantage reader",
-    "quandl: mark a test of the Quandl reader"
+    "quandl: mark a test of the Quandl reader",
+    "network: liveness check that pings a live service (deselected by default; run with -m network)"
     ]
 filterwarnings =[
     "ignore:`np.bool` is a deprecated alias:DeprecationWarning:pandas.core.indexes",
