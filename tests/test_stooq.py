@@ -1,47 +1,53 @@
+from pathlib import Path
+
 import pytest
 
 from pandas_datareader import data as web
+from pandas_datareader._utils import SymbolWarning
 from pandas_datareader.data import get_data_stooq
+from tests._mock import make_response, patch_session_get, service_up
 
 pytestmark = pytest.mark.stable
 
 
-def test_stooq_dji():
-    f = web.DataReader("GS", "stooq")
-    assert f.shape[0] > 0
+class TestStooqOffline:
+    # Stooq now serves a JavaScript anti-bot challenge to every non-browser client, so its real
+    # response can't be recorded (see TestStooqLive). This fixture is a hand-written sample of the
+    # historical CSV format and pins the parser only; it can't catch upstream shape drift.
+    def test_datareader_parses_prices(self, monkeypatch, datapath):
+        patch_session_get(monkeypatch, {"stooq.com": datapath("data", "stooq", "spy.csv")})
+        df = web.DataReader("SPY", "stooq")
+        assert df.shape[0] == 9
+        assert {"Open", "High", "Low", "Close", "Volume"} <= set(df.columns)
+
+    def test_close_value_is_parsed(self, monkeypatch, datapath):
+        patch_session_get(monkeypatch, {"stooq.com": datapath("data", "stooq", "spy.csv")})
+        df = get_data_stooq("SPY", start="20180101", end="20180115")
+        assert df["Close"].loc["2018-01-12"] == pytest.approx(277.92)
+
+    def test_failed_symbol_warns_and_fills_nan(self, monkeypatch, datapath):
+        # Stooq sends every symbol to the same URL (only the query string differs), so dispatch on
+        # the ``s`` param: a real CSV for SPY, an empty body for the bad symbol.
+        spy = Path(datapath("data", "stooq", "spy.csv")).read_bytes()
+
+        def handler(url, params=None, **kwargs):
+            return make_response(b"") if "BADSYM" in (params or {}).get("s", "") else make_response(spy)
+
+        patch_session_get(monkeypatch, handler)
+        with pytest.warns(SymbolWarning):
+            df = web.DataReader(["SPY", "BADSYM"], "stooq")
+
+        assert df["Close"]["BADSYM"].isna().all()
+        assert df["Close"]["SPY"].notna().any()
 
 
-def test_get_data_stooq_dji():
-    f = get_data_stooq("AMZN")
-    assert f.shape[0] > 0
-
-
-def test_get_data_stooq_dates():
-    f = get_data_stooq("SPY", start="20180101", end="20180115")
-    assert f.shape[0] == 9
-
-
-def test_stooq_sp500():
-    f = get_data_stooq("^SPX")
-    assert f.shape[0] > 0
-
-
-@pytest.mark.xfail(reason="No longer works as of October 2023")
-def test_stooq_clx19f():
-    f = get_data_stooq("CLX26.F", start="20200101", end="20200115")
-    assert f.shape[0] > 0
-
-
-def test_get_data_stooq_dax():
-    f = get_data_stooq("^DAX")
-    assert f.shape[0] > 0
-
-
-def test_stooq_googl():
-    f = get_data_stooq("GOOGL.US")
-    assert f.shape[0] > 0
-
-
-def test_get_data_ibm():
-    f = get_data_stooq("IBM.DE")
-    assert f.shape[0] > 0
+@pytest.mark.network
+@pytest.mark.xfail(reason="Stooq serves a JS anti-bot challenge to non-browser clients", strict=False)
+class TestStooqLive:
+    def test_returns_price_csv(self):
+        # Will xpass if Stooq ever drops the anti-bot wall for the reader's plain client.
+        if not service_up("https://stooq.com"):
+            pytest.skip("Stooq unreachable")
+        df = web.DataReader("SPY", "stooq")
+        assert {"Open", "High", "Low", "Close", "Volume"} <= set(df.columns)
+        assert len(df) > 0

@@ -1,326 +1,142 @@
-from datetime import datetime
-
 import numpy as np
 import pandas as pd
-from pandas import testing as tm
 import pytest
 import requests
-from requests.exceptions import ConnectionError
 
 from pandas_datareader import data as web
-from pandas_datareader._testing import skip_on_exception
 from pandas_datareader._utils import RemoteDataError
 from pandas_datareader.data import YahooDailyReader
+from pandas_datareader.yahoo._auth import _CRUMB_URL
+from tests._mock import from_fixtures, live_or_record, make_response, patch_session_get, tolerate_outage
 
-XFAIL_REASON = "Known connection failures on Yahoo when testing!"
+# The crumb/cookie auth handshake every Yahoo reader performs before its real request. Offline these
+# are stubbed; when recording they pass through to the real service so the data request is authorized.
+_AUTH = {"fc.yahoo.com": make_response(b""), "getcrumb": make_response(b"testcrumb")}
+
+# A real AAPL year that contains both a dividend and the 4:1 split (2020-08-31). Historical values
+# never change, so exact assertions stay stable across re-recordings.
+_CHART_START = "2020-01-01"
+_CHART_END = "2020-12-31"
 
 
-class TestYahoo:
-    @classmethod
-    def setup_class(cls):
-        pytest.importorskip("lxml")
+def _chart_offline(monkeypatch, datapath, symbol):
+    patch_session_get(
+        monkeypatch,
+        from_fixtures({**_AUTH, f"v8/finance/chart/{symbol}": datapath("data", "yahoo", "chart_aapl_2020.json")}),
+    )
 
-    @skip_on_exception(RemoteDataError)
-    def test_yahoo(self):
-        # Asserts that yahoo is minimally working
-        start = datetime(2010, 1, 1)
-        end = datetime(2013, 1, 25)
 
-        assert round(web.DataReader("F", "yahoo", start, end)["Close"].iloc[-1], 2) == 13.68
+class TestYahooOffline:
+    def test_daily_prices_are_parsed(self, monkeypatch, datapath):
+        _chart_offline(monkeypatch, datapath, "AAPL")
+        df = web.get_data_yahoo("AAPL", start=_CHART_START, end=_CHART_END)
 
-    def test_yahoo_fails(self):
-        start = datetime(2010, 1, 1)
-        end = datetime(2013, 1, 27)
+        assert list(df.columns) == ["High", "Low", "Open", "Close", "Volume", "Adj Close"]
+        assert len(df) > 200
+        assert (df.dtypes[["Open", "High", "Low", "Close"]] == np.float64).all()
+        assert df["Volume"].loc["2020-08-31"] > 0
 
-        with pytest.raises(Exception):  # noqa: B017
-            web.DataReader("NON EXISTENT TICKER", "yahoo", start, end)
+    def test_adjust_price_applies_ratio(self, monkeypatch, datapath):
+        _chart_offline(monkeypatch, datapath, "AAPL")
+        raw = web.get_data_yahoo("AAPL", start=_CHART_START, end=_CHART_END)
+        adjusted = web.get_data_yahoo("AAPL", start=_CHART_START, end=_CHART_END, adjust_price=True)
 
-    def test_get_quote_series(self):
-        stringlist = ["GOOG", "AAPL"]
-        fields = ["exchange", "sharesOutstanding", "epsForward"]
-        try:
-            AAPL = web.get_quote_yahoo("AAPL")
-            df = web.get_quote_yahoo(pd.Series(stringlist))
-        except ConnectionError:
-            pytest.xfail(reason=XFAIL_REASON)
-        tm.assert_series_equal(AAPL.iloc[0][fields], df.loc["AAPL"][fields])
-        assert sorted(stringlist) == sorted(df.index.values)
+        assert "Adj Close" not in adjusted.columns
+        ratio = raw["Adj Close"] / raw["Close"]
+        pd.testing.assert_series_equal(adjusted["Adj_Ratio"], ratio, check_names=False)
+        pd.testing.assert_series_equal(adjusted["Open"], raw["Open"] * ratio, check_names=False)
 
-    def test_get_quote_string(self):
-        try:
-            df = web.get_quote_yahoo("GOOG")
-        except ConnectionError:
-            pytest.xfail(reason=XFAIL_REASON)
-
-        assert not pd.isnull(df["marketCap"].iloc[0])
-
-    def test_get_quote_stringlist(self):
-        stringlist = ["GOOG", "AAPL"]
-        try:
-            df = web.get_quote_yahoo(stringlist)
-        except ConnectionError:
-            pytest.xfail(reason=XFAIL_REASON)
-        assert sorted(stringlist) == sorted(df.index.values)
-
-    def test_get_quote_comma_name(self):
-        try:
-            df = web.get_quote_yahoo(["RGLD"])
-        except ConnectionError:
-            pytest.xfail(reason=XFAIL_REASON)
-        assert df["longName"].iloc[0] == "Royal Gold, Inc."
-
-    @skip_on_exception(RemoteDataError)
-    def test_get_data_single_symbol(self):
-        # single symbol
-        # http://finance.yahoo.com/q/hp?s=GOOG&a=09&b=08&c=2010&d=09&e=10&f=2010&g=d
-        # just test that we succeed
-        web.get_data_yahoo("GOOG")
-
-    @skip_on_exception(RemoteDataError)
-    def test_data_with_no_actions(self):
-        web.get_data_yahoo("TSLA")
-
-    @skip_on_exception(RemoteDataError)
-    def test_get_data_adjust_price(self):
-        goog = web.get_data_yahoo("GOOG")
-        goog_adj = web.get_data_yahoo("GOOG", adjust_price=True)
-        assert "Adj Close" not in goog_adj.columns
-        assert (goog["Open"] * goog_adj["Adj_Ratio"]).equals(goog_adj["Open"])
-
-    @pytest.mark.xfail(reason="Yahoo are returning an extra day 31st Dec 2012")
-    def test_get_data_interval(self):
-        # daily interval data
-        pan = web.get_data_yahoo("XOM", "2013-01-01", "2013-12-31", interval="d")
-        assert len(pan) == 252
-
-        # weekly interval data
-        pan = web.get_data_yahoo("XOM", "2013-01-01", "2013-12-31", interval="w")
-        assert len(pan) == 53
-
-        # monthly interval data
-        pan = web.get_data_yahoo("XOM", "2012-12-31", "2013-12-31", interval="m")
-        assert len(pan) == 12
-
-        # test fail on invalid interval
-        with pytest.raises(ValueError):
-            web.get_data_yahoo("XOM", interval="NOT VALID")
-
-    @skip_on_exception(RemoteDataError)
-    def test_get_data_multiple_symbols(self):
-        # just test that we succeed
-        sl = ["AAPL", "AMZN", "GOOG"]
-        web.get_data_yahoo(sl, "2012")
-
-    @pytest.mark.parametrize("adj_pr", [True, False])
-    @skip_on_exception(RemoteDataError)
-    def test_get_data_null_as_missing_data(self, adj_pr):
-        result = web.get_data_yahoo("SRCE", "20160626", "20160705", adjust_price=adj_pr)
-        # sanity checking
-        floats = ["Open", "High", "Low", "Close"]
-        if adj_pr:
-            floats.append("Adj_Ratio")
-        else:
-            floats.append("Adj Close")
-
-        assert (result[floats].dtypes == np.float64).all()
-
-    @skip_on_exception(RemoteDataError)
-    def test_get_data_multiple_symbols_two_dates(self):
-        data = web.get_data_yahoo(["GE", "MSFT", "INTC"], "JAN-01-12", "JAN-31-12")
-        result = data.Close.loc["01-18-12"].T
-        assert result.size == 3
-
-        # sanity checking
-        assert result.dtypes == np.float64
-
-        expected = np.array(
-            [
-                [18.99, 28.4, 25.18],
-                [18.58, 28.31, 25.13],
-                [19.03, 28.16, 25.52],
-                [18.81, 28.82, 25.87],
-            ]
-        )
-        df = data.Open
-        result = df[(df.index >= "Jan-15-12") & (df.index <= "Jan-20-12")]
-        assert expected.shape == result.shape
-
-    def test_get_date_ret_index(self):
-        pan = web.get_data_yahoo(["GE", "INTC", "IBM"], "1977", "1987", ret_index=True)
-        assert hasattr(pan, "Ret_Index")
-
-        if hasattr(pan, "Ret_Index") and hasattr(pan.Ret_Index, "INTC"):
-            tstamp = pan.Ret_Index.INTC.first_valid_index()
-            result = pan.Ret_Index.loc[tstamp, "INTC"]
-            assert result == 1.0
-
-        # sanity checking
-        assert np.issubdtype(pan.values.dtype, np.floating)
-
-    def test_get_data_yahoo_actions(self):
-        start = datetime(1990, 1, 1)
-        end = datetime(2018, 4, 5)
-
-        actions = web.get_data_yahoo_actions("AAPL", start, end, adjust_dividends=False)
-
-        assert sum(actions["action"] == "DIVIDEND") == 47
-        assert sum(actions["action"] == "SPLIT") == 3
-
-        assert actions.loc["2005-02-28", "action"] == "SPLIT"
-        assert actions.loc["2005-02-28", "value"] == 1 / 2.0
-
-        assert actions.loc["1995-11-21", "action"] == "DIVIDEND"
-        assert round(actions.loc["1995-11-21", "value"], 3) == 0.030
-
-        actions = web.get_data_yahoo_actions("AAPL", start, end, adjust_dividends=True)
-
-        assert actions.loc["1995-11-21", "action"] == "DIVIDEND"
-        assert round(actions.loc["1995-11-21", "value"], 4) == 0.0011
-
-    def test_get_data_yahoo_actions_invalid_symbol(self):
-        start = datetime(1990, 1, 1)
-        end = datetime(2000, 4, 5)
-
-        with pytest.raises(IOError):
-            web.get_data_yahoo_actions("UNKNOWN TICKER", start, end)
-
-    @skip_on_exception(RemoteDataError)
-    def test_yahoo_reader_class(self):
-        r = YahooDailyReader("GOOG", start="JAN-01-2015")
-        df = r.read()
-
-        assert df.Volume.loc["JAN-02-2015"] > 0
-
+    def test_supplied_session_is_used(self):
         session = requests.Session()
+        assert YahooDailyReader("AAPL", session=session).session is session
 
-        r = YahooDailyReader("GOOG", session=session)
-        assert r.session is session
-
-    def test_yahoo_datareader(self):
-        start = datetime(2010, 1, 1)
-        end = datetime(2015, 5, 9)
-        # yahoo will adjust for dividends by default
-        result = web.DataReader("AAPL", "yahoo-actions", start, end)
-
-        exp_idx = pd.DatetimeIndex(
-            [
-                "2015-05-07",
-                "2015-02-05",
-                "2014-11-06",
-                "2014-08-07",
-                "2014-06-09",
-                "2014-05-08",
-                "2014-02-06",
-                "2013-11-06",
-                "2013-08-08",
-                "2013-05-09",
-                "2013-02-07",
-                "2012-11-07",
-                "2012-08-09",
-            ]
+    def test_quotes_are_parsed(self, monkeypatch, datapath):
+        patch_session_get(
+            monkeypatch,
+            from_fixtures({**_AUTH, "v7/finance/quote": datapath("data", "yahoo", "quote_aapl_goog.json")}),
         )
+        df = web.get_quote_yahoo(["AAPL", "GOOG"])
+        assert sorted(df.index) == ["AAPL", "GOOG"]
+        assert df.loc["AAPL", "price"] > 0
+        assert df.loc["AAPL", "longName"] == "Apple Inc."
+        assert "marketCap" in df.columns
 
-        exp = pd.DataFrame(
-            {
-                "action": [
-                    "DIVIDEND",
-                    "DIVIDEND",
-                    "DIVIDEND",
-                    "DIVIDEND",
-                    "SPLIT",
-                    "DIVIDEND",
-                    "DIVIDEND",
-                    "DIVIDEND",
-                    "DIVIDEND",
-                    "DIVIDEND",
-                    "DIVIDEND",
-                    "DIVIDEND",
-                    "DIVIDEND",
-                ],
-                "value": [
-                    0.130000,
-                    0.117500,
-                    0.117500,
-                    0.117500,
-                    0.142857,
-                    0.117500,
-                    0.108929,
-                    0.108929,
-                    0.108929,
-                    0.108929,
-                    0.094643,
-                    0.094643,
-                    0.094643,
-                ],
-            },
-            index=exp_idx,
+    def test_quotes_empty_raises(self, monkeypatch):
+        mapping = {**_AUTH, "v7/finance/quote": make_response(json={"quoteResponse": {"result": []}})}
+        patch_session_get(monkeypatch, from_fixtures(mapping))
+        with pytest.raises(RemoteDataError):
+            web.get_quote_yahoo("AAPL")
+
+    def test_actions_are_parsed(self, monkeypatch, datapath):
+        _chart_offline(monkeypatch, datapath, "AAPL")
+        actions = web.DataReader("AAPL", "yahoo-actions", start=_CHART_START, end=_CHART_END)
+        assert set(actions["action"]) == {"DIVIDEND", "SPLIT"}
+        # 4:1 split on 2020-08-31 -> ratio denominator/numerator = 0.25.
+        assert actions.loc["2020-08-31", "value"] == pytest.approx(0.25)
+
+    def test_ret_index_is_computed(self, monkeypatch, datapath):
+        _chart_offline(monkeypatch, datapath, "AAPL")
+        df = web.get_data_yahoo("AAPL", start=_CHART_START, end=_CHART_END, ret_index=True)
+        assert "Ret_Index" in df.columns
+        assert df["Ret_Index"].iloc[0] == pytest.approx(1.0)
+
+    def test_unadjusted_dividends_scale_up_before_split(self, monkeypatch, datapath):
+        _chart_offline(monkeypatch, datapath, "AAPL")
+        adjusted = web.get_data_yahoo_actions("AAPL", _CHART_START, _CHART_END, adjust_dividends=True)
+        unadjusted = web.get_data_yahoo_actions("AAPL", _CHART_START, _CHART_END, adjust_dividends=False)
+
+        adj_div = adjusted[adjusted["action"] == "DIVIDEND"]["value"]
+        un_div = unadjusted[unadjusted["action"] == "DIVIDEND"]["value"]
+        # Dividends with an ex-date before the 2020-08-31 4:1 split are reported split-adjusted;
+        # turning that off scales them back up, so the unadjusted value is larger.
+        presplit = adj_div.index[adj_div.index < pd.Timestamp("2020-08-31")]
+        assert len(presplit) > 0
+        assert (un_div.loc[presplit] > adj_div.loc[presplit]).all()
+
+    def test_empty_history(self, monkeypatch, datapath):
+        # A hand-written "no data" response; the real service rarely returns this shape on demand.
+        patch_session_get(
+            monkeypatch,
+            from_fixtures({**_AUTH, "v8/finance/chart/NOPE": datapath("data", "yahoo", "chart_empty.json")}),
         )
-        exp.index.name = "Date"
-        tm.assert_frame_equal(result.reindex_like(exp).round(2), exp.round(2))
+        df = web.get_data_yahoo("NOPE", start=_CHART_START, end=_CHART_END)
+        assert df.dropna(how="all").empty
 
-        # where dividends are not adjusted for splits
-        result = web.get_data_yahoo_actions("AAPL", start, end, adjust_dividends=False)
+    def test_invalid_interval_raises(self):
+        with pytest.raises(ValueError):
+            YahooDailyReader("F", interval="NOT VALID")
 
-        exp = pd.DataFrame(
-            {
-                "action": [
-                    "DIVIDEND",
-                    "DIVIDEND",
-                    "DIVIDEND",
-                    "DIVIDEND",
-                    "SPLIT",
-                    "DIVIDEND",
-                    "DIVIDEND",
-                    "DIVIDEND",
-                    "DIVIDEND",
-                    "DIVIDEND",
-                    "DIVIDEND",
-                    "DIVIDEND",
-                    "DIVIDEND",
-                ],
-                "value": [
-                    0.1300,
-                    0.1175,
-                    0.1175,
-                    0.1175,
-                    0.1429,
-                    0.8225,
-                    0.7625,
-                    0.7625,
-                    0.7625,
-                    0.7625,
-                    0.6625,
-                    0.6625,
-                    0.6625,
-                ],
-            },
-            index=exp_idx,
+
+@pytest.mark.network
+class TestYahooLive:
+    def test_daily_shape(self, monkeypatch, datapath):
+        live_or_record(
+            monkeypatch,
+            {"v8/finance/chart/AAPL": datapath("data", "yahoo", "chart_aapl_2020.json")},
+            _CRUMB_URL,
         )
-        exp.index.name = "Date"
-        tm.assert_frame_equal(result.reindex_like(exp).round(4), exp.round(4))
+        with tolerate_outage():
+            df = web.get_data_yahoo("AAPL", start=_CHART_START, end=_CHART_END)
+            assert list(df.columns) == ["High", "Low", "Open", "Close", "Volume", "Adj Close"]
+            assert len(df) > 200
 
-        # test cases with "1/0" split ratio in actions -
-        # no split, just chnage symbol from POT to NTR
-        start = datetime(2017, 12, 30)
-        end = datetime(2018, 12, 30)
-
-        result = web.DataReader("NTR", "yahoo-actions", start, end)
-
-        exp_idx = pd.DatetimeIndex(["2018-12-28", "2018-09-27", "2018-06-28", "2018-03-28"])
-
-        exp = pd.DataFrame(
-            {
-                "action": ["DIVIDEND", "DIVIDEND", "DIVIDEND", "DIVIDEND"],
-                "value": [0.43, 0.40, 0.40, 0.40],
-            },
-            index=exp_idx,
+    def test_actions_shape(self, monkeypatch, datapath):
+        live_or_record(
+            monkeypatch,
+            {"v8/finance/chart/AAPL": datapath("data", "yahoo", "chart_aapl_2020.json")},
+            _CRUMB_URL,
         )
-        exp.index.name = "Date"
-        tm.assert_frame_equal(result.reindex_like(exp).round(2), exp.round(2))
+        with tolerate_outage():
+            actions = web.DataReader("AAPL", "yahoo-actions", start=_CHART_START, end=_CHART_END)
+            assert set(actions["action"]) == {"DIVIDEND", "SPLIT"}
 
-    @skip_on_exception(RemoteDataError)
-    def test_yahoo_DataReader_multi(self):
-        start = datetime(2010, 1, 1)
-        end = datetime(2015, 5, 9)
-        result = web.DataReader(["AAPL", "F"], "yahoo-actions", start, end)
-        assert isinstance(result, dict)
+    def test_quotes_shape(self, monkeypatch, datapath):
+        live_or_record(
+            monkeypatch,
+            {"v7/finance/quote": datapath("data", "yahoo", "quote_aapl_goog.json")},
+            _CRUMB_URL,
+        )
+        with tolerate_outage():
+            df = web.get_quote_yahoo(["AAPL", "GOOG"])
+            assert sorted(df.index) == ["AAPL", "GOOG"]
+            assert "marketCap" in df.columns

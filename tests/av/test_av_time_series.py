@@ -11,6 +11,7 @@ TEST_API_KEY = os.getenv("ALPHAVANTAGE_API_KEY")
 TEST_API_KEY = None if not TEST_API_KEY else TEST_API_KEY
 
 pytestmark = [
+    pytest.mark.network,
     pytest.mark.requires_api_key,
     pytest.mark.alpha_vantage,
     pytest.mark.skipif(TEST_API_KEY is None, reason="ALPHAVANTAGE_API_KEY not set"),

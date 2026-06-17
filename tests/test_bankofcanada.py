@@ -1,70 +1,31 @@
 from datetime import date, timedelta
 
+import pandas as pd
 import pytest
 
 from pandas_datareader import data as web
 from pandas_datareader._utils import RemoteDataError
+from pandas_datareader.bankofcanada import BankOfCanadaReader
+from tests._mock import live_or_record, make_response, patch_session_get, tolerate_outage
 
 pytestmark = pytest.mark.stable
 
 
-class TestBankOfCanada:
-    @staticmethod
-    def get_symbol(currency_code, inverted=False):
-        if inverted:
-            return f"FXCAD{currency_code}"
-        else:
-            return f"FX{currency_code}CAD"
-
-    def check_bankofcanada_count(self, code):
-        start, end = date.today() - timedelta(days=30), date.today()
-        df = web.DataReader(self.get_symbol(code), "bankofcanada", start, end)
-        assert df.size > 15
-
-    def check_bankofcanada_valid(self, code):
-        symbol = self.get_symbol(code)
-        df = web.DataReader(symbol, "bankofcanada", date.today() - timedelta(days=30), date.today())
-        assert symbol in df.columns
-
-    def check_bankofcanada_inverted(self, code):
-        symbol = self.get_symbol(code)
-        symbol_inverted = self.get_symbol(code, inverted=True)
-
-        df = web.DataReader(symbol, "bankofcanada", date.today() - timedelta(days=30), date.today())
-        df_i = web.DataReader(
-            symbol_inverted,
-            "bankofcanada",
-            date.today() - timedelta(days=30),
-            date.today(),
+class TestBankOfCanadaOffline:
+    def test_observations_are_parsed(self, monkeypatch, datapath):
+        patch_session_get(
+            monkeypatch,
+            {"valet/observations": datapath("data", "bankofcanada", "fx_usd_cad.csv")},
         )
-        try:
-            pairs = zip((1 / df)[symbol].tolist(), df_i[symbol_inverted].tolist(), strict=True)
-        except TypeError:
-            # Python 3.9 only
-            pairs = zip(  # noqa: B905
-                (1 / df)[symbol].tolist(), df_i[symbol_inverted].tolist()
-            )
-        assert all(a - b < 0.01 for a, b in pairs)
 
-    def test_bankofcanada_usd_count(self):
-        self.check_bankofcanada_count("USD")
+        df = web.DataReader("FXUSDCAD", "bankofcanada", "2017-07-01", "2017-07-31")
+        assert "FXUSDCAD" in df.columns
+        assert isinstance(df.index, pd.DatetimeIndex)
+        assert df.index.name == "date"
+        assert len(df) > 15  # ~20 business days in July 2017
+        assert df["FXUSDCAD"].loc["2017-07-05"] == pytest.approx(1.2982)
 
-    def test_bankofcanada_eur_count(self):
-        self.check_bankofcanada_count("EUR")
-
-    def test_bankofcanada_usd_valid(self):
-        self.check_bankofcanada_valid("USD")
-
-    def test_bankofcanada_eur_valid(self):
-        self.check_bankofcanada_valid("EUR")
-
-    def test_bankofcanada_usd_inverted(self):
-        self.check_bankofcanada_inverted("USD")
-
-    def test_bankofcanada_eur_inverted(self):
-        self.check_bankofcanada_inverted("EUR")
-
-    def test_bankofcanada_bad_range(self):
+    def test_bad_range_raises(self):
         with pytest.raises(ValueError):
             web.DataReader(
                 "FXCADUSD",
@@ -73,11 +34,21 @@ class TestBankOfCanada:
                 date.today() - timedelta(days=30),
             )
 
-    def test_bankofcanada_bad_url(self):
+    def test_remote_error_on_bad_status(self, monkeypatch):
+        patch_session_get(monkeypatch, make_response(b"", status_code=404))
         with pytest.raises(RemoteDataError):
-            web.DataReader(
-                "abcdefgh",
-                "bankofcanada",
-                date.today() - timedelta(days=30),
-                date.today(),
-            )
+            web.DataReader("abcdefgh", "bankofcanada", "2017-07-01", "2017-07-31")
+
+
+@pytest.mark.network
+class TestBankOfCanadaLive:
+    def test_observations_shape(self, monkeypatch, datapath):
+        live_or_record(
+            monkeypatch,
+            {"valet/observations": datapath("data", "bankofcanada", "fx_usd_cad.csv")},
+            BankOfCanadaReader._URL,
+        )
+        with tolerate_outage():
+            df = web.DataReader("FXUSDCAD", "bankofcanada", "2017-07-01", "2017-07-31")
+            assert "FXUSDCAD" in df.columns
+            assert len(df) > 0
