@@ -34,6 +34,23 @@ class TestFamaFrenchOffline:
         assert ff[0].index.freq.name in ("ME", "M")
         assert ff[1].index.freq.name in ("YE-DEC", "A-DEC")
 
+    def test_daily_factors_index(self, monkeypatch, datapath):
+        # Daily files carry 8-digit YYYYMMDD dates and must yield a DatetimeIndex, not the
+        # PeriodIndex used for monthly/annual tables. The old reader fed them to the %Y%m branch
+        # and died with "unconverted data remains: 01".
+        patch_session_get(
+            monkeypatch,
+            {
+                "F-F_Research_Data_Factors_daily": datapath(
+                    "data", "famafrench", "F-F_Research_Data_Factors_daily_CSV.zip"
+                )
+            },
+        )
+        ff = web.DataReader("F-F_Research_Data_Factors_daily", "famafrench", start="2010-01-01", end="2010-12-31")
+        assert isinstance(ff[0].index, pd.DatetimeIndex)
+        assert ff[0].index.min() >= pd.Timestamp("2010-01-01")
+        assert ff[0].index.max() <= pd.Timestamp("2010-12-31")
+
     def test_me_breakpoints(self, monkeypatch, datapath):
         patch_session_get(
             monkeypatch,
@@ -76,6 +93,21 @@ class TestFamaFrenchLive:
             ff = web.DataReader("F-F_Research_Data_Factors", "famafrench")
             assert "DESCR" in ff
             assert ff[0].index.freq.name in ("ME", "M")
+
+    def test_daily_factors_shape(self, monkeypatch, datapath):
+        live_or_record(
+            monkeypatch,
+            {
+                "F-F_Research_Data_Factors_daily": datapath(
+                    "data", "famafrench", "F-F_Research_Data_Factors_daily_CSV.zip"
+                )
+            },
+            _URL + "data_library.html",
+        )
+        with tolerate_outage():
+            ff = web.DataReader("F-F_Research_Data_Factors_daily", "famafrench")
+            assert "DESCR" in ff
+            assert isinstance(ff[0].index, pd.DatetimeIndex)
 
     def test_breakpoints_shape(self, monkeypatch, datapath):
         live_or_record(
