@@ -127,10 +127,16 @@ class FamaFrenchReader(_BaseReader):
             start = 0 if not match else match.start()
 
             df = read_csv(StringIO("Date" + src[start:]), **params)
-            if df.index.min() > 190000:
-                df.index = to_datetime(df.index.astype(str), format="%Y%m").to_period(freq="M")
+            idx = df.index.astype(str)
+            # Dates are bare integers whose width encodes the frequency: YYYY (annual),
+            # YYYYMM (monthly), or YYYYMMDD (daily). Daily tables keep a DatetimeIndex;
+            # annual and monthly collapse to a PeriodIndex.
+            if df.index.min() > 19000000:
+                df.index = to_datetime(idx, format="%Y%m%d")
+            elif df.index.min() > 190000:
+                df.index = to_datetime(idx, format="%Y%m").to_period(freq="M")
             else:
-                df.index = to_datetime(df.index.astype(str), format="%Y").to_period(freq="Y")
+                df.index = to_datetime(idx, format="%Y").to_period(freq="Y")
             df = df.truncate(self.start, self.end)
             datasets[i] = df
 
