@@ -1,8 +1,12 @@
 from collections import OrderedDict
+from datetime import datetime
 from pathlib import Path
+import re
 
+import narwhals.stable.v2 as nw
 import pandas as pd
 
+from pandas_datareader._output import PANDAS, make_frame, observation_schema
 from pandas_datareader.compat import get_filepath_or_buffer
 
 # Dimension identifiers that mark the time axis across SDMX-JSON and JSON-stat responses.
@@ -73,6 +77,91 @@ def _pivot_observations(records, dim_names, label_maps, time_pos):
 
     df.index = _to_datetime_index(df.index, time_name)
     return df.sort_index()
+
+
+_QUARTER_CODE = re.compile(r"^(\d{4})-?Q([1-4])$")
+_SEMESTER_CODE = re.compile(r"^(\d{4})-?S([12])$")
+_WEEK_CODE = re.compile(r"^(\d{4})-?W(\d{2})$")
+
+
+def _parse_period_code(code):
+    """Parse an SDMX/JSON-stat period code to its period-start timestamp, or None if unrecognized.
+
+    Handles annual ('2009'), monthly ('2009-01'), daily ('2009-01-15'), quarterly ('2009-Q1'),
+    semester ('2013-S2' -> July 1st), and ISO-week ('2020-W05' -> that week's Monday) codes.
+    """
+    text = str(code).strip()
+    if match := _QUARTER_CODE.match(text):
+        return datetime(int(match[1]), 3 * int(match[2]) - 2, 1)
+    if match := _SEMESTER_CODE.match(text):
+        return datetime(int(match[1]), 6 * int(match[2]) - 5, 1)
+    if match := _WEEK_CODE.match(text):
+        try:
+            return datetime.strptime(f"{match[1]}-W{match[2]}-1", "%G-W%V-%u")
+        except ValueError:
+            return None
+    for fmt in ("%Y", "%Y-%m", "%Y-%m-%d"):
+        try:
+            return datetime.strptime(text, fmt)
+        except ValueError:
+            continue
+    return None
+
+
+def _observations_to_records(records, dim_names, label_maps, time_pos):
+    """Convert ``(codes, value)`` observations into display-labeled row records.
+
+    Non-time dimension codes map through their label maps, matching the column labels
+    :func:`_pivot_observations` produces; the time dimension keeps its raw codes for datetime
+    casting downstream; values coerce to float.
+
+    Parameters
+    ----------
+    records : list of tuple
+        Each entry is ``(code_tuple, value)`` with one code per entry in *dim_names*.
+    dim_names : list of str
+        Human-readable name of each dimension, used as the record keys.
+    label_maps : list of dict
+        One mapping of code to display name per dimension, aligned with *dim_names*.
+    time_pos : int
+        Position of the time dimension within *dim_names*.
+
+    Returns
+    -------
+    list of dict
+        One record per observation: a key per dimension plus ``'value'``.
+    """
+    rows = []
+    for codes, value in records:
+        row = {}
+        for position, (name, code) in enumerate(zip(dim_names, codes, strict=True)):
+            row[name] = code if position == time_pos else label_maps[position].get(code, code)
+        row["value"] = float(value)
+        rows.append(row)
+    return rows
+
+
+def _present_observations(records, dim_names, label_maps, time_pos, output_type):
+    """Present parsed observations as today's wide pandas frame or a long native frame.
+
+    The pandas path pivots to the time-indexed wide frame, with its legacy time parsing. Every
+    other backend gets one row per observation with display-labeled dimension columns and a float64
+    ``value`` column; period codes parse in Python via :func:`_parse_period_code` before any
+    backend sees them, so the time column is datetime-typed identically everywhere -- including
+    quarterly, semester, and ISO-week codes -- and stays string-typed only when a code defeats the
+    parser.
+    """
+    if output_type == PANDAS:
+        return _pivot_observations(records, dim_names, label_maps, time_pos)
+    tidy_records = _observations_to_records(records, dim_names, label_maps, time_pos)
+    time_name = dim_names[time_pos]
+    parsed_times = [_parse_period_code(row[time_name]) for row in tidy_records]
+    schema = observation_schema(dim_names)
+    if all(parsed is not None for parsed in parsed_times):
+        for row, parsed in zip(tidy_records, parsed_times, strict=True):
+            row[time_name] = parsed
+        schema[time_name] = nw.Datetime()
+    return make_frame(tidy_records, output_type, schema=schema)
 
 
 def _read_content(path_or_buf):
