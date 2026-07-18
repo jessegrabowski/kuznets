@@ -18,6 +18,11 @@ re-impose `to_period(freq)`. Two boundary subtleties:
   period-start timestamps. This is the one reader where the shared filter must not be used; both
   presenters then contain identical rows.
 - Container parity: `dict[int | "DESCR", ...]` in every backend; `"DESCR"` stays a str.
+- **Guard to retire (from PR 2):** `FamaFrenchReader` currently hits the base `_present_tidy`
+  guard — `NotImplementedError: output_type=... is not yet supported by FamaFrenchReader` — because
+  its payload is a dict. Landing commit 1 of this PR must replace that error with the working dict
+  presenter; add a test asserting `output_type="polars"` succeeds so the guard's retirement is
+  pinned.
 
 **econdb** — the tidy side is record-native ([R]): long records `TIME_PERIOD` + one column per
 metadata dimension + `value`. The pandas presenter replays today's iterative
