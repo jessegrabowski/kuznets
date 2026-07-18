@@ -1,4 +1,4 @@
-from collections.abc import Generator
+from concurrent.futures import ThreadPoolExecutor
 import datetime
 from io import StringIO
 from urllib.parse import urlencode
@@ -16,6 +16,47 @@ from pandas_datareader._utils import (
     _sanitize_dates,
 )
 from pandas_datareader.config import get_headers, get_setting
+
+_DEFAULT_MAX_WORKERS = 5
+
+
+def _fetch_symbols_concurrently(symbols, fetch_one, max_workers: int, catch: tuple = (OSError, KeyError)):
+    """Fetch every symbol through a thread pool, preserving input order.
+
+    Workers never warn or touch shared state; exceptions listed in ``catch`` are returned as the
+    symbol's result for the caller to handle on the main thread, and any other exception
+    propagates.
+
+    Parameters
+    ----------
+    symbols : iterable of str
+        Symbols to fetch.
+    fetch_one : callable
+        Called with a single symbol; returns that symbol's frame.
+    max_workers : int
+        Concurrent request ceiling; clamped to [1, number of symbols]. With one worker the fetches
+        run sequentially on the calling thread.
+    catch : tuple of exception types, optional
+        Exceptions to capture as per-symbol results. Default ``(OSError, KeyError)``.
+
+    Returns
+    -------
+    list of tuple
+        One ``(symbol, frame_or_exception)`` pair per symbol, in input order.
+    """
+
+    def worker(symbol):
+        try:
+            return symbol, fetch_one(symbol)
+        except catch as exc:
+            return symbol, exc
+
+    symbols = list(symbols)
+    workers = max(1, min(max_workers, len(symbols)))
+    if workers == 1:
+        return [worker(symbol) for symbol in symbols]
+    with ThreadPoolExecutor(max_workers=workers) as executor:
+        return list(executor.map(worker, symbols))
 
 
 class _BaseReader:
@@ -319,6 +360,7 @@ class _DailyBaseReader(_BaseReader):
         session: requests.Session | None = None,
         chunksize: int = 25,
         output_type: str = "pandas",
+        max_workers: int | None = None,
     ) -> None:
         """
         Initialize the daily reader.
@@ -338,10 +380,14 @@ class _DailyBaseReader(_BaseReader):
         session : Session, optional
             ``requests.sessions.Session`` instance to be used.
         chunksize : int, default 25
-            Number of symbols to download consecutively before initiating pause.
+            Unused; retained for backward compatibility.
         output_type : str, optional
             Backend of the returned data: 'pandas', 'polars', 'pyarrow' (alias 'arrow'), or 'dask'.
             Backends other than pandas must be installed separately. Default 'pandas'.
+        max_workers : int, optional
+            Number of concurrent requests for multi-symbol reads. Keep it modest for rate-limited
+            hosts, and pass 1 when supplying a session that is not thread-safe (requests-cache,
+            for example). Default 5.
         """
         super().__init__(
             symbols=symbols,
@@ -353,6 +399,7 @@ class _DailyBaseReader(_BaseReader):
             output_type=output_type,
         )
         self.chunksize = chunksize
+        self.max_workers = _DEFAULT_MAX_WORKERS if max_workers is None else max_workers
 
     def _get_params(self, *args, **kwargs) -> dict:
         """Return parameters for an API call. Must be overridden in subclass."""
@@ -424,18 +471,20 @@ class _DailyBaseReader(_BaseReader):
         RemoteDataError
             If no data is fetched for any symbol.
         """
+        results = _fetch_symbols_concurrently(
+            symbols, lambda sym: self._read_one_data(self.url, self._get_params(sym)), self.max_workers
+        )
         stocks = {}
         failed = []
         passed = []
-        for sym_group in _in_chunks(symbols, self.chunksize):
-            for sym in sym_group:
-                try:
-                    stocks[sym] = self._read_one_data(self.url, self._get_params(sym))
-                    passed.append(sym)
-                except (OSError, KeyError):
-                    msg = "Failed to read symbol: {0!r}, replacing with NaN."
-                    warnings.warn(msg.format(sym), SymbolWarning, stacklevel=2)
-                    failed.append(sym)
+        for sym, outcome in results:
+            if isinstance(outcome, Exception):
+                msg = "Failed to read symbol: {0!r}, replacing with NaN."
+                warnings.warn(msg.format(sym), SymbolWarning, stacklevel=2)
+                failed.append(sym)
+            else:
+                stocks[sym] = outcome
+                passed.append(sym)
 
         if len(passed) == 0:
             msg = "No data fetched using {0!r}"
@@ -447,25 +496,6 @@ class _DailyBaseReader(_BaseReader):
             for sym in failed:
                 stocks[sym] = df_na
         return stocks
-
-
-def _in_chunks(seq, size: int) -> Generator:
-    """
-    Return sequence in 'chunks' of size defined by *size*.
-
-    Parameters
-    ----------
-    seq : sequence
-        Input sequence.
-    size : int
-        Chunk size.
-
-    Yields
-    ------
-    sequence
-        A slice of *seq* of length *size* (or less for the final chunk).
-    """
-    return (seq[pos : pos + size] for pos in range(0, len(seq), size))
 
 
 class _OptionBaseReader(_BaseReader):
