@@ -40,12 +40,10 @@ class TestValidateOutputType:
         assert validate_output_type(name) == expected
 
     def test_unknown_backend_raises_value_error(self):
-        with pytest.raises(ValueError, match="output_type='modin' is not supported"):
+        with pytest.raises(ValueError, match="output_type='modin' is not supported") as exc_info:
             validate_output_type("modin")
-
-    def test_error_message_lists_valid_backends(self):
-        with pytest.raises(ValueError, match="'arrow'.*'dask'.*'pandas'.*'polars'.*'pyarrow'"):
-            validate_output_type("bogus")
+        for valid_name in ["'arrow'", "'dask'", "'pandas'", "'polars'", "'pyarrow'"]:
+            assert valid_name in str(exc_info.value)
 
     def test_non_string_raises_type_error(self):
         with pytest.raises(TypeError, match="must be a str"):
