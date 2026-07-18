@@ -1,26 +1,27 @@
 import os
 
+import narwhals.stable.v2 as nw
 import pandas as pd
 import pytest
 
 from pandas_datareader import data as web
 from pandas_datareader.compat import assert_frame_equal
+from pandas_datareader.quandl import QuandlReader
+from tests._backends import BACKENDS, as_narwhals, skip_unless_installed
+from tests._mock import patch_session_get
 
 TEST_API_KEY = os.getenv("QUANDL_API_KEY")
 # Ensure blank TEST_API_KEY not used in pull request
 TEST_API_KEY = None if not TEST_API_KEY else TEST_API_KEY
 
+
 # These are live tests against the keyed Quandl API: deselected by default (like every other
 # network test) and additionally skipped when no key is configured. Run with ``-m network`` and
 # QUANDL_API_KEY set; the weekly refresh workflow records fixtures when the secret is present.
-pytestmark = [
-    pytest.mark.network,
-    pytest.mark.requires_api_key,
-    pytest.mark.quandl,
-    pytest.mark.skipif(TEST_API_KEY is None, reason="QUANDL_API_KEY not set"),
-]
-
-
+@pytest.mark.network
+@pytest.mark.requires_api_key
+@pytest.mark.quandl
+@pytest.mark.skipif(TEST_API_KEY is None, reason="QUANDL_API_KEY not set")
 class TestQuandl:
     # we test data from 10 years back where possible, 2 years otherwise, or...
     start10 = "2007-01-01"  # over ten years back
@@ -176,3 +177,21 @@ class TestQuandl:
             ],
         )
         assert df.High.at[pd.to_datetime(self.day2)] == 91.9
+
+
+@pytest.mark.stable
+class TestQuandlBackends:
+    # Quandl requires an API key and can't be recorded, so a hand-written sample of the dataset
+    # CSV format pins the tidy schema only.
+    csv_body = b"Date,Open,Adj. Close\n2020-01-03,10.5,10.6\n2020-01-02,10.0,10.1\n"
+
+    @pytest.mark.parametrize("output_type", BACKENDS)
+    def test_single_symbol_tidy_schema(self, monkeypatch, output_type):
+        skip_unless_installed(output_type)
+        patch_session_get(monkeypatch, {"quandl.com": self.csv_body})
+        reader = QuandlReader("WIKI/AAPL", api_key="fake-key", output_type=output_type)
+        tidy = as_narwhals(reader.read())
+
+        assert tidy.columns == ["Date", "Open", "AdjClose"]
+        assert tidy.schema["Date"] == nw.Datetime
+        assert tidy["Open"].to_list() == [10.0, 10.5]

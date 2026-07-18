@@ -1,5 +1,6 @@
 from datetime import datetime
 
+import narwhals.stable.v2 as nw
 import numpy as np
 import pandas as pd
 import pytest
@@ -7,6 +8,7 @@ import pytest
 from pandas_datareader import data as web
 from pandas_datareader._utils import RemoteDataError
 from pandas_datareader.fred import FRED_API_URL, FRED_CSV_URL, FredReader
+from tests._backends import BACKENDS, as_narwhals, skip_unless_installed
 from tests._mock import live_or_record, make_response, patch_session_get, tolerate_outage
 
 pytestmark = pytest.mark.stable
@@ -91,3 +93,47 @@ class TestFredLive:
             assert df.index.name == "DATE"
             assert len(df) > 0
             assert np.issubdtype(df["GDP"].values.dtype, np.floating)
+
+
+class TestFredBackends:
+    @pytest.mark.parametrize("output_type", BACKENDS)
+    def test_single_series_tidy_schema(self, monkeypatch, datapath, output_type):
+        skip_unless_installed(output_type)
+        monkeypatch.delenv("FRED_API_KEY", raising=False)
+        patch_session_get(monkeypatch, {"fredgraph.csv": datapath("data", "fred", "gdp.csv")})
+
+        as_pandas = web.DataReader("GDP", "fred", datetime(2010, 1, 1), datetime(2013, 1, 1))
+        tidy = as_narwhals(
+            web.DataReader("GDP", "fred", datetime(2010, 1, 1), datetime(2013, 1, 1), output_type=output_type)
+        )
+
+        assert tidy.columns == ["DATE", "GDP"]
+        assert tidy.schema["DATE"] == nw.Datetime
+        assert len(tidy) == len(as_pandas)
+        assert tidy["GDP"].to_list() == as_pandas["GDP"].tolist()
+
+    @pytest.mark.parametrize("output_type", BACKENDS)
+    def test_multiple_series_outer_join_keeps_nulls(self, monkeypatch, datapath, output_type):
+        skip_unless_installed(output_type)
+        monkeypatch.delenv("FRED_API_KEY", raising=False)
+        monkeypatch.setattr("pandas_datareader.fred.time.sleep", lambda seconds: None)
+        patch_session_get(
+            monkeypatch,
+            {
+                "id=GDP": datapath("data", "fred", "gdp.csv"),
+                "id=DFII5": datapath("data", "fred", "dfii5.csv"),
+            },
+        )
+
+        as_pandas = web.DataReader(["GDP", "DFII5"], "fred", datetime(2010, 1, 1), datetime(2013, 1, 27))
+        tidy = as_narwhals(
+            web.DataReader(
+                ["GDP", "DFII5"], "fred", datetime(2010, 1, 1), datetime(2013, 1, 27), output_type=output_type
+            )
+        )
+
+        assert tidy.columns == ["DATE", "GDP", "DFII5"]
+        assert len(tidy) == len(as_pandas)
+        # The outer join of quarterly GDP and daily DFII5 leaves gaps; nulls must survive conversion.
+        assert tidy["GDP"].null_count() == int(as_pandas["GDP"].isna().sum())
+        assert tidy["DFII5"].null_count() == int(as_pandas["DFII5"].isna().sum())

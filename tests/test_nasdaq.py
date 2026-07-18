@@ -1,9 +1,11 @@
 import ftplib
 
+import narwhals.stable.v2 as nw
 import pytest
 
 from pandas_datareader import data as web, nasdaq_trader
 from pandas_datareader._utils import RemoteDataError
+from tests._backends import BACKENDS, as_narwhals, skip_unless_installed
 from tests._mock import RECORD
 
 pytestmark = pytest.mark.stable
@@ -79,3 +81,21 @@ class TestNasdaqLive:
             sample += [line for line in lines[1:-1] if line.split("|")[1] in _SAMPLE_SYMBOLS]
             sample.append(lines[-1])
             datapath("data", "nasdaq", "nasdaqtraded.txt").write_text("\n".join(sample) + "\n")
+
+
+class TestNasdaqBackends:
+    @pytest.mark.parametrize("output_type", BACKENDS)
+    def test_symbols_tidy_schema(self, monkeypatch, datapath, output_type):
+        skip_unless_installed(output_type)
+        text = datapath("data", "nasdaq", "nasdaqtraded.txt").read_text().splitlines()
+        monkeypatch.setattr(nasdaq_trader, "FTP", _FakeFTP(text))
+
+        as_pandas = web.DataReader("symbols", "nasdaq")
+        tidy = as_narwhals(web.DataReader("symbols", "nasdaq", output_type=output_type))
+
+        assert tidy.columns[0] == "Symbol"
+        assert len(tidy) == len(as_pandas)
+        assert sorted(tidy["Symbol"].to_list()) == sorted(as_pandas.index.tolist())
+        # The two categorical listing fields must survive conversion as categorical/dictionary.
+        for categorical_field in ("Listing Exchange", "Financial Status"):
+            assert tidy.schema[categorical_field] == nw.Categorical

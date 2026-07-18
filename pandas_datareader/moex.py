@@ -130,13 +130,18 @@ class MoexReader(_DailyBaseReader):
                 markets_n_engines[symbol] = list(set(markets_n_engines[symbol]))
         return markets_n_engines, boards
 
-    def read_all_boards(self) -> pd.DataFrame:
+    def read_all_boards(self):
         """Read all data from every board for every ticker.
 
         Returns
         -------
-        df : DataFrame
+        df : DataFrame or native frame
+            One row per (date, board), as a pandas DataFrame by default or as a native frame of the
+            backend selected with ``output_type``.
         """
+        return self._present(self._read_all_boards_core())
+
+    def _read_all_boards_core(self) -> pd.DataFrame:
         markets_n_engines, boards = self._get_metadata()
         try:
             self.__markets_n_engines = markets_n_engines
@@ -198,7 +203,7 @@ class MoexReader(_DailyBaseReader):
         df : DataFrame
         """
         markets_n_engines, boards = self._get_metadata()
-        b = self.read_all_boards()
+        b = self._read_all_boards_core()
         parts = []
         for secid in list(set(b["SECID"].tolist())):
             part = b[b["BOARDID"] == boards[secid]]

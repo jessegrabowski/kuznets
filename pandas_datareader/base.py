@@ -119,7 +119,10 @@ class _BaseReader:
             Data retrieved from the remote source, as a pandas DataFrame by default or as a native
             frame of the backend selected with ``output_type``.
         """
-        payload = self._read_core()
+        return self._present(self._read_core())
+
+    def _present(self, payload):
+        """Dispatch the payload to the presenter matching ``output_type``."""
         if self.output_type == PANDAS:
             return self._present_pandas(payload)
         return self._present_tidy(payload)

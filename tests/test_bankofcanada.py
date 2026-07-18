@@ -1,11 +1,13 @@
 from datetime import date, timedelta
 
+import narwhals.stable.v2 as nw
 import pandas as pd
 import pytest
 
 from pandas_datareader import data as web
 from pandas_datareader._utils import RemoteDataError
 from pandas_datareader.bankofcanada import BankOfCanadaReader
+from tests._backends import BACKENDS, as_narwhals, skip_unless_installed
 from tests._mock import live_or_record, make_response, patch_session_get, tolerate_outage
 
 pytestmark = pytest.mark.stable
@@ -52,3 +54,23 @@ class TestBankOfCanadaLive:
             df = web.DataReader("FXUSDCAD", "bankofcanada", "2017-07-01", "2017-07-31")
             assert "FXUSDCAD" in df.columns
             assert len(df) > 0
+
+
+class TestBankOfCanadaBackends:
+    @pytest.mark.parametrize("output_type", BACKENDS)
+    def test_tidy_schema_matches_pandas(self, monkeypatch, datapath, output_type):
+        skip_unless_installed(output_type)
+        patch_session_get(
+            monkeypatch,
+            {"valet/observations": datapath("data", "bankofcanada", "fx_usd_cad.csv")},
+        )
+
+        as_pandas = web.DataReader("FXUSDCAD", "bankofcanada", "2017-07-01", "2017-07-31")
+        tidy = as_narwhals(
+            web.DataReader("FXUSDCAD", "bankofcanada", "2017-07-01", "2017-07-31", output_type=output_type)
+        )
+
+        assert tidy.columns == ["date", "FXUSDCAD"]
+        assert tidy.schema["date"] == nw.Datetime
+        assert len(tidy) == len(as_pandas)
+        assert tidy["FXUSDCAD"].to_list() == as_pandas["FXUSDCAD"].tolist()

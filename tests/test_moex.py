@@ -1,6 +1,8 @@
 import pytest
 
 from pandas_datareader import data as web
+from pandas_datareader.moex import MoexReader
+from tests._backends import BACKENDS, as_narwhals, skip_unless_installed
 from tests._mock import from_fixtures, patch_session_get, service_up, tolerate_outage
 
 pytestmark = pytest.mark.stable
@@ -42,3 +44,33 @@ class TestMoexLive:
             assert "SECID" in df.columns
             assert "BOARDID" in df.columns
             assert len(df) > 0
+
+
+class TestMoexBackends:
+    @pytest.mark.parametrize("output_type", BACKENDS)
+    def test_primary_board_tidy_schema(self, monkeypatch, datapath, output_type):
+        skip_unless_installed(output_type)
+        patch_session_get(monkeypatch, _moex_fixtures(datapath))
+
+        as_pandas = web.DataReader("SBER", "moex", start="2020-07-14", end="2020-07-14")
+        tidy = as_narwhals(
+            web.DataReader("SBER", "moex", start="2020-07-14", end="2020-07-14", output_type=output_type)
+        )
+
+        assert tidy.columns[0] == "TRADEDATE"
+        assert {"SECID", "BOARDID"} <= set(tidy.columns)
+        assert len(tidy) == len(as_pandas)
+        assert tidy["BOARDID"].to_list() == as_pandas["BOARDID"].tolist()
+
+    @pytest.mark.parametrize("output_type", BACKENDS)
+    def test_read_all_boards_honors_output_type(self, monkeypatch, datapath, output_type):
+        skip_unless_installed(output_type)
+        patch_session_get(monkeypatch, _moex_fixtures(datapath))
+
+        as_pandas = MoexReader("SBER", start="2020-07-14", end="2020-07-14").read_all_boards()
+        reader = MoexReader("SBER", start="2020-07-14", end="2020-07-14", output_type=output_type)
+        tidy = as_narwhals(reader.read_all_boards())
+
+        assert tidy.columns[0] == "TRADEDATE"
+        assert len(tidy) == len(as_pandas)
+        assert sorted(set(tidy["BOARDID"].to_list())) == sorted(set(as_pandas["BOARDID"]))

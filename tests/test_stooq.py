@@ -1,8 +1,10 @@
+import narwhals.stable.v2 as nw
 import pytest
 
 from pandas_datareader import data as web
 from pandas_datareader._utils import SymbolWarning
 from pandas_datareader.data import get_data_stooq
+from tests._backends import BACKENDS, as_narwhals, skip_unless_installed
 from tests._mock import make_response, patch_session_get, service_up
 
 pytestmark = pytest.mark.stable
@@ -49,3 +51,19 @@ class TestStooqLive:
         df = web.DataReader("SPY", "stooq")
         assert {"Open", "High", "Low", "Close", "Volume"} <= set(df.columns)
         assert len(df) > 0
+
+
+class TestStooqBackends:
+    @pytest.mark.parametrize("output_type", BACKENDS)
+    def test_single_symbol_tidy_schema(self, monkeypatch, datapath, output_type):
+        skip_unless_installed(output_type)
+        patch_session_get(monkeypatch, {"stooq.com": datapath("data", "stooq", "spy.csv")})
+
+        as_pandas = web.DataReader("SPY", "stooq")
+        tidy = as_narwhals(web.DataReader("SPY", "stooq", output_type=output_type))
+
+        assert tidy.columns[0] == "Date"
+        assert set(tidy.columns) >= {"Open", "High", "Low", "Close", "Volume"}
+        assert tidy.schema["Date"] == nw.Datetime
+        assert len(tidy) == len(as_pandas)
+        assert tidy["Close"].to_list() == as_pandas["Close"].tolist()
