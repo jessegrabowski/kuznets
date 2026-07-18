@@ -1,6 +1,8 @@
 import pandas as pd
 
+from pandas_datareader._output import filter_date_range, make_frame
 from pandas_datareader.base import _BaseReader
+from pandas_datareader.io.util import _parse_period_code
 
 
 class EcondbReader(_BaseReader):
@@ -80,28 +82,27 @@ class EcondbReader(_BaseReader):
 
         return f"{self._URL}?{self.symbols}&format=json&page_size=500&expand=both"
 
-    def _read_core(self) -> pd.DataFrame:
-        """Fetch data from the EconDB API.
+    def _read_core(self) -> list:
+        """Fetch the raw series entries from the EconDB API.
 
         Returns
         -------
-        df : DataFrame
-            Requested time series data.
+        results : list of dict
+            One entry per series, each carrying ``data`` and ``additional_metadata``.
         """
         # Route through _get_response so a non-200 (e.g. the 401 the API now returns without
         # credentials) raises RemoteDataError instead of a confusing KeyError on ``["results"]``.
-        results = self._get_response(self.url).json()["results"]
-        df = pd.DataFrame({"dates": []}).set_index("dates")
+        return self._get_response(self.url).json()["results"]
 
+    def _show_func(self, text: str) -> str:
         if self._show == "labels":
+            return text[text.find(":") + 1 :]
+        return text[: text.find(":")]
 
-            def show_func(x):
-                return x[x.find(":") + 1 :]
-
-        elif self._show == "codes":
-
-            def show_func(x):
-                return x[: x.find(":")]
+    def _present_pandas(self, results: list) -> pd.DataFrame:
+        """Merge the series into the wide frame with MultiIndex metadata columns."""
+        show_func = self._show_func
+        df = pd.DataFrame({"dates": []}).set_index("dates")
 
         unique_keys = {k for s in results for k in s["additional_metadata"]}
         for entry in results:
@@ -127,3 +128,24 @@ class EcondbReader(_BaseReader):
         df.index.name = "TIME_PERIOD"
         df = df.truncate(self.start, self.end)
         return df
+
+    def _present_tidy(self, results: list):
+        """One row per observation: metadata dimension columns, ``TIME_PERIOD``, and ``value``."""
+        records = []
+        unique_keys = {k for s in results for k in s["additional_metadata"]}
+        for entry in results:
+            head = dict(entry["additional_metadata"]) if entry["additional_metadata"] != "" else {}
+            for key in unique_keys:
+                head.setdefault(key, "-1:None")
+            dimensions = {self._show_func(key): self._show_func(value) for key, value in head.items()}
+            if not dimensions:
+                dimensions = {"ticker": entry["ticker"]}
+            for date_code, value in zip(entry["data"]["dates"], entry["data"]["values"], strict=True):
+                records.append({**dimensions, "TIME_PERIOD": date_code, "value": value})
+        # All-or-nothing datetime parsing keeps the column's dtype homogeneous per response.
+        parsed = [_parse_period_code(record["TIME_PERIOD"]) for record in records]
+        if records and all(timestamp is not None for timestamp in parsed):
+            for record, timestamp in zip(records, parsed, strict=True):
+                record["TIME_PERIOD"] = timestamp
+        frame = make_frame(records, self.output_type)
+        return filter_date_range(frame, "TIME_PERIOD", self.start, self.end)

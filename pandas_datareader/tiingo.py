@@ -1,5 +1,8 @@
+import datetime as dt
+
 import pandas as pd
 
+from pandas_datareader._output import make_frame
 from pandas_datareader.base import _BaseReader
 from pandas_datareader.config import get_api_key
 
@@ -19,6 +22,33 @@ def get_tiingo_symbols() -> pd.DataFrame:
     """
     url = "https://apimedia.tiingo.com/docs/tiingo/daily/supported_tickers.zip"
     return pd.read_csv(url)
+
+
+def _records_to_pandas(payload: list, concat_axis: int) -> pd.DataFrame:
+    """Replay the per-symbol frame construction and concatenate along ``concat_axis``."""
+    frames = []
+    for symbol, out in payload:
+        df = pd.DataFrame(out)
+        df["symbol"] = symbol
+        df["date"] = pd.to_datetime(df["date"])
+        frames.append(df.set_index(["symbol", "date"]))
+    return pd.concat(frames, axis=concat_axis)
+
+
+def _records_to_tidy(payload: list, output_type: str):
+    """One row per record with ``symbol`` first; ISO dates parse in Python so every backend agrees."""
+    records = [{"symbol": symbol, **record} for symbol, out in payload for record in out]
+    parsed = []
+    for record in records:
+        try:
+            parsed.append(dt.datetime.fromisoformat(record["date"]))
+        except (KeyError, TypeError, ValueError):
+            parsed = None
+            break
+    if parsed is not None:
+        for record, timestamp in zip(records, parsed, strict=True):
+            record["date"] = timestamp
+    return make_frame(records, output_type)
 
 
 class TiingoIEXHistoricalReader(_BaseReader):
@@ -116,39 +146,34 @@ class TiingoIEXHistoricalReader(_BaseReader):
         out = self._get_response(url, params=params, headers=headers).json()
         return self._read_lines(out)
 
-    def _read_lines(self, out: list[dict]) -> pd.DataFrame:
-        """Parse JSON response into a DataFrame.
+    def _read_lines(self, out: list[dict]) -> list[dict]:
+        """Pass the parsed JSON records through as the payload for the presenters."""
+        return out
 
-        Parameters
-        ----------
-        out : list of dict
-            Parsed JSON response.
-
-        Returns
-        -------
-        df : DataFrame
-        """
-        df = pd.DataFrame(out)
-        df["symbol"] = self._symbol
-        df["date"] = pd.to_datetime(df["date"])
-        df = df.set_index(["symbol", "date"])
-        return df
-
-    def _read_core(self) -> pd.DataFrame:
-        """Fetch data for every requested symbol.
+    def _read_core(self) -> list:
+        """Fetch raw records for every requested symbol.
 
         Returns
         -------
-        df : DataFrame
+        payload : list of tuple
+            One ``(symbol, records)`` pair per requested symbol.
         """
-        dfs = []
+        payload = []
         for symbol in self.symbols:
             self._symbol = symbol
             try:
-                dfs.append(self._read_one_data(self.url, self.params))
+                payload.append((symbol, self._read_one_data(self.url, self.params)))
             finally:
                 self.close()
-        return pd.concat(dfs, axis=self._concat_axis)
+        return payload
+
+    def _present_pandas(self, payload: list) -> pd.DataFrame:
+        """(symbol, date)-indexed frame concatenated across symbols."""
+        return _records_to_pandas(payload, self._concat_axis)
+
+    def _present_tidy(self, payload: list):
+        """One row per (symbol, date) with plain columns."""
+        return _records_to_tidy(payload, self.output_type)
 
 
 class TiingoDailyReader(_BaseReader):
@@ -243,39 +268,34 @@ class TiingoDailyReader(_BaseReader):
         out = self._get_response(url, params=params, headers=headers).json()
         return self._read_lines(out)
 
-    def _read_lines(self, out: list[dict]) -> pd.DataFrame:
-        """Parse JSON response into a DataFrame.
+    def _read_lines(self, out: list[dict]) -> list[dict]:
+        """Pass the parsed JSON records through as the payload for the presenters."""
+        return out
 
-        Parameters
-        ----------
-        out : list of dict
-            Parsed JSON response.
-
-        Returns
-        -------
-        df : DataFrame
-        """
-        df = pd.DataFrame(out)
-        df["symbol"] = self._symbol
-        df["date"] = pd.to_datetime(df["date"])
-        df = df.set_index(["symbol", "date"])
-        return df
-
-    def _read_core(self) -> pd.DataFrame:
-        """Fetch data for every requested symbol.
+    def _read_core(self) -> list:
+        """Fetch raw records for every requested symbol.
 
         Returns
         -------
-        df : DataFrame
+        payload : list of tuple
+            One ``(symbol, records)`` pair per requested symbol.
         """
-        dfs = []
+        payload = []
         for symbol in self.symbols:
             self._symbol = symbol
             try:
-                dfs.append(self._read_one_data(self.url, self.params))
+                payload.append((symbol, self._read_one_data(self.url, self.params)))
             finally:
                 self.close()
-        return pd.concat(dfs, axis=self._concat_axis)
+        return payload
+
+    def _present_pandas(self, payload: list) -> pd.DataFrame:
+        """(symbol, date)-indexed frame concatenated across symbols."""
+        return _records_to_pandas(payload, self._concat_axis)
+
+    def _present_tidy(self, payload: list):
+        """One row per (symbol, date) with plain columns."""
+        return _records_to_tidy(payload, self.output_type)
 
 
 class TiingoMetaDataReader(TiingoDailyReader):
@@ -339,21 +359,23 @@ class TiingoMetaDataReader(TiingoDailyReader):
         """Not used."""
         return None
 
-    def _read_lines(self, out: dict) -> pd.Series:
-        """Parse JSON response into a Series.
+    def _read_lines(self, out: dict) -> dict:
+        """Pass the parsed metadata mapping through as the payload for the presenters."""
+        return out
 
-        Parameters
-        ----------
-        out : dict
-            Parsed JSON response.
+    def _present_pandas(self, payload: list) -> pd.DataFrame:
+        """Metadata fields as rows, one column per symbol."""
+        series = []
+        for symbol, out in payload:
+            s = pd.Series(out)
+            s.name = symbol
+            series.append(s)
+        return pd.concat(series, axis=self._concat_axis)
 
-        Returns
-        -------
-        df : Series
-        """
-        s = pd.Series(out)
-        s.name = self._symbol
-        return s
+    def _present_tidy(self, payload: list):
+        """One row per symbol with the metadata fields as columns."""
+        records = [{"symbol": symbol, **out} for symbol, out in payload]
+        return make_frame(records, self.output_type)
 
 
 class TiingoQuoteReader(TiingoDailyReader):
