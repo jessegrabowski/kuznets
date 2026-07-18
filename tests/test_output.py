@@ -1,10 +1,20 @@
 import importlib.util
 
+import narwhals.stable.v2 as nw
 import pandas as pd
 import pandas.testing as tm
 import pytest
 
-from pandas_datareader._output import attach_index, detach_index, from_pandas, validate_output_type
+from pandas_datareader._output import (
+    attach_index,
+    concat_frames,
+    detach_index,
+    filter_date_range,
+    from_pandas,
+    make_frame,
+    to_datetime_col,
+    validate_output_type,
+)
 
 pytestmark = pytest.mark.stable
 
@@ -14,6 +24,15 @@ requires_dask = pytest.mark.skipif(importlib.util.find_spec("dask") is None, rea
 def dated_frame(index_name: str | None = "DATE") -> pd.DataFrame:
     index = pd.DatetimeIndex(["2020-01-01", "2020-01-02", "2020-01-03"], name=index_name)
     return pd.DataFrame({"GDP": [1.0, 2.0, 3.0], "CPI": [4.0, 5.0, 6.0]}, index=index)
+
+
+def column_values(frame, name: str) -> list:
+    return nw.from_native(frame, eager_only=True)[name].to_list()
+
+
+def skip_unless_installed(backend: str) -> None:
+    if backend != "pandas":
+        pytest.importorskip(backend)
 
 
 class TestValidateOutputType:
@@ -164,3 +183,147 @@ class TestFromPandas:
         frame = pd.DataFrame({"x": pd.Series([None, None], dtype=object), "y": [1.0, 2.0]})
         result = from_pandas(frame, "pyarrow")
         assert str(result.schema.field("x").type) == "double"
+
+
+SDMX_RECORDS = [
+    {"Country": "USA", "TIME_PERIOD": "2020-01", "value": 1.5},
+    {"Country": "FRA", "TIME_PERIOD": "2020-02", "value": 2.5},
+]
+
+
+class TestMakeFrame:
+    def test_pandas_from_records(self):
+        result = make_frame(SDMX_RECORDS, "pandas")
+        assert isinstance(result, pd.DataFrame)
+        assert list(result.columns) == ["Country", "TIME_PERIOD", "value"]
+        assert result["value"].tolist() == [1.5, 2.5]
+
+    def test_polars_from_records(self):
+        polars = pytest.importorskip("polars")
+        result = make_frame(SDMX_RECORDS, "polars")
+        assert isinstance(result, polars.DataFrame)
+        assert result.columns == ["Country", "TIME_PERIOD", "value"]
+
+    def test_pyarrow_from_records(self):
+        pyarrow = pytest.importorskip("pyarrow")
+        result = make_frame(SDMX_RECORDS, "pyarrow")
+        assert isinstance(result, pyarrow.Table)
+        assert result.column_names == ["Country", "TIME_PERIOD", "value"]
+
+    @requires_dask
+    def test_dask_from_records(self):
+        dask_dataframe = pytest.importorskip("dask.dataframe")
+        result = make_frame(SDMX_RECORDS, "dask")
+        assert isinstance(result, dask_dataframe.DataFrame)
+        assert result.compute()["value"].tolist() == [1.5, 2.5]
+
+    def test_missing_record_keys_become_null(self):
+        pytest.importorskip("polars")
+        result = make_frame([{"a": 1, "b": "x"}, {"a": 2}], "polars")
+        assert result.rows() == [(1, "x"), (2, None)]
+
+    def test_column_oriented_input(self):
+        result = make_frame({"a": [1, 2], "b": [3.0, 4.0]}, "pandas")
+        assert result["a"].tolist() == [1, 2]
+
+    def test_schema_forces_dtypes_over_inference(self):
+        polars = pytest.importorskip("polars")
+        schema = {"Country": nw.String(), "value": nw.Float64()}
+        result = make_frame([{"Country": "USA", "value": 1}], "polars", schema=schema)
+        assert result.schema["value"] == polars.Float64
+
+    def test_empty_records_with_schema_yield_typed_empty_frame(self):
+        pytest.importorskip("polars")
+        result = make_frame([], "polars", schema={"Country": nw.String(), "value": nw.Float64()})
+        assert result.columns == ["Country", "value"]
+        assert result.height == 0
+
+    def test_empty_records_without_schema_yield_empty_frame(self):
+        result = make_frame([], "pandas")
+        assert isinstance(result, pd.DataFrame)
+        assert result.shape == (0, 0)
+
+
+class TestFilterDateRange:
+    def datetime_native(self, backend):
+        return make_frame(
+            {
+                "Date": [pd.Timestamp("2020-01-01"), pd.Timestamp("2020-01-02"), pd.Timestamp("2020-01-03")],
+                "x": [1.0, 2.0, 3.0],
+            },
+            backend,
+        )
+
+    @pytest.mark.parametrize("backend", ["pandas", "polars", "pyarrow"])
+    def test_both_endpoints_inclusive(self, backend):
+        skip_unless_installed(backend)
+        result = filter_date_range(
+            self.datetime_native(backend), "Date", pd.Timestamp("2020-01-01"), pd.Timestamp("2020-01-02")
+        )
+        assert column_values(result, "x") == [1.0, 2.0]
+
+    def test_start_only(self):
+        result = filter_date_range(self.datetime_native("pandas"), "Date", start=pd.Timestamp("2020-01-02"))
+        assert result["x"].tolist() == [2.0, 3.0]
+
+    def test_end_only(self):
+        result = filter_date_range(self.datetime_native("pandas"), "Date", end=pd.Timestamp("2020-01-02"))
+        assert result["x"].tolist() == [1.0, 2.0]
+
+    def test_no_bounds_returns_same_object(self):
+        frame = self.datetime_native("pandas")
+        assert filter_date_range(frame, "Date") is frame
+
+    def test_string_period_codes_skip_filtering(self):
+        frame = make_frame({"TIME_PERIOD": ["2013-S1", "2013-S2"], "value": [1.0, 2.0]}, "pandas")
+        result = filter_date_range(frame, "TIME_PERIOD", pd.Timestamp("2013-01-01"), pd.Timestamp("2013-06-30"))
+        assert result is frame
+
+    def test_date_typed_column(self):
+        polars = pytest.importorskip("polars")
+        frame = polars.DataFrame(
+            {"Date": [pd.Timestamp("2020-01-01").date(), pd.Timestamp("2020-02-01").date()], "x": [1.0, 2.0]}
+        )
+        result = filter_date_range(frame, "Date", pd.Timestamp("2020-01-15"), pd.Timestamp("2020-02-15"))
+        assert result["x"].to_list() == [2.0]
+
+    @requires_dask
+    def test_lazy_dask_frame_filters_and_stays_lazy(self):
+        dask_dataframe = pytest.importorskip("dask.dataframe")
+        lazy = nw.from_native(self.datetime_native("pandas"), eager_only=True).lazy(backend="dask").to_native()
+        result = filter_date_range(lazy, "Date", pd.Timestamp("2020-01-02"), pd.Timestamp("2020-01-03"))
+        assert isinstance(result, dask_dataframe.DataFrame)
+        assert result.compute()["x"].tolist() == [2.0, 3.0]
+
+
+class TestToDatetimeCol:
+    @pytest.mark.parametrize("backend", ["pandas", "polars", "pyarrow"])
+    def test_calendar_strings_are_cast(self, backend):
+        skip_unless_installed(backend)
+        frame = make_frame({"t": ["2020-01-01", "2020-02-01"], "x": [1.0, 2.0]}, backend)
+        result = to_datetime_col(frame, "t")
+        filtered = filter_date_range(result, "t", pd.Timestamp("2020-01-15"), pd.Timestamp("2020-02-15"))
+        assert column_values(filtered, "x") == [2.0]
+
+    def test_non_calendar_codes_keep_strings(self):
+        pytest.importorskip("polars")
+        frame = make_frame({"t": ["2013-S1", "2013-S2"]}, "polars")
+        result = to_datetime_col(frame, "t")
+        assert result is frame
+
+    def test_non_string_column_is_unchanged(self):
+        frame = make_frame({"t": [1, 2]}, "pandas")
+        assert to_datetime_col(frame, "t") is frame
+
+
+class TestConcatFrames:
+    @pytest.mark.parametrize("backend", ["pandas", "polars", "pyarrow"])
+    def test_vertical_concat(self, backend):
+        skip_unless_installed(backend)
+        parts = [make_frame({"x": [float(i)]}, backend) for i in range(3)]
+        result = concat_frames(parts)
+        assert column_values(result, "x") == [0.0, 1.0, 2.0]
+
+    def test_empty_sequence_raises(self):
+        with pytest.raises(ValueError, match="at least one frame"):
+            concat_frames([])

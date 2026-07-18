@@ -1,6 +1,9 @@
+from collections.abc import Sequence
+import datetime
 import importlib.util
 
 import narwhals.stable.v2 as nw
+from narwhals.stable.v2.typing import IntoFrame
 import pandas as pd
 
 PANDAS = "pandas"
@@ -167,3 +170,143 @@ def from_pandas(df: pd.DataFrame, output_type: str):
         # Catches transitive gaps find_spec cannot see, e.g. polars needing pyarrow for from_pandas.
         _require_backend(output_type)
         raise ImportError(f"output_type={output_type!r} conversion failed: {exc}") from exc
+
+
+def make_frame(records: list[dict] | dict[str, list], output_type: str, schema: dict | None = None):
+    """Build a native frame of the requested backend directly from parsed records.
+
+    Keys missing from a record become nulls; column order follows first appearance across the
+    records.
+
+    Parameters
+    ----------
+    records : list of dict or dict of str to list
+        Row records as parsed from a JSON or SDMX payload, or ready-made columns.
+    output_type : str
+        Canonical backend name from :func:`validate_output_type`.
+    schema : dict mapping str to narwhals dtype, optional
+        Column dtypes to impose, guaranteeing identical schemas on every backend. When omitted each
+        backend infers its own dtypes. Default None.
+
+    Returns
+    -------
+    DataFrame or Table
+        A native frame of the requested backend.
+    """
+    if isinstance(records, dict):
+        columns = records
+    else:
+        keys = {}
+        for record in records:
+            for key in record:
+                keys[key] = None
+        columns = {key: [record.get(key) for record in records] for key in keys}
+    if not columns and schema is not None:
+        columns = {name: [] for name in schema}
+    if output_type == "dask":
+        # narwhals from_dict is eager-only; build in pandas and hand off lazily.
+        return nw.from_dict(columns, schema=schema, backend=PANDAS).lazy(backend="dask").to_native()
+    return nw.from_dict(columns, schema=schema, backend=output_type).to_native()
+
+
+def filter_date_range(
+    frame: IntoFrame,
+    column: str,
+    start: str | datetime.date | datetime.datetime | pd.Timestamp | None = None,
+    end: str | datetime.date | datetime.datetime | pd.Timestamp | None = None,
+):
+    """Keep rows whose ``column`` value lies in the inclusive range [start, end].
+
+    Inclusivity on both endpoints matches pandas ``truncate`` and label slicing. A column that is
+    not datetime- or date-typed -- e.g. non-calendar period codes like '2013-S1' -- comes back
+    unfiltered, leaving only the server-side query bounds in effect.
+
+    Parameters
+    ----------
+    frame : DataFrame or Table
+        Any narwhals-compatible native frame, eager or lazy.
+    column : str
+        Name of the date column to filter on.
+    start : datetime-like, optional
+        Inclusive lower bound; no lower bound when None. Default None.
+    end : datetime-like, optional
+        Inclusive upper bound; no upper bound when None. Default None.
+
+    Returns
+    -------
+    DataFrame or Table
+        The filtered frame in its original backend.
+    """
+    if start is None and end is None:
+        return frame
+    ndf = nw.from_native(frame)
+    dtype = ndf.collect_schema()[column]
+    if dtype == nw.Date:
+        lower = None if start is None else pd.Timestamp(start).date()
+        upper = None if end is None else pd.Timestamp(end).date()
+    elif dtype == nw.Datetime:
+        lower = None if start is None else pd.Timestamp(start).to_pydatetime()
+        upper = None if end is None else pd.Timestamp(end).to_pydatetime()
+    else:
+        return frame
+    target = nw.col(column)
+    if lower is not None and upper is not None:
+        condition = target.is_between(lower, upper, closed="both")
+    elif lower is not None:
+        condition = target >= lower
+    else:
+        condition = target <= upper
+    return ndf.filter(condition).to_native()
+
+
+def to_datetime_col(frame: IntoFrame, column: str):
+    """Cast a string ``column`` to datetime, keeping the strings when they are not calendar dates.
+
+    The datetime format is inferred by the backend. Values that defeat inference -- non-calendar
+    period codes such as SDMX semesters ('2013-S1') -- leave the frame unchanged. A column that is
+    not string-typed also comes back unchanged.
+
+    Parameters
+    ----------
+    frame : DataFrame or Table
+        Any narwhals-compatible native frame.
+    column : str
+        Name of the column to cast.
+
+    Returns
+    -------
+    DataFrame or Table
+        The frame in its original backend, with ``column`` cast when possible.
+    """
+    ndf = nw.from_native(frame)
+    if ndf.collect_schema()[column] != nw.String:
+        return frame
+    try:
+        return ndf.with_columns(nw.col(column).str.to_datetime()).to_native()
+    except Exception:
+        # Backends raise different error types for unparseable dates; keeping the strings is the
+        # designed fallback for non-calendar period codes, not a swallowed failure.
+        return frame
+
+
+def concat_frames(frames: Sequence[IntoFrame]):
+    """Concatenate native frames of the same backend vertically.
+
+    Parameters
+    ----------
+    frames : sequence of DataFrame or Table
+        Frames of one backend with matching schemas.
+
+    Returns
+    -------
+    DataFrame or Table
+        The stacked frame in the shared backend.
+
+    Raises
+    ------
+    ValueError
+        If ``frames`` is empty.
+    """
+    if not frames:
+        raise ValueError("concat_frames requires at least one frame")
+    return nw.concat([nw.from_native(frame) for frame in frames], how="vertical").to_native()

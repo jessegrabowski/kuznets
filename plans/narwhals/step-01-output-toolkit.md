@@ -35,7 +35,7 @@ Public surface (consumed by later steps):
   isinstance-DatetimeIndex-guard semantics).
 - `to_datetime_col(native_frame, column)` — narwhals str→datetime cast with a keep-strings
   fallback on failure.
-- `concat_frames(frames, output_type)` — `nw.concat` wrapper.
+- `concat_frames(frames)` — `nw.concat` wrapper; the backend is inferred from the frames.
 
 There are deliberately **no un-decorators** (no melt-the-panel, no de-period-ize): under the tidy
 architecture nothing decorated ever needs converting.
