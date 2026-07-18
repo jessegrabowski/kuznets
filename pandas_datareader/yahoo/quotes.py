@@ -23,6 +23,7 @@ class YahooQuotesReader(_BaseReader):
         retry_count: int = 3,
         pause: float = 0.1,
         session=None,
+        output_type: str = "pandas",
     ) -> None:
         super().__init__(
             symbols=symbols,
@@ -31,6 +32,7 @@ class YahooQuotesReader(_BaseReader):
             retry_count=retry_count,
             pause=pause,
             session=session,
+            output_type=output_type,
         )
         self.headers = session.headers if session is not None else DEFAULT_HEADERS
 

@@ -35,6 +35,7 @@ class TSPReader(_BaseReader):
         retry_count: int = 3,
         pause: float = 0.1,
         session=None,
+        output_type: str = "pandas",
     ) -> None:
         """
         Initialize the reader.
@@ -53,6 +54,9 @@ class TSPReader(_BaseReader):
             Time, in seconds, to pause between consecutive queries.
         session : Session, optional
             ``requests.sessions.Session`` instance to be used.
+        output_type : str, optional
+            Backend of the returned data: 'pandas', 'polars', 'pyarrow' (alias 'arrow'), or 'dask'.
+            Backends other than pandas must be installed separately. Default 'pandas'.
         """
         super().__init__(
             symbols=symbols,
@@ -61,6 +65,7 @@ class TSPReader(_BaseReader):
             retry_count=retry_count,
             pause=pause,
             session=session,
+            output_type=output_type,
         )
         self._format = "string"
 

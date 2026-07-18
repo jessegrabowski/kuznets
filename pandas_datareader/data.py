@@ -4,9 +4,10 @@ Module contains tools for collecting data from various remote sources.
 
 import datetime
 
-from pandas import DataFrame, Timestamp
+from pandas import Timestamp
 import requests
 
+from pandas_datareader._output import PANDAS, detach_index, from_pandas, validate_output_type
 from pandas_datareader.av.forex import AVForexReader
 from pandas_datareader.av.time_series import AVTimeSeriesReader
 from pandas_datareader.bankofcanada import BankOfCanadaReader
@@ -46,59 +47,59 @@ __all__ = [
 ]
 
 
-def get_data_alphavantage(*args, **kwargs) -> DataFrame:
+def get_data_alphavantage(*args, **kwargs):
     return AVTimeSeriesReader(*args, **kwargs).read()
 
 
-def get_data_fred(*args, **kwargs) -> DataFrame:
+def get_data_fred(*args, **kwargs):
     return FredReader(*args, **kwargs).read()
 
 
-def get_data_famafrench(*args, **kwargs) -> dict[int | str, DataFrame]:
+def get_data_famafrench(*args, **kwargs):
     return FamaFrenchReader(*args, **kwargs).read()
 
 
-def get_data_yahoo(*args, **kwargs) -> DataFrame:
+def get_data_yahoo(*args, **kwargs):
     return YahooDailyReader(*args, **kwargs).read()
 
 
-def get_data_econdb(*args, **kwargs) -> DataFrame:
+def get_data_econdb(*args, **kwargs):
     return EcondbReader(*args, **kwargs).read()
 
 
-def get_data_yahoo_actions(*args, **kwargs) -> DataFrame:
+def get_data_yahoo_actions(*args, **kwargs):
     return YahooActionReader(*args, **kwargs).read()
 
 
-def get_quote_yahoo(*args, **kwargs) -> DataFrame:
+def get_quote_yahoo(*args, **kwargs):
     return YahooQuotesReader(*args, **kwargs).read()
 
 
-def get_data_quandl(*args, **kwargs) -> DataFrame:
+def get_data_quandl(*args, **kwargs):
     return QuandlReader(*args, **kwargs).read()
 
 
-def get_data_moex(*args, **kwargs) -> DataFrame:
+def get_data_moex(*args, **kwargs):
     return MoexReader(*args, **kwargs).read()
 
 
-def get_data_stooq(*args, **kwargs) -> DataFrame:
+def get_data_stooq(*args, **kwargs):
     return StooqDailyReader(*args, **kwargs).read()
 
 
-def get_data_tiingo(*args, **kwargs) -> DataFrame:
+def get_data_tiingo(*args, **kwargs):
     return TiingoDailyReader(*args, **kwargs).read()
 
 
-def get_iex_data_tiingo(*args, **kwargs) -> DataFrame:
+def get_iex_data_tiingo(*args, **kwargs):
     return TiingoIEXHistoricalReader(*args, **kwargs).read()
 
 
-def get_quotes_tiingo(*args, **kwargs) -> DataFrame:
+def get_quotes_tiingo(*args, **kwargs):
     return TiingoQuoteReader(*args, **kwargs).read()
 
 
-def get_exchange_rate_av(*args, **kwargs) -> DataFrame:
+def get_exchange_rate_av(*args, **kwargs):
     return AVForexReader(*args, **kwargs).read()
 
 
@@ -112,7 +113,8 @@ def DataReader(
     session: requests.Session | None = None,
     api_key: str | None = None,
     headers: dict | None = None,
-) -> DataFrame:
+    output_type: str = "pandas",
+):
     """
     Import data from a number of online sources.
 
@@ -144,11 +146,15 @@ def DataReader(
         Headers applied to every request, merged over ``options.headers`` and the config file. Pass
         a ``User-Agent`` here to identify as something other than ``pandas-datareader`` when a host
         blocks the default agent.
+    output_type : str, optional
+        Backend of the returned data: 'pandas', 'polars', 'pyarrow' (alias 'arrow'), or 'dask'.
+        Backends other than pandas must be installed separately. Default 'pandas'.
 
     Returns
     -------
-    df : DataFrame
-        Data from the specified source.
+    df : DataFrame or native frame
+        Data from the specified source, as a pandas DataFrame by default or as a native frame of
+        the backend selected with ``output_type``.
 
     Examples
     --------
@@ -195,6 +201,8 @@ def DataReader(
         msg = f"data_source={data_source!r} is not implemented"
         raise NotImplementedError(msg)
 
+    output_type = validate_output_type(output_type)
+
     if data_source == "yahoo":
         return YahooDailyReader(
             symbols=name,
@@ -205,6 +213,7 @@ def DataReader(
             retry_count=retry_count,
             pause=pause,
             session=session,
+            output_type=output_type,
         ).read()
 
     elif data_source == "bankofcanada":
@@ -215,6 +224,7 @@ def DataReader(
             retry_count=retry_count,
             pause=pause,
             session=session,
+            output_type=output_type,
         ).read()
 
     elif data_source == "stooq":
@@ -226,6 +236,7 @@ def DataReader(
             retry_count=retry_count,
             pause=pause,
             session=session,
+            output_type=output_type,
         ).read()
 
     elif data_source == "fred":
@@ -238,6 +249,7 @@ def DataReader(
             session=session,
             api_key=api_key,
             headers=headers,
+            output_type=output_type,
         ).read()
 
     elif data_source == "famafrench":
@@ -248,6 +260,7 @@ def DataReader(
             retry_count=retry_count,
             pause=pause,
             session=session,
+            output_type=output_type,
         ).read()
 
     elif data_source == "oecd":
@@ -258,6 +271,7 @@ def DataReader(
             retry_count=retry_count,
             pause=pause,
             session=session,
+            output_type=output_type,
         ).read()
     elif data_source == "eurostat":
         return EurostatReader(
@@ -267,11 +281,16 @@ def DataReader(
             retry_count=retry_count,
             pause=pause,
             session=session,
+            output_type=output_type,
         ).read()
     elif data_source == "nasdaq":
         if name != "symbols":
             raise ValueError(f"Only the string 'symbols' is supported for Nasdaq, not {name!r}")
-        return get_nasdaq_symbols(retry_count=retry_count, pause=pause)
+        nasdaq_symbols = get_nasdaq_symbols(retry_count=retry_count, pause=pause)
+        if output_type == PANDAS:
+            return nasdaq_symbols
+        tidy, _ = detach_index(nasdaq_symbols)
+        return from_pandas(tidy, output_type)
 
     elif data_source == "quandl":
         return QuandlReader(
@@ -282,6 +301,7 @@ def DataReader(
             pause=pause,
             session=session,
             api_key=api_key,
+            output_type=output_type,
         ).read()
     elif data_source == "moex":
         return MoexReader(
@@ -291,6 +311,7 @@ def DataReader(
             retry_count=retry_count,
             pause=pause,
             session=session,
+            output_type=output_type,
         ).read()
     elif data_source == "tiingo":
         return TiingoDailyReader(
@@ -301,6 +322,7 @@ def DataReader(
             pause=pause,
             session=session,
             api_key=api_key,
+            output_type=output_type,
         ).read()
 
     elif data_source == "yahoo-actions":
@@ -311,6 +333,7 @@ def DataReader(
             retry_count=retry_count,
             pause=pause,
             session=session,
+            output_type=output_type,
         ).read()
 
     elif data_source == "yahoo-dividends":
@@ -324,6 +347,7 @@ def DataReader(
             pause=pause,
             session=session,
             interval="d",
+            output_type=output_type,
         ).read()
 
     elif data_source == "av-forex":
@@ -333,6 +357,7 @@ def DataReader(
             pause=pause,
             session=session,
             api_key=api_key,
+            output_type=output_type,
         ).read()
 
     elif data_source == "av-forex-daily":
@@ -345,6 +370,7 @@ def DataReader(
             pause=pause,
             session=session,
             api_key=api_key,
+            output_type=output_type,
         ).read()
 
     elif data_source == "av-daily":
@@ -357,6 +383,7 @@ def DataReader(
             pause=pause,
             session=session,
             api_key=api_key,
+            output_type=output_type,
         ).read()
 
     elif data_source == "av-daily-adjusted":
@@ -369,6 +396,7 @@ def DataReader(
             pause=pause,
             session=session,
             api_key=api_key,
+            output_type=output_type,
         ).read()
 
     elif data_source == "av-weekly":
@@ -381,6 +409,7 @@ def DataReader(
             pause=pause,
             session=session,
             api_key=api_key,
+            output_type=output_type,
         ).read()
 
     elif data_source == "av-weekly-adjusted":
@@ -393,6 +422,7 @@ def DataReader(
             pause=pause,
             session=session,
             api_key=api_key,
+            output_type=output_type,
         ).read()
 
     elif data_source == "av-monthly":
@@ -405,6 +435,7 @@ def DataReader(
             pause=pause,
             session=session,
             api_key=api_key,
+            output_type=output_type,
         ).read()
 
     elif data_source == "av-monthly-adjusted":
@@ -417,6 +448,7 @@ def DataReader(
             pause=pause,
             session=session,
             api_key=api_key,
+            output_type=output_type,
         ).read()
 
     elif data_source == "av-intraday":
@@ -429,6 +461,7 @@ def DataReader(
             pause=pause,
             session=session,
             api_key=api_key,
+            output_type=output_type,
         ).read()
 
     elif data_source == "econdb":
@@ -439,6 +472,7 @@ def DataReader(
             retry_count=retry_count,
             pause=pause,
             session=session,
+            output_type=output_type,
         ).read()
 
     elif data_source == "naver":
@@ -449,6 +483,7 @@ def DataReader(
             retry_count=retry_count,
             pause=pause,
             session=session,
+            output_type=output_type,
         ).read()
 
     else:

@@ -536,6 +536,7 @@ class WorldBankReader(_BaseReader):
         pause: float = 0.1,
         session=None,
         errors: str = "warn",
+        output_type: str = "pandas",
     ) -> None:
         """
         Initialize the reader.
@@ -565,6 +566,9 @@ class WorldBankReader(_BaseReader):
         errors : str, default "warn"
             One of ``{'ignore', 'warn', 'raise'}``. Controls validation of country codes against a
             hardcoded list. ``'raise'`` will raise a ``ValueError`` on a bad country code.
+        output_type : str, optional
+            Backend of the returned data: 'pandas', 'polars', 'pyarrow' (alias 'arrow'), or 'dask'.
+            Backends other than pandas must be installed separately. Default 'pandas'.
         """
         if symbols is None:
             symbols = ["NY.GDP.MKTP.CD", "NY.GNS.ICTR.ZS"]
@@ -578,6 +582,7 @@ class WorldBankReader(_BaseReader):
             retry_count=retry_count,
             pause=pause,
             session=session,
+            output_type=output_type,
         )
 
         if countries is None:

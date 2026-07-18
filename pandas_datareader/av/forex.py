@@ -14,6 +14,7 @@ class AVForexReader(AlphaVantage):
         pause: float = 0.1,
         session=None,
         api_key: str | None = None,
+        output_type: str = "pandas",
     ) -> None:
         """
         Initialize the reader.
@@ -31,6 +32,9 @@ class AVForexReader(AlphaVantage):
         api_key : str, optional
             Alpha Vantage API key. If not provided the environmental variable
             ``ALPHAVANTAGE_API_KEY`` is read. The API key is *required*.
+        output_type : str, optional
+            Backend of the returned data: 'pandas', 'polars', 'pyarrow' (alias 'arrow'), or 'dask'.
+            Backends other than pandas must be installed separately. Default 'pandas'.
         """
         super().__init__(
             symbols=symbols,
@@ -40,6 +44,7 @@ class AVForexReader(AlphaVantage):
             pause=pause,
             session=session,
             api_key=api_key,
+            output_type=output_type,
         )
         self.from_curr = {}
         self.to_curr = {}

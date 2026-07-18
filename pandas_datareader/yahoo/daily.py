@@ -23,6 +23,7 @@ class YahooDailyReader(_DailyBaseReader):
         interval="d",
         get_actions=False,
         adjust_dividends=True,
+        output_type="pandas",
     ):
         """
         Initialize the reader.
@@ -56,6 +57,9 @@ class YahooDailyReader(_DailyBaseReader):
             If True, adds Dividend and Split columns to the DataFrame.
         adjust_dividends : bool, default True
             If True, adjusts dividends for splits.
+        output_type : str, optional
+            Backend of the returned data: 'pandas', 'polars', 'pyarrow' (alias 'arrow'), or 'dask'.
+            Backends other than pandas must be installed separately. Default 'pandas'.
         """
         super().__init__(
             symbols=symbols,
@@ -65,6 +69,7 @@ class YahooDailyReader(_DailyBaseReader):
             pause=pause,
             session=session,
             chunksize=chunksize,
+            output_type=output_type,
         )
 
         if session is None:

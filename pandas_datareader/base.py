@@ -315,6 +315,7 @@ class _DailyBaseReader(_BaseReader):
         pause: float | None = None,
         session: requests.Session | None = None,
         chunksize: int = 25,
+        output_type: str = "pandas",
     ) -> None:
         """
         Initialize the daily reader.
@@ -335,6 +336,9 @@ class _DailyBaseReader(_BaseReader):
             ``requests.sessions.Session`` instance to be used.
         chunksize : int, default 25
             Number of symbols to download consecutively before initiating pause.
+        output_type : str, optional
+            Backend of the returned data: 'pandas', 'polars', 'pyarrow' (alias 'arrow'), or 'dask'.
+            Backends other than pandas must be installed separately. Default 'pandas'.
         """
         super().__init__(
             symbols=symbols,
@@ -343,6 +347,7 @@ class _DailyBaseReader(_BaseReader):
             retry_count=retry_count,
             pause=pause,
             session=session,
+            output_type=output_type,
         )
         self.chunksize = chunksize
 
