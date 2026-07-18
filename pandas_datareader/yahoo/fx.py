@@ -5,6 +5,7 @@ import warnings
 from pandas import DataFrame, Series, concat, to_datetime
 
 from pandas_datareader._utils import RemoteDataError, SymbolWarning
+from pandas_datareader.base import _fetch_symbols_concurrently
 from pandas_datareader.yahoo.daily import YahooDailyReader
 
 
@@ -91,22 +92,23 @@ class YahooFXReader(YahooDailyReader):
         return df
 
     def _dl_mult_symbols(self, symbols):
+        def fetch_one(sym):
+            df = self._read_one_data(sym)
+            df["PairCode"] = sym
+            return df
+
+        results = _fetch_symbols_concurrently(symbols, fetch_one, self.max_workers, catch=(OSError,))
         stocks = {}
-        failed = []
         passed = []
-        for sym in symbols:
-            try:
-                df = self._read_one_data(sym)
-                df["PairCode"] = sym
-                stocks[sym] = df
-                passed.append(sym)
-            except OSError:
+        for sym, outcome in results:
+            if isinstance(outcome, Exception):
                 msg = "Failed to read symbol: {0!r}, replacing with NaN."
                 warnings.warn(msg.format(sym), SymbolWarning, stacklevel=2)
-                failed.append(sym)
+            else:
+                stocks[sym] = outcome
+                passed.append(sym)
 
         if len(passed) == 0:
             msg = "No data fetched using {0!r}"
             raise RemoteDataError(msg.format(self.__class__.__name__))
-        else:
-            return concat(stocks).set_index(["PairCode", "Date"])
+        return concat(stocks).set_index(["PairCode", "Date"])

@@ -4,7 +4,7 @@ import pandas as pd
 import pytest
 
 from pandas_datareader.data import DataReader
-from tests._mock import patch_session_get
+from tests._mock import make_response, patch_session_get
 
 pytestmark = pytest.mark.stable
 
@@ -51,3 +51,11 @@ class TestDataReader:
         assert isinstance(as_polars, polars.DataFrame)
         assert as_polars.columns == ["Symbol", "Security Name"]
         assert as_polars["Symbol"].to_list() == ["AAPL"]
+
+    def test_max_workers_flows_through_the_dispatch(self, monkeypatch, datapath):
+        spy = datapath("data", "stooq", "spy.csv").read_bytes()
+        patch_session_get(monkeypatch, lambda url, params=None, **kwargs: make_response(spy))
+
+        sequential = DataReader(["SPY", "AAPL"], "stooq", max_workers=1)
+        parallel = DataReader(["SPY", "AAPL"], "stooq", max_workers=2)
+        pd.testing.assert_frame_equal(parallel, sequential)
