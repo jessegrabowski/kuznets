@@ -376,7 +376,37 @@ class _DailyBaseReader(_BaseReader):
             df = self._dl_mult_symbols(self.symbols)
         return df
 
-    def _dl_mult_symbols(self, symbols: list[str]) -> DataFrame:
+    def _present_pandas(self, payload):
+        """Materialize the wide Attributes-by-Symbols panel for multi-symbol payloads."""
+        if isinstance(payload, dict):
+            return self._to_panel(payload)
+        return payload
+
+    def _present_tidy(self, payload):
+        """Convert to the requested backend; multi-symbol payloads become one row per (date, symbol)."""
+        if not isinstance(payload, dict):
+            return super()._present_tidy(payload)
+        long = concat(payload, names=["Symbol"])
+        if long.index.names[1] is None:
+            long.index = long.index.set_names("Date", level=1)
+        long = long.reset_index()
+        date_column = long.columns[1]
+        long = long.sort_values([date_column, "Symbol"], kind="stable").reset_index(drop=True)
+        ordered = [date_column, "Symbol", *(c for c in long.columns if c not in (date_column, "Symbol"))]
+        return from_pandas(long[ordered], self.output_type)
+
+    def _to_panel(self, stocks: dict) -> DataFrame:
+        """Pivot per-symbol frames into the wide panel with (Attributes, Symbols) columns."""
+        try:
+            result = concat(stocks, sort=True).unstack(level=0)
+            result.columns.names = ["Attributes", "Symbols"]
+            return result
+        except AttributeError as exc:
+            # cannot construct a panel with just 1D nans indicating no data
+            msg = "No data fetched using {0!r}"
+            raise RemoteDataError(msg.format(self.__class__.__name__)) from exc
+
+    def _dl_mult_symbols(self, symbols: list[str]) -> dict:
         """Download data for multiple symbols.
 
         Parameters
@@ -386,8 +416,8 @@ class _DailyBaseReader(_BaseReader):
 
         Returns
         -------
-        result : DataFrame
-            Combined data for all symbols.
+        stocks : dict
+            One frame per symbol, in fetch order; failed symbols hold all-NaN frames.
 
         Raises
         ------
@@ -416,14 +446,7 @@ class _DailyBaseReader(_BaseReader):
             df_na[:] = np.nan
             for sym in failed:
                 stocks[sym] = df_na
-        try:
-            result = concat(stocks, sort=True).unstack(level=0)
-            result.columns.names = ["Attributes", "Symbols"]
-            return result
-        except AttributeError as exc:
-            # cannot construct a panel with just 1D nans indicating no data
-            msg = "No data fetched using {0!r}"
-            raise RemoteDataError(msg.format(self.__class__.__name__)) from exc
+        return stocks
 
 
 def _in_chunks(seq, size: int) -> Generator:

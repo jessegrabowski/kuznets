@@ -67,3 +67,29 @@ class TestStooqBackends:
         assert tidy.schema["Date"] == nw.Datetime
         assert len(tidy) == len(as_pandas)
         assert tidy["Close"].to_list() == as_pandas["Close"].tolist()
+
+    @pytest.mark.parametrize("output_type", BACKENDS)
+    def test_multi_symbol_long_panel(self, monkeypatch, datapath, output_type):
+        skip_unless_installed(output_type)
+        spy = datapath("data", "stooq", "spy.csv").read_bytes()
+
+        def handler(url, params=None, **kwargs):
+            return make_response(b"") if "BADSYM" in (params or {}).get("s", "") else make_response(spy)
+
+        patch_session_get(monkeypatch, handler)
+        with pytest.warns(SymbolWarning):
+            wide = web.DataReader(["SPY", "BADSYM"], "stooq")
+        with pytest.warns(SymbolWarning):
+            tidy = as_narwhals(web.DataReader(["SPY", "BADSYM"], "stooq", output_type=output_type))
+
+        assert tidy.columns[:2] == ["Date", "Symbol"]
+        assert set(tidy.columns) >= {"Open", "High", "Low", "Close"}
+        assert tidy.schema["Date"] == nw.Datetime
+        assert sorted(set(tidy["Symbol"].to_list())) == ["BADSYM", "SPY"]
+        # One row per (date, symbol); the failed symbol appears as all-null rows.
+        assert len(tidy) == 2 * len(wide)
+        rows = list(zip(tidy["Symbol"].to_list(), tidy["Close"].to_list(), strict=True))
+        bad_close = [value for symbol, value in rows if symbol == "BADSYM"]
+        assert all(value is None or value != value for value in bad_close)
+        spy_close = [value for symbol, value in rows if symbol == "SPY"]
+        assert spy_close == wide["Close"]["SPY"].sort_index().tolist()

@@ -159,15 +159,15 @@ class QuandlReader(_DailyBaseReader):
         """
         return {}
 
-    def _read_core(self) -> DataFrame:
-        """Fetch data from Quandl.
+    def _read_core(self):
+        """Fetch data from Quandl; columns are cleaned (whitespace, punctuation removed)."""
+        payload = super()._read_core()
+        if isinstance(payload, dict):
+            return {symbol: self._clean_columns(frame) for symbol, frame in payload.items()}
+        return self._clean_columns(payload)
 
-        Returns
-        -------
-        df : DataFrame
-            Columns are cleaned (whitespace, punctuation removed).
-        """
-        df = super()._read_core()
+    @staticmethod
+    def _clean_columns(df: DataFrame) -> DataFrame:
         df.rename(
             columns=lambda n: (
                 n.replace(" ", "")

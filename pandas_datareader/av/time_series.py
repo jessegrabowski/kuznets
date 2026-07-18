@@ -141,11 +141,8 @@ class AVTimeSeriesReader(AlphaVantage):
         df : DataFrame
         """
         data = super()._read_lines(out)
-        # reverse since alphavantage returns descending by date
-        data = data[::-1]
-        start_str = self.start.strftime("%Y-%m-%d")
-        end_str = self.end.strftime("%Y-%m-%d")
-        data = data.loc[start_str:end_str]
+        data.index = pd.to_datetime(data.index)
+        data = data.sort_index().loc[self.start : self.end]
         if data.empty:
             raise ValueError("Please input a valid date range")
         else:

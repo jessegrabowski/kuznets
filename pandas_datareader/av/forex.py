@@ -61,6 +61,12 @@ class AVForexReader(AlphaVantage):
             print(e)
             raise ValueError("Please input a currency pair formatted 'FROM/TO' or a list of currency symbols") from e
 
+    def _present_tidy(self, payload):
+        """One row per currency pair, with the rate fields as columns."""
+        pairs = payload.T
+        pairs.index.name = "Pair"
+        return super()._present_tidy(pairs)
+
     @property
     def function(self) -> str:
         """Alpha Vantage endpoint function."""

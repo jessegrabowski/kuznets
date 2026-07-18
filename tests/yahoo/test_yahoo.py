@@ -1,3 +1,4 @@
+import narwhals.stable.v2 as nw
 import numpy as np
 import pandas as pd
 import pytest
@@ -7,6 +8,8 @@ from pandas_datareader import data as web
 from pandas_datareader._utils import RemoteDataError
 from pandas_datareader.data import YahooDailyReader
 from pandas_datareader.yahoo._auth import _CRUMB_URL
+from pandas_datareader.yahoo.fx import YahooFXReader
+from tests._backends import BACKENDS, as_narwhals, skip_unless_installed
 from tests._mock import from_fixtures, live_or_record, make_response, patch_session_get, tolerate_outage
 
 # The crumb/cookie auth handshake every Yahoo reader performs before its real request. Offline these
@@ -140,3 +143,133 @@ class TestYahooLive:
             df = web.get_quote_yahoo(["AAPL", "GOOG"])
             assert sorted(df.index) == ["AAPL", "GOOG"]
             assert "marketCap" in df.columns
+
+
+class TestYahooBackends:
+    @pytest.mark.parametrize("output_type", BACKENDS)
+    def test_daily_single_tidy(self, monkeypatch, datapath, output_type):
+        skip_unless_installed(output_type)
+        _chart_offline(monkeypatch, datapath, "AAPL")
+        as_pandas = web.get_data_yahoo("AAPL", start=_CHART_START, end=_CHART_END)
+        tidy = as_narwhals(web.get_data_yahoo("AAPL", start=_CHART_START, end=_CHART_END, output_type=output_type))
+
+        assert tidy.columns == ["Date", "High", "Low", "Open", "Close", "Volume", "Adj Close"]
+        assert tidy.schema["Date"] == nw.Datetime
+        assert len(tidy) == len(as_pandas)
+        assert tidy["Close"].to_list() == as_pandas["Close"].tolist()
+
+    @pytest.mark.parametrize("output_type", BACKENDS)
+    def test_daily_multi_long_panel(self, monkeypatch, datapath, output_type):
+        skip_unless_installed(output_type)
+        chart = datapath("data", "yahoo", "chart_aapl_2020.json")
+        mapping = {**_AUTH, "v8/finance/chart/AAPL": chart, "v8/finance/chart/MSFT": chart}
+        patch_session_get(monkeypatch, from_fixtures(mapping))
+
+        wide = web.get_data_yahoo(["AAPL", "MSFT"], start=_CHART_START, end=_CHART_END)
+        tidy = as_narwhals(
+            web.get_data_yahoo(["AAPL", "MSFT"], start=_CHART_START, end=_CHART_END, output_type=output_type)
+        )
+
+        assert tidy.columns[:2] == ["Date", "Symbol"]
+        assert sorted(set(tidy["Symbol"].to_list())) == ["AAPL", "MSFT"]
+        assert len(tidy) == 2 * len(wide)
+
+    @pytest.mark.parametrize("output_type", BACKENDS)
+    def test_quotes_row_per_symbol(self, monkeypatch, datapath, output_type):
+        skip_unless_installed(output_type)
+        patch_session_get(
+            monkeypatch,
+            from_fixtures({**_AUTH, "v7/finance/quote": datapath("data", "yahoo", "quote_aapl_goog.json")}),
+        )
+        as_pandas = web.get_quote_yahoo(["AAPL", "GOOG"])
+        tidy = as_narwhals(web.get_quote_yahoo(["AAPL", "GOOG"], output_type=output_type))
+
+        assert "symbol" in tidy.columns
+        assert "price" in tidy.columns
+        assert sorted(tidy["symbol"].to_list()) == ["AAPL", "GOOG"]
+        assert len(tidy) == len(as_pandas)
+
+    @pytest.mark.parametrize("output_type", BACKENDS)
+    def test_actions_single_long(self, monkeypatch, datapath, output_type):
+        skip_unless_installed(output_type)
+        _chart_offline(monkeypatch, datapath, "AAPL")
+        as_pandas = web.DataReader("AAPL", "yahoo-actions", start=_CHART_START, end=_CHART_END)
+        tidy = as_narwhals(
+            web.DataReader("AAPL", "yahoo-actions", start=_CHART_START, end=_CHART_END, output_type=output_type)
+        )
+
+        assert tidy.columns == ["Date", "action", "value"]
+        assert set(tidy["action"].to_list()) == {"DIVIDEND", "SPLIT"}
+        assert len(tidy) == len(as_pandas)
+
+    @pytest.mark.parametrize("output_type", BACKENDS)
+    def test_actions_multi_single_long_frame(self, monkeypatch, datapath, output_type):
+        skip_unless_installed(output_type)
+        chart = datapath("data", "yahoo", "chart_aapl_2020.json")
+        mapping = {**_AUTH, "v8/finance/chart/AAPL": chart, "v8/finance/chart/MSFT": chart}
+        patch_session_get(monkeypatch, from_fixtures(mapping))
+
+        as_dict = web.DataReader(["AAPL", "MSFT"], "yahoo-actions", start=_CHART_START, end=_CHART_END)
+        assert isinstance(as_dict, dict)
+        tidy = as_narwhals(
+            web.DataReader(
+                ["AAPL", "MSFT"], "yahoo-actions", start=_CHART_START, end=_CHART_END, output_type=output_type
+            )
+        )
+
+        assert tidy.columns == ["Date", "Symbol", "action", "value"]
+        assert sorted(set(tidy["Symbol"].to_list())) == ["AAPL", "MSFT"]
+        assert len(tidy) == sum(len(frame) for frame in as_dict.values())
+
+    def test_empty_history_converts(self, monkeypatch, datapath):
+        skip_unless_installed("polars")
+        patch_session_get(
+            monkeypatch,
+            from_fixtures({**_AUTH, "v8/finance/chart/NOPE": datapath("data", "yahoo", "chart_empty.json")}),
+        )
+        as_pandas = web.get_data_yahoo("NOPE", start=_CHART_START, end=_CHART_END)
+        tidy = as_narwhals(web.get_data_yahoo("NOPE", start=_CHART_START, end=_CHART_END, output_type="polars"))
+        assert len(tidy) == len(as_pandas)
+        assert tidy["Close"].to_list() == [None] * len(tidy)
+
+    @pytest.mark.parametrize("output_type", BACKENDS)
+    def test_fx_single_tidy(self, monkeypatch, datapath, output_type):
+        skip_unless_installed(output_type)
+        chart = datapath("data", "yahoo", "chart_aapl_2020.json")
+        patch_session_get(monkeypatch, from_fixtures({"v8/finance/chart/AUDUSD=X": chart}))
+
+        as_pandas = YahooFXReader("AUDUSD", start=_CHART_START, end=_CHART_END).read()
+        tidy = as_narwhals(YahooFXReader("AUDUSD", start=_CHART_START, end=_CHART_END, output_type=output_type).read())
+
+        assert tidy.columns[0] == "Date"
+        assert {"Open", "High", "Low", "Close"} <= set(tidy.columns)
+        assert "Volume" not in tidy.columns
+        assert len(tidy) == len(as_pandas)
+
+    @pytest.mark.parametrize("output_type", BACKENDS)
+    def test_fx_multi_tidy(self, monkeypatch, datapath, output_type):
+        skip_unless_installed(output_type)
+        chart = datapath("data", "yahoo", "chart_aapl_2020.json")
+        mapping = {"chart/AUDUSD=X": chart, "chart/EURUSD=X": chart}
+        patch_session_get(monkeypatch, from_fixtures(mapping))
+
+        as_pandas = YahooFXReader(["AUDUSD", "EURUSD"], start=_CHART_START, end=_CHART_END).read()
+        reader = YahooFXReader(["AUDUSD", "EURUSD"], start=_CHART_START, end=_CHART_END, output_type=output_type)
+        tidy = as_narwhals(reader.read())
+
+        assert {"PairCode", "Date"} <= set(tidy.columns)
+        assert sorted(set(tidy["PairCode"].to_list())) == ["AUDUSD", "EURUSD"]
+        assert len(tidy) == len(as_pandas)
+
+    @pytest.mark.parametrize("output_type", BACKENDS)
+    def test_dividends_single_long(self, monkeypatch, datapath, output_type):
+        skip_unless_installed(output_type)
+        _chart_offline(monkeypatch, datapath, "AAPL")
+        as_pandas = web.DataReader("AAPL", "yahoo-dividends", start=_CHART_START, end=_CHART_END)
+        tidy = as_narwhals(
+            web.DataReader("AAPL", "yahoo-dividends", start=_CHART_START, end=_CHART_END, output_type=output_type)
+        )
+
+        assert tidy.columns == ["Date", "action", "value"]
+        assert set(tidy["action"].to_list()) == {"DIVIDEND"}
+        assert len(tidy) == len(as_pandas)
