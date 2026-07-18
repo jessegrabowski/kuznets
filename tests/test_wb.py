@@ -34,7 +34,7 @@ class TestWorldBankOffline:
                 [["US", "USA", "2010", 1.0]], columns=["country", "iso_code", "year", "x"]
             ),
         )
-        WorldBankReader(symbols=["A", "B", "C"], countries="US")._read()
+        WorldBankReader(symbols=["A", "B", "C"], countries="US").read()
         assert len(sleeps) == 2
 
     def test_download_parses_values(self, monkeypatch, datapath):

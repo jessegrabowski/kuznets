@@ -5,9 +5,10 @@ from urllib.parse import urlencode
 import warnings
 
 import numpy as np
-from pandas import DataFrame, Timestamp, concat, read_csv
+from pandas import DataFrame, MultiIndex, Timestamp, concat, read_csv
 import requests
 
+from pandas_datareader._output import PANDAS, detach_index, from_pandas, validate_output_type
 from pandas_datareader._utils import (
     RemoteDataError,
     SymbolWarning,
@@ -34,6 +35,7 @@ class _BaseReader:
         session: requests.Session | None = None,
         freq: str | None = None,
         headers: dict | None = None,
+        output_type: str = "pandas",
     ) -> None:
         """
         Initialize the reader.
@@ -64,7 +66,11 @@ class _BaseReader:
             Headers applied to every request, merged over ``options.headers`` and the config file.
             Pass a ``User-Agent`` here to identify as something other than ``pandas-datareader``
             when a host blocks the default agent.
+        output_type : str, optional
+            Backend of the returned data: 'pandas', 'polars', 'pyarrow' (alias 'arrow'), or 'dask'.
+            Backends other than pandas must be installed separately. Default 'pandas'.
         """
+        self.output_type = validate_output_type(output_type)
         self.symbols = symbols
 
         start, end = _sanitize_dates(start or self.default_start_date, end)
@@ -104,18 +110,41 @@ class _BaseReader:
         """Parameters to use in API calls."""
         return None
 
-    def read(self) -> DataFrame:
+    def read(self):
         """Read data from connector.
 
         Returns
         -------
-        df : DataFrame
-            Data retrieved from the remote source.
+        df : DataFrame or native frame
+            Data retrieved from the remote source, as a pandas DataFrame by default or as a native
+            frame of the backend selected with ``output_type``.
         """
+        payload = self._read_core()
+        if self.output_type == PANDAS:
+            return self._present_pandas(payload)
+        return self._present_tidy(payload)
+
+    def _read_core(self):
+        """Fetch and parse the payload consumed by both presenters."""
         try:
             return self._read_one_data(self.url, self.params)
         finally:
             self.close()
+
+    def _present_pandas(self, payload):
+        """Decorate the payload into the pandas output shape. Identity for simple readers."""
+        return payload
+
+    def _present_tidy(self, payload):
+        """Convert the payload to the requested backend, with indexes detached into columns.
+
+        Handles plain single-frame payloads only; readers whose payloads are dicts or carry
+        MultiIndex columns must override with their own tidy presenter.
+        """
+        if not isinstance(payload, DataFrame) or isinstance(payload.columns, MultiIndex):
+            raise NotImplementedError(f"output_type={self.output_type!r} is not yet supported by {type(self).__name__}")
+        tidy, _ = detach_index(payload)
+        return from_pandas(tidy, self.output_type)
 
     def _read_one_data(self, url: str, params: dict | None) -> DataFrame:
         """Read one data from specified URL.
@@ -286,6 +315,7 @@ class _DailyBaseReader(_BaseReader):
         pause: float | None = None,
         session: requests.Session | None = None,
         chunksize: int = 25,
+        output_type: str = "pandas",
     ) -> None:
         """
         Initialize the daily reader.
@@ -306,6 +336,9 @@ class _DailyBaseReader(_BaseReader):
             ``requests.sessions.Session`` instance to be used.
         chunksize : int, default 25
             Number of symbols to download consecutively before initiating pause.
+        output_type : str, optional
+            Backend of the returned data: 'pandas', 'polars', 'pyarrow' (alias 'arrow'), or 'dask'.
+            Backends other than pandas must be installed separately. Default 'pandas'.
         """
         super().__init__(
             symbols=symbols,
@@ -314,6 +347,7 @@ class _DailyBaseReader(_BaseReader):
             retry_count=retry_count,
             pause=pause,
             session=session,
+            output_type=output_type,
         )
         self.chunksize = chunksize
 
@@ -321,7 +355,7 @@ class _DailyBaseReader(_BaseReader):
         """Return parameters for an API call. Must be overridden in subclass."""
         raise NotImplementedError
 
-    def read(self) -> DataFrame:
+    def _read_core(self) -> DataFrame:
         """Read data for one or more symbols.
 
         Returns

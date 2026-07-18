@@ -38,8 +38,8 @@ class YahooFXReader(YahooDailyReader):
         }
         return params
 
-    def read(self) -> DataFrame:
-        """Read FX data.
+    def _read_core(self) -> DataFrame:
+        """Fetch FX data.
 
         Returns
         -------

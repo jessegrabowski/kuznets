@@ -24,6 +24,12 @@ string-typed columns — mirroring today's `isinstance(df.index, DatetimeIndex)`
 
 `read_jsdmx` / `read_jstat` are public helpers; they gain an `output_type="pandas"` parameter.
 
+**Guard to retire (from PR 2):** `EurostatReader` and `OECDReader` currently hit the base
+`_present_tidy` guard — `NotImplementedError: output_type=... is not yet supported by ...` — because
+their payload carries MultiIndex columns. Landing this PR must replace that error with the working
+record-native tidy path; add a test asserting `output_type="polars"` succeeds for both readers so
+the guard's retirement is pinned.
+
 ## Tasks
 
 | # | Commit | Contents | Testing plan |

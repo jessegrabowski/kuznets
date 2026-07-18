@@ -21,6 +21,7 @@ class QuandlReader(_DailyBaseReader):
         session=None,
         chunksize: int = 25,
         api_key: str | None = None,
+        output_type: str = "pandas",
     ) -> None:
         """
         Initialize the reader.
@@ -54,8 +55,11 @@ class QuandlReader(_DailyBaseReader):
             Quandl API key. Resolved through :func:`pandas_datareader.config.get_api_key` (argument,
             ``options.api_keys['quandl']``, ``QUANDL_API_KEY``, then the config file). The API key
             is *required*.
+        output_type : str, optional
+            Backend of the returned data: 'pandas', 'polars', 'pyarrow' (alias 'arrow'), or 'dask'.
+            Backends other than pandas must be installed separately. Default 'pandas'.
         """
-        super().__init__(symbols, start, end, retry_count, pause, session, chunksize)
+        super().__init__(symbols, start, end, retry_count, pause, session, chunksize, output_type=output_type)
         self.api_key = get_api_key("quandl", api_key)
 
     @property
@@ -155,15 +159,15 @@ class QuandlReader(_DailyBaseReader):
         """
         return {}
 
-    def read(self) -> DataFrame:
-        """Read data from Quandl.
+    def _read_core(self) -> DataFrame:
+        """Fetch data from Quandl.
 
         Returns
         -------
         df : DataFrame
             Columns are cleaned (whitespace, punctuation removed).
         """
-        df = super().read()
+        df = super()._read_core()
         df.rename(
             columns=lambda n: (
                 n.replace(" ", "")

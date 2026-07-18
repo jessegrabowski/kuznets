@@ -43,8 +43,9 @@ class FamaFrenchReader(_BaseReader):
     """
     Get data for the given name from the Fama/French data library.
 
-    For annual and monthly data, index is a pandas.PeriodIndex, otherwise it's a
-    pandas.DatetimeIndex.
+    ``read`` returns a dict of DataFrames keyed by integer table number, plus a ``'DESCR'`` string
+    entry describing the data set. For annual and monthly data, each table's index is a
+    pandas.PeriodIndex, otherwise it's a pandas.DatetimeIndex.
     """
 
     @property
@@ -75,18 +76,6 @@ class FamaFrenchReader(_BaseReader):
                 except UnicodeDecodeError:
                     data = zf.open(zf.namelist()[0]).read().decode(encoding="cp1252")
         return data
-
-    def read(self) -> dict[int | str, DataFrame]:
-        """
-        Read data.
-
-        Returns
-        -------
-        datasets : dict of int or str to DataFrame
-            A dictionary of DataFrames. Tables are accessed by integer keys. See df['DESCR'] for a
-            description of the data set.
-        """
-        return super().read()
 
     def _read_one_data(self, url: str, params) -> dict[int | str, DataFrame]:
         params = {

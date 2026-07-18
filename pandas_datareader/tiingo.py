@@ -35,6 +35,7 @@ class TiingoIEXHistoricalReader(_BaseReader):
         session=None,
         freq: str | None = None,
         api_key: str | None = None,
+        output_type: str = "pandas",
     ) -> None:
         """
         Initialize the reader.
@@ -62,8 +63,11 @@ class TiingoIEXHistoricalReader(_BaseReader):
             Tiingo API key. Resolved through :func:`pandas_datareader.config.get_api_key` (argument,
             ``options.api_keys['tiingo']``, ``TIINGO_API_KEY``, then the config file). The API key
             is *required*.
+        output_type : str, optional
+            Backend of the returned data: 'pandas', 'polars', 'pyarrow' (alias 'arrow'), or 'dask'.
+            Backends other than pandas must be installed separately. Default 'pandas'.
         """
-        super().__init__(symbols, start, end, retry_count, pause, timeout, session, freq)
+        super().__init__(symbols, start, end, retry_count, pause, timeout, session, freq, output_type=output_type)
 
         if isinstance(self.symbols, str):
             self.symbols = [self.symbols]
@@ -130,8 +134,8 @@ class TiingoIEXHistoricalReader(_BaseReader):
         df = df.set_index(["symbol", "date"])
         return df
 
-    def read(self) -> pd.DataFrame:
-        """Read data from connector.
+    def _read_core(self) -> pd.DataFrame:
+        """Fetch data for every requested symbol.
 
         Returns
         -------
@@ -161,6 +165,7 @@ class TiingoDailyReader(_BaseReader):
         session=None,
         freq: str | None = None,
         api_key: str | None = None,
+        output_type: str = "pandas",
     ) -> None:
         """
         Initialize the reader.
@@ -187,8 +192,11 @@ class TiingoDailyReader(_BaseReader):
             Tiingo API key. Resolved through :func:`pandas_datareader.config.get_api_key` (argument,
             ``options.api_keys['tiingo']``, ``TIINGO_API_KEY``, then the config file). The API key
             is *required*.
+        output_type : str, optional
+            Backend of the returned data: 'pandas', 'polars', 'pyarrow' (alias 'arrow'), or 'dask'.
+            Backends other than pandas must be installed separately. Default 'pandas'.
         """
-        super().__init__(symbols, start, end, retry_count, pause, timeout, session, freq)
+        super().__init__(symbols, start, end, retry_count, pause, timeout, session, freq, output_type=output_type)
         if isinstance(self.symbols, str):
             self.symbols = [self.symbols]
         self._symbol = ""
@@ -253,8 +261,8 @@ class TiingoDailyReader(_BaseReader):
         df = df.set_index(["symbol", "date"])
         return df
 
-    def read(self) -> pd.DataFrame:
-        """Read data from connector.
+    def _read_core(self) -> pd.DataFrame:
+        """Fetch data for every requested symbol.
 
         Returns
         -------
@@ -284,6 +292,7 @@ class TiingoMetaDataReader(TiingoDailyReader):
         session=None,
         freq: str | None = None,
         api_key: str | None = None,
+        output_type: str = "pandas",
     ) -> None:
         """
         Initialize the reader.
@@ -310,8 +319,13 @@ class TiingoMetaDataReader(TiingoDailyReader):
             Tiingo API key. Resolved through :func:`pandas_datareader.config.get_api_key` (argument,
             ``options.api_keys['tiingo']``, ``TIINGO_API_KEY``, then the config file). The API key
             is *required*.
+        output_type : str, optional
+            Backend of the returned data: 'pandas', 'polars', 'pyarrow' (alias 'arrow'), or 'dask'.
+            Backends other than pandas must be installed separately. Default 'pandas'.
         """
-        super().__init__(symbols, start, end, retry_count, pause, timeout, session, freq, api_key)
+        super().__init__(
+            symbols, start, end, retry_count, pause, timeout, session, freq, api_key, output_type=output_type
+        )
         self._concat_axis = 1
 
     @property

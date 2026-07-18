@@ -22,6 +22,7 @@ class EcondbReader(_BaseReader):
         pause: float = 0.1,
         session=None,
         freq: str | None = None,
+        output_type: str = "pandas",
     ) -> None:
         """
         Initialize the reader.
@@ -51,6 +52,9 @@ class EcondbReader(_BaseReader):
             ``requests.sessions.Session`` instance to be used.
         freq : str, optional
             Not used.
+        output_type : str, optional
+            Backend of the returned data: 'pandas', 'polars', 'pyarrow' (alias 'arrow'), or 'dask'.
+            Backends other than pandas must be installed separately. Default 'pandas'.
         """
         super().__init__(
             symbols=symbols,
@@ -60,6 +64,7 @@ class EcondbReader(_BaseReader):
             pause=pause,
             session=session,
             freq=freq,
+            output_type=output_type,
         )
         params = dict(s.split("=") for s in self.symbols.split("&"))
         if "from" in params and not start:
@@ -75,8 +80,8 @@ class EcondbReader(_BaseReader):
 
         return f"{self._URL}?{self.symbols}&format=json&page_size=500&expand=both"
 
-    def read(self) -> pd.DataFrame:
-        """Read data from the EconDB API.
+    def _read_core(self) -> pd.DataFrame:
+        """Fetch data from the EconDB API.
 
         Returns
         -------

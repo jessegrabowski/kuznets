@@ -23,6 +23,7 @@ class YahooQuotesReader(_BaseReader):
         retry_count: int = 3,
         pause: float = 0.1,
         session=None,
+        output_type: str = "pandas",
     ) -> None:
         super().__init__(
             symbols=symbols,
@@ -31,6 +32,7 @@ class YahooQuotesReader(_BaseReader):
             retry_count=retry_count,
             pause=pause,
             session=session,
+            output_type=output_type,
         )
         self.headers = session.headers if session is not None else DEFAULT_HEADERS
 
@@ -39,8 +41,8 @@ class YahooQuotesReader(_BaseReader):
         """API URL."""
         return "https://query1.finance.yahoo.com/v7/finance/quote"
 
-    def read(self) -> DataFrame:
-        """Read quotes for one or more symbols.
+    def _read_core(self) -> DataFrame:
+        """Fetch quotes for one or more symbols.
 
         Returns
         -------
