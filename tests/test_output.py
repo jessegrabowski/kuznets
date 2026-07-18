@@ -279,6 +279,21 @@ class TestFilterDateRange:
         result = filter_date_range(frame, "Date", pd.Timestamp("2020-01-15"), pd.Timestamp("2020-02-15"))
         assert result["x"].to_list() == [2.0]
 
+    def test_auto_detects_single_datetime_column(self):
+        result = filter_date_range(
+            self.datetime_native("pandas"), start=pd.Timestamp("2020-01-02"), end=pd.Timestamp("2020-01-03")
+        )
+        assert result["x"].tolist() == [2.0, 3.0]
+
+    def test_auto_detect_without_datetime_column_skips_filtering(self):
+        frame = make_frame({"TIME_PERIOD": ["2013-S1"], "value": [1.0]}, "pandas")
+        assert filter_date_range(frame, start=pd.Timestamp("2013-01-01"), end=pd.Timestamp("2013-12-31")) is frame
+
+    def test_auto_detect_with_multiple_datetime_columns_raises(self):
+        frame = make_frame({"a": [pd.Timestamp("2020-01-01")], "b": [pd.Timestamp("2020-01-02")], "x": [1.0]}, "pandas")
+        with pytest.raises(ValueError, match="pass column="):
+            filter_date_range(frame, start=pd.Timestamp("2020-01-01"), end=pd.Timestamp("2020-01-02"))
+
     @requires_dask
     def test_lazy_dask_frame_filters_and_stays_lazy(self):
         dask_dataframe = pytest.importorskip("dask.dataframe")

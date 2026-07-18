@@ -1,5 +1,6 @@
 from pandas import DataFrame, DatetimeIndex
 
+from pandas_datareader._output import filter_date_range
 from pandas_datareader.base import _BaseReader
 from pandas_datareader.io import read_jstat
 
@@ -27,22 +28,20 @@ class EurostatReader(_BaseReader):
             "untilTimePeriod": self.end.year,
         }
 
-    def _read_lines(self, out: dict) -> DataFrame:
-        """Parse the Eurostat JSON-stat response into a DataFrame.
+    def _read_lines(self, out: dict) -> dict:
+        """Pass the parsed JSON-stat response through as the payload for the presenters."""
+        return out
 
-        Parameters
-        ----------
-        out : dict
-            Parsed JSON-stat response.
-
-        Returns
-        -------
-        df : DataFrame
-            Eurostat data for the requested symbol, indexed by time.
-        """
-        df = read_jstat(out)
+    def _present_pandas(self, payload: dict) -> DataFrame:
+        """Pivot the observations into the wide time-indexed frame, truncated to the range."""
+        df = read_jstat(payload)
         # Non-calendar period codes (e.g. semesters) stay as a string index and can't be sliced
         # against datetime bounds; the server-side year filter already constrains those.
         if isinstance(df.index, DatetimeIndex):
             df = df.truncate(self.start, self.end)
         return df
+
+    def _present_tidy(self, payload: dict):
+        """Build the long native frame and filter it to the requested range."""
+        frame = read_jstat(payload, output_type=self.output_type)
+        return filter_date_range(frame, start=self.start, end=self.end)

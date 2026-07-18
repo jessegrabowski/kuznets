@@ -1,11 +1,13 @@
 from datetime import datetime
 
+import narwhals.stable.v2 as nw
 import pandas as pd
 import pytest
 
 from pandas_datareader import data as web
 from pandas_datareader._utils import RemoteDataError
 from pandas_datareader.oecd import OECDReader
+from tests._backends import BACKENDS, as_narwhals, skip_unless_installed
 from tests._mock import live_or_record, make_response, patch_session_get, tolerate_outage
 
 pytestmark = pytest.mark.stable
@@ -49,3 +51,23 @@ class TestOECDLive:
             assert isinstance(df.index, pd.DatetimeIndex)
             assert "Reference area" in df.columns.names
             assert len(df) > 0
+
+
+class TestOECDBackends:
+    # This retires the base-presenter NotImplementedError guard for OECDReader (plans/narwhals
+    # step-04): non-pandas output must succeed, as one row per observation.
+    @pytest.mark.parametrize("output_type", BACKENDS)
+    def test_long_schema_and_value_parity(self, monkeypatch, datapath, output_type):
+        skip_unless_installed(output_type)
+        patch_session_get(monkeypatch, {"sdmx.oecd.org": datapath("data", "oecd", "tud.json")})
+
+        kwargs = {"start": datetime(2009, 1, 1), "end": datetime(2010, 1, 1)}
+        wide = web.DataReader(TUD, "oecd", **kwargs)
+        tidy = as_narwhals(web.DataReader(TUD, "oecd", output_type=output_type, **kwargs))
+
+        assert tidy.columns[-1] == "value"
+        assert {"Reference area", "Measure"} <= set(tidy.columns)
+        assert any(dtype == nw.Datetime for dtype in tidy.schema.values())
+        # One tidy row per non-null cell of the wide pandas frame, over the same date range.
+        assert len(tidy) == int(wide.notna().sum().sum())
+        assert sum(tidy["value"].to_list()) == pytest.approx(float(wide.sum().sum()))

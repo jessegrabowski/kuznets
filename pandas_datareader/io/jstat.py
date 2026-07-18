@@ -1,25 +1,32 @@
 import numpy as np
 
+from pandas_datareader._output import validate_output_type
 from pandas_datareader.io.util import (
     TIME_IDS,
     _load_json,
-    _pivot_observations,
+    _present_observations,
 )
 
 
-def read_jstat(path_or_buf):
-    """Convert a JSON-stat 2.0 dataset to a pandas DataFrame.
+def read_jstat(path_or_buf, output_type: str = "pandas"):
+    """Convert a JSON-stat 2.0 dataset to a dataframe of the requested backend.
 
     Parameters
     ----------
     path_or_buf : str or file-like
         A valid JSON-stat 2.0 string or file-like object. See https://json-stat.org/.
+    output_type : str, optional
+        Backend of the returned data: 'pandas', 'polars', 'pyarrow' (alias 'arrow'), or 'dask'.
+        Default 'pandas'.
 
     Returns
     -------
-    df : DataFrame
-        Time-indexed data with the remaining dimensions forming the columns.
+    df : DataFrame or native frame
+        For pandas, time-indexed wide data with the remaining dimensions forming the columns; for
+        any other backend, one row per observation with display-labeled dimension columns and a
+        float64 ``value`` column.
     """
+    output_type = validate_output_type(output_type)
     data = _load_json(path_or_buf)
 
     dim_ids = data["id"]
@@ -44,4 +51,4 @@ def read_jstat(path_or_buf):
         codes = tuple(dim_codes[c] for dim_codes, c in zip(cat_codes, coords, strict=True))
         records.append((codes, value))
 
-    return _pivot_observations(records, dim_names, label_maps, time_pos)
+    return _present_observations(records, dim_names, label_maps, time_pos, output_type)

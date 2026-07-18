@@ -1,12 +1,13 @@
+from pandas_datareader._output import validate_output_type
 from pandas_datareader.io.util import (
     TIME_IDS,
     _load_json,
-    _pivot_observations,
+    _present_observations,
 )
 
 
-def read_jsdmx(path_or_buf):
-    """Convert an SDMX-JSON 2.0 data message to a pandas DataFrame.
+def read_jsdmx(path_or_buf, output_type: str = "pandas"):
+    """Convert an SDMX-JSON 2.0 data message to a dataframe of the requested backend.
 
     Expects the message to have been requested with ``dimensionAtObservation=AllDimensions``.
 
@@ -15,12 +16,18 @@ def read_jsdmx(path_or_buf):
     path_or_buf : str or file-like
         A valid SDMX-JSON 2.0 string or file-like object. See
         https://github.com/sdmx-twg/sdmx-json.
+    output_type : str, optional
+        Backend of the returned data: 'pandas', 'polars', 'pyarrow' (alias 'arrow'), or 'dask'.
+        Default 'pandas'.
 
     Returns
     -------
-    df : DataFrame
-        Time-indexed data with the remaining dimensions forming the columns.
+    df : DataFrame or native frame
+        For pandas, time-indexed wide data with the remaining dimensions forming the columns; for
+        any other backend, one row per observation with display-labeled dimension columns and a
+        float64 ``value`` column.
     """
+    output_type = validate_output_type(output_type)
     data = _load_json(path_or_buf)
 
     payload = data["data"]
@@ -39,4 +46,4 @@ def read_jsdmx(path_or_buf):
         codes = tuple(dim_codes[p] for dim_codes, p in zip(cat_codes, pos, strict=True))
         records.append((codes, value[0]))
 
-    return _pivot_observations(records, dim_names, label_maps, time_pos)
+    return _present_observations(records, dim_names, label_maps, time_pos, output_type)

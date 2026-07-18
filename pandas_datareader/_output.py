@@ -209,9 +209,25 @@ def make_frame(records: list[dict] | dict[str, list], output_type: str, schema: 
     return nw.from_dict(columns, schema=schema, backend=output_type).to_native()
 
 
+def observation_schema(dimension_names) -> dict:
+    """Narwhals schema for long-form observation records: string dimensions plus a float64 value.
+
+    Parameters
+    ----------
+    dimension_names : iterable of str
+        Names of the dimension columns.
+
+    Returns
+    -------
+    dict
+        Mapping of column name to narwhals dtype, ready for :func:`make_frame`.
+    """
+    return {name: nw.String() for name in dimension_names} | {"value": nw.Float64()}
+
+
 def filter_date_range(
     frame: IntoFrame,
-    column: str,
+    column: str | None = None,
     start: str | datetime.date | datetime.datetime | pd.Timestamp | None = None,
     end: str | datetime.date | datetime.datetime | pd.Timestamp | None = None,
 ):
@@ -225,8 +241,10 @@ def filter_date_range(
     ----------
     frame : DataFrame or Table
         Any narwhals-compatible native frame, eager or lazy.
-    column : str
-        Name of the date column to filter on.
+    column : str, optional
+        Name of the date column to filter on. When omitted, the frame's single datetime- or
+        date-typed column is used; a frame with none comes back unfiltered, and one with several
+        raises ValueError. Default None.
     start : datetime-like, optional
         Inclusive lower bound; no lower bound when None. Default None.
     end : datetime-like, optional
@@ -240,7 +258,15 @@ def filter_date_range(
     if start is None and end is None:
         return frame
     ndf = nw.from_native(frame)
-    dtype = ndf.collect_schema()[column]
+    schema = ndf.collect_schema()
+    if column is None:
+        datetime_columns = [name for name, dtype in schema.items() if dtype == nw.Datetime or dtype == nw.Date]
+        if not datetime_columns:
+            return frame
+        if len(datetime_columns) > 1:
+            raise ValueError(f"multiple datetime columns {datetime_columns}; pass column= explicitly")
+        column = datetime_columns[0]
+    dtype = schema[column]
     if dtype == nw.Date:
         lower = None if start is None else pd.Timestamp(start).date()
         upper = None if end is None else pd.Timestamp(end).date()
@@ -262,9 +288,8 @@ def filter_date_range(
 def to_datetime_col(frame: IntoFrame, column: str):
     """Cast a string ``column`` to datetime, keeping the strings when they are not calendar dates.
 
-    The datetime format is inferred by the backend. Values that defeat inference -- non-calendar
-    period codes such as SDMX semesters ('2013-S1') -- leave the frame unchanged. A column that is
-    not string-typed also comes back unchanged.
+    The datetime format is inferred by the backend. Values that defeat inference leave the frame
+    unchanged, as does a column that is not string-typed.
 
     Parameters
     ----------
@@ -285,7 +310,7 @@ def to_datetime_col(frame: IntoFrame, column: str):
         return ndf.with_columns(nw.col(column).str.to_datetime()).to_native()
     except Exception:
         # Backends raise different error types for unparseable dates; keeping the strings is the
-        # designed fallback for non-calendar period codes, not a swallowed failure.
+        # designed fallback, not a swallowed failure.
         return frame
 
 
