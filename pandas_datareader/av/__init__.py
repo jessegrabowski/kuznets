@@ -21,6 +21,7 @@ class AlphaVantage(_BaseReader):
         pause: float | None = None,
         session=None,
         api_key: str | None = None,
+        output_type: str = "pandas",
     ) -> None:
         """
         Initialize the reader.
@@ -43,6 +44,9 @@ class AlphaVantage(_BaseReader):
             Alpha Vantage API key. Resolved through :func:`pandas_datareader.config.get_api_key`
             (argument, ``options.api_keys['alphavantage']``, ``ALPHAVANTAGE_API_KEY``, then the
             config file). The API key is *required*.
+        output_type : str, optional
+            Backend of the returned data: 'pandas', 'polars', 'pyarrow' (alias 'arrow'), or 'dask'.
+            Backends other than pandas must be installed separately. Default 'pandas'.
 
         Notes
         -----
@@ -55,6 +59,7 @@ class AlphaVantage(_BaseReader):
             retry_count=retry_count,
             pause=pause,
             session=session,
+            output_type=output_type,
         )
         self.api_key = get_api_key("alphavantage", api_key)
 

@@ -1,5 +1,7 @@
 import datetime as dt
+import importlib.util
 
+import pandas as pd
 import pytest
 import requests
 
@@ -10,6 +12,7 @@ from pandas_datareader._utils import (
     RemoteDataError,
     _init_session,
 )
+from tests._mock import from_fixtures, patch_session_get
 
 pytestmark = pytest.mark.stable
 
@@ -125,3 +128,68 @@ class TestDailyBaseReader:
         b = base._DailyBaseReader()
         with pytest.raises(NotImplementedError):
             b._get_params()
+
+
+class _CsvOutputReader(base._BaseReader):
+    @property
+    def url(self):
+        return "https://example.test/data.csv"
+
+
+class TestOutputType:
+    csv_body = b"Date,Close\n2020-01-02,1.5\n2020-01-01,1.0\n"
+
+    def test_invalid_output_type_raises_before_any_request(self, monkeypatch):
+        patch_session_get(monkeypatch, from_fixtures({}))
+        with pytest.raises(ValueError, match="not supported"):
+            base._BaseReader([], output_type="bogus")
+
+    def test_missing_backend_raises_import_error_before_any_request(self, monkeypatch):
+        patch_session_get(monkeypatch, from_fixtures({}))
+        monkeypatch.setattr(importlib.util, "find_spec", lambda module: None)
+        with pytest.raises(ImportError, match=r"pandas-datareader\[polars\]"):
+            base._BaseReader([], output_type="polars")
+
+    def test_pandas_default_unchanged_through_dispatcher(self, monkeypatch):
+        patch_session_get(monkeypatch, from_fixtures({"example.test": self.csv_body}))
+        result = _CsvOutputReader("X").read()
+        assert isinstance(result.index, pd.DatetimeIndex)
+        assert result.index.name == "Date"
+        assert result["Close"].tolist() == [1.0, 1.5]
+
+    def test_polars_output_through_base_dispatcher(self, monkeypatch):
+        polars = pytest.importorskip("polars")
+        patch_session_get(monkeypatch, from_fixtures({"example.test": self.csv_body}))
+        result = _CsvOutputReader("X", output_type="polars").read()
+        assert isinstance(result, polars.DataFrame)
+        assert result.columns == ["Date", "Close"]
+        assert result["Close"].to_list() == [1.0, 1.5]
+
+    def test_pyarrow_output_through_base_dispatcher(self, monkeypatch):
+        pyarrow = pytest.importorskip("pyarrow")
+        patch_session_get(monkeypatch, from_fixtures({"example.test": self.csv_body}))
+        result = _CsvOutputReader("X", output_type="pyarrow").read()
+        assert isinstance(result, pyarrow.Table)
+        assert result.column_names == ["Date", "Close"]
+        assert result["Close"].to_pylist() == [1.0, 1.5]
+
+    def test_dict_payload_raises_not_implemented_for_non_pandas(self):
+        pytest.importorskip("polars")
+
+        class _DictPayloadReader(base._BaseReader):
+            def _read_core(self):
+                return {0: pd.DataFrame({"x": [1.0]}), "DESCR": "description"}
+
+        with pytest.raises(NotImplementedError, match="not yet supported by _DictPayloadReader"):
+            _DictPayloadReader([], output_type="polars").read()
+
+    def test_multiindex_column_payload_raises_not_implemented_for_non_pandas(self):
+        pytest.importorskip("polars")
+
+        class _PanelPayloadReader(base._BaseReader):
+            def _read_core(self):
+                columns = pd.MultiIndex.from_tuples([("a", "x"), ("a", "y")])
+                return pd.DataFrame([[1.0, 2.0]], columns=columns)
+
+        with pytest.raises(NotImplementedError, match="not yet supported by _PanelPayloadReader"):
+            _PanelPayloadReader([], output_type="polars").read()

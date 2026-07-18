@@ -536,6 +536,7 @@ class WorldBankReader(_BaseReader):
         pause: float = 0.1,
         session=None,
         errors: str = "warn",
+        output_type: str = "pandas",
     ) -> None:
         """
         Initialize the reader.
@@ -565,6 +566,9 @@ class WorldBankReader(_BaseReader):
         errors : str, default "warn"
             One of ``{'ignore', 'warn', 'raise'}``. Controls validation of country codes against a
             hardcoded list. ``'raise'`` will raise a ``ValueError`` on a bad country code.
+        output_type : str, optional
+            Backend of the returned data: 'pandas', 'polars', 'pyarrow' (alias 'arrow'), or 'dask'.
+            Backends other than pandas must be installed separately. Default 'pandas'.
         """
         if symbols is None:
             symbols = ["NY.GDP.MKTP.CD", "NY.GNS.ICTR.ZS"]
@@ -578,6 +582,7 @@ class WorldBankReader(_BaseReader):
             retry_count=retry_count,
             pause=pause,
             session=session,
+            output_type=output_type,
         )
 
         if countries is None:
@@ -636,48 +641,45 @@ class WorldBankReader(_BaseReader):
                 "format": "json",
             }
 
-    def read(self) -> pd.DataFrame:
-        """Read data from the World Bank API.
+    def _read_core(self) -> pd.DataFrame:
+        """Fetch all requested indicators from the World Bank API.
 
         Returns
         -------
         df : DataFrame
         """
         try:
-            return self._read()
+            data = []
+            for i, indicator in enumerate(self.symbols):
+                if i:
+                    # Space out requests so a batch of indicators doesn't slam the API.
+                    time.sleep(self.pause)
+                # Build URL for api call
+                try:
+                    df = self._read_one_data(self.url + indicator, self.params)
+                    df.columns = ["country", "iso_code", "year", indicator]
+                    data.append(df)
+
+                except ValueError as e:
+                    msg = str(e) + " Indicator: " + indicator
+                    if self.errors == "raise":
+                        raise ValueError(msg) from e
+                    elif self.errors == "warn":
+                        warnings.warn(msg, stacklevel=2)
+
+            # Confirm we actually got some data, and build Dataframe
+            if len(data) > 0:
+                out = reduce(lambda x, y: x.merge(y, how="outer"), data)
+                out = out.drop("iso_code", axis=1)
+                out = out.set_index(["country", "year"])
+                out = out.apply(pd.to_numeric, errors="coerce")
+
+                return out
+            else:
+                msg = "No indicators returned data."
+                raise ValueError(msg)
         finally:
             self.close()
-
-    def _read(self) -> pd.DataFrame:
-        data = []
-        for i, indicator in enumerate(self.symbols):
-            if i:
-                # Space out requests so a batch of indicators doesn't slam the API.
-                time.sleep(self.pause)
-            # Build URL for api call
-            try:
-                df = self._read_one_data(self.url + indicator, self.params)
-                df.columns = ["country", "iso_code", "year", indicator]
-                data.append(df)
-
-            except ValueError as e:
-                msg = str(e) + " Indicator: " + indicator
-                if self.errors == "raise":
-                    raise ValueError(msg) from e
-                elif self.errors == "warn":
-                    warnings.warn(msg, stacklevel=2)
-
-        # Confirm we actually got some data, and build Dataframe
-        if len(data) > 0:
-            out = reduce(lambda x, y: x.merge(y, how="outer"), data)
-            out = out.drop("iso_code", axis=1)
-            out = out.set_index(["country", "year"])
-            out = out.apply(pd.to_numeric, errors="coerce")
-
-            return out
-        else:
-            msg = "No indicators returned data."
-            raise ValueError(msg)
 
     def _read_lines(self, out: list) -> pd.DataFrame:
         # Check to see if there is a possible problem

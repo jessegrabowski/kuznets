@@ -25,6 +25,7 @@ class NaverDailyReader(_DailyBaseReader):
         interval: str = "d",
         get_actions: bool = False,
         adjust_dividends: bool = True,
+        output_type: str = "pandas",
     ) -> None:
         """
         Initialize the reader.
@@ -55,6 +56,9 @@ class NaverDailyReader(_DailyBaseReader):
             Not implemented.
         adjust_dividends : bool, default True
             Not implemented.
+        output_type : str, optional
+            Backend of the returned data: 'pandas', 'polars', 'pyarrow' (alias 'arrow'), or 'dask'.
+            Backends other than pandas must be installed separately. Default 'pandas'.
         """
         if not isinstance(symbols, str):
             raise NotImplementedError("Bulk-fetching is not implemented")
@@ -67,6 +71,7 @@ class NaverDailyReader(_DailyBaseReader):
             pause=pause,
             session=session,
             chunksize=chunksize,
+            output_type=output_type,
         )
 
         self.headers = {

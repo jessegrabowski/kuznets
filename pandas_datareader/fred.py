@@ -41,32 +41,29 @@ class FredReader(_BaseReader):
         """API URL."""
         return FRED_API_URL if self.api_key else FRED_CSV_URL
 
-    def read(self) -> DataFrame:
-        """Read data from FRED.
+    def _read_core(self) -> DataFrame:
+        """Fetch all requested series from FRED.
 
         Returns
         -------
         df : DataFrame
-            If multiple names are passed for "series" then the index of the DataFrame is the outer
-            join of the indices of each series.
+            If multiple series names are passed in ``symbols``, the index is the outer join of the
+            individual series indices.
         """
         try:
-            return self._read()
+            names = self.symbols if is_list_like(self.symbols) else [self.symbols]
+            fetch = self._fetch_api if self.api_key else self._fetch_csv
+
+            series = []
+            for i, name in enumerate(names):
+                if i:
+                    # Space out requests so a batch of series doesn't slam FRED.
+                    time.sleep(self.pause)
+                series.append(fetch(name))
+
+            return concat(series, axis=1, join="outer", sort=True)
         finally:
             self.close()
-
-    def _read(self) -> DataFrame:
-        names = self.symbols if is_list_like(self.symbols) else [self.symbols]
-        fetch = self._fetch_api if self.api_key else self._fetch_csv
-
-        series = []
-        for i, name in enumerate(names):
-            if i:
-                # Space out requests so a batch of series doesn't slam FRED.
-                time.sleep(self.pause)
-            series.append(fetch(name))
-
-        return concat(series, axis=1, join="outer", sort=True)
 
     def _fetch_csv(self, name: str) -> DataFrame:
         """Fetch a single series from the public ``fredgraph.csv`` endpoint."""
