@@ -69,14 +69,14 @@ class TSPReader(_BaseReader):
         """API URL."""
         return "https://secure.tsp.gov/components/CORS/getSharePricesRaw.html"
 
-    def read(self) -> DataFrame:
-        """Read TSP fund price data.
+    def _read_core(self) -> DataFrame:
+        """Fetch TSP fund price data.
 
         Returns
         -------
         df : DataFrame
         """
-        df = super().read()
+        df = super()._read_core()
         df.columns = (x.strip() for x in df.columns)
         df.drop(columns=self.all_symbols - set(self.symbols), inplace=True)
         return df

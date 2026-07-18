@@ -636,48 +636,45 @@ class WorldBankReader(_BaseReader):
                 "format": "json",
             }
 
-    def read(self) -> pd.DataFrame:
-        """Read data from the World Bank API.
+    def _read_core(self) -> pd.DataFrame:
+        """Fetch all requested indicators from the World Bank API.
 
         Returns
         -------
         df : DataFrame
         """
         try:
-            return self._read()
+            data = []
+            for i, indicator in enumerate(self.symbols):
+                if i:
+                    # Space out requests so a batch of indicators doesn't slam the API.
+                    time.sleep(self.pause)
+                # Build URL for api call
+                try:
+                    df = self._read_one_data(self.url + indicator, self.params)
+                    df.columns = ["country", "iso_code", "year", indicator]
+                    data.append(df)
+
+                except ValueError as e:
+                    msg = str(e) + " Indicator: " + indicator
+                    if self.errors == "raise":
+                        raise ValueError(msg) from e
+                    elif self.errors == "warn":
+                        warnings.warn(msg, stacklevel=2)
+
+            # Confirm we actually got some data, and build Dataframe
+            if len(data) > 0:
+                out = reduce(lambda x, y: x.merge(y, how="outer"), data)
+                out = out.drop("iso_code", axis=1)
+                out = out.set_index(["country", "year"])
+                out = out.apply(pd.to_numeric, errors="coerce")
+
+                return out
+            else:
+                msg = "No indicators returned data."
+                raise ValueError(msg)
         finally:
             self.close()
-
-    def _read(self) -> pd.DataFrame:
-        data = []
-        for i, indicator in enumerate(self.symbols):
-            if i:
-                # Space out requests so a batch of indicators doesn't slam the API.
-                time.sleep(self.pause)
-            # Build URL for api call
-            try:
-                df = self._read_one_data(self.url + indicator, self.params)
-                df.columns = ["country", "iso_code", "year", indicator]
-                data.append(df)
-
-            except ValueError as e:
-                msg = str(e) + " Indicator: " + indicator
-                if self.errors == "raise":
-                    raise ValueError(msg) from e
-                elif self.errors == "warn":
-                    warnings.warn(msg, stacklevel=2)
-
-        # Confirm we actually got some data, and build Dataframe
-        if len(data) > 0:
-            out = reduce(lambda x, y: x.merge(y, how="outer"), data)
-            out = out.drop("iso_code", axis=1)
-            out = out.set_index(["country", "year"])
-            out = out.apply(pd.to_numeric, errors="coerce")
-
-            return out
-        else:
-            msg = "No indicators returned data."
-            raise ValueError(msg)
 
     def _read_lines(self, out: list) -> pd.DataFrame:
         # Check to see if there is a possible problem
