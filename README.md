@@ -24,6 +24,13 @@ import pandas_datareader as pdr
 pdr.get_data_fred('GS10')
 ```
 
+Every reader accepts an `output_type` argument to return polars, pyarrow, or dask frames instead of
+pandas, and multi-symbol daily reads fetch concurrently (tune with `max_workers`):
+
+``` python
+pdr.DataReader(["AAPL", "MSFT"], "stooq", output_type="polars", max_workers=8)
+```
+
 ## Documentation
 
 [Stable documentation](https://pydata.github.io/pandas-datareader/) is available on
@@ -38,9 +45,16 @@ for the latest changes in master.
 
 Using pandas datareader requires the following packages:
 
--   pandas>=1.5.3
+-   pandas>=3.0
+-   narwhals>=2.0
 -   lxml
--   requests>=2.19.0
+-   requests
+
+Non-pandas output backends are optional extras:
+
+``` shell
+pip install pandas-datareader[polars]    # or [pyarrow], [dask], [backends]
+```
 
 Building the documentation additionally requires:
 
