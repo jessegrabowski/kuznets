@@ -1,3 +1,4 @@
+import narwhals.stable.v2 as nw
 import numpy as np
 import pandas as pd
 import pytest
@@ -11,6 +12,7 @@ from pandas_datareader.wb import (
     get_indicators,
     search,
 )
+from tests._backends import BACKENDS, as_narwhals, skip_unless_installed
 from tests._mock import from_fixtures, live_or_record, patch_session_get, service_up, tolerate_outage
 
 pytestmark = pytest.mark.stable
@@ -165,3 +167,19 @@ class TestWorldBankLive:
             result = get_indicators()
             assert len(result) > 10000
             assert {"id", "name", "source"} <= set(result.columns)
+
+
+class TestWorldBankBackends:
+    @pytest.mark.parametrize("output_type", BACKENDS)
+    def test_tidy_schema_matches_pandas(self, monkeypatch, datapath, output_type):
+        skip_unless_installed(output_type)
+        patch_session_get(monkeypatch, {"NY.GDP.PCAP.CD": datapath("data", "wb", "country_jp_gdp.json")})
+
+        reader_kwargs = {"symbols": "NY.GDP.PCAP.CD", "countries": "JP", "start": 2000, "end": 2004, "errors": "ignore"}
+        as_pandas = WorldBankReader(**reader_kwargs).read()
+        tidy = as_narwhals(WorldBankReader(**reader_kwargs, output_type=output_type).read())
+
+        assert tidy.columns == ["country", "year", "NY.GDP.PCAP.CD"]
+        assert tidy.schema["country"] == nw.String
+        assert len(tidy) == len(as_pandas)
+        assert tidy["NY.GDP.PCAP.CD"].to_list() == as_pandas["NY.GDP.PCAP.CD"].tolist()
