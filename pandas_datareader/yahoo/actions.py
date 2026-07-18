@@ -19,6 +19,8 @@ class YahooActionReader(YahooDailyReader):
             If multiple symbols, returns a dict keyed by symbol.
         """
         data = super()._read_core()
+        if isinstance(data, dict):
+            data = self._to_panel(data)
         actions = {}
         if isinstance(data.columns, MultiIndex):
             data = data.swaplevel(0, 1, axis=1)
@@ -27,6 +29,10 @@ class YahooActionReader(YahooDailyReader):
             return actions
         else:
             return _get_one_action(data)
+
+    def _present_pandas(self, payload):
+        """The action payload (frame, or dict keyed by symbol) is already the pandas output."""
+        return payload
 
     @property
     def get_actions(self) -> bool:
