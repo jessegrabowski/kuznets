@@ -3,8 +3,9 @@ import re
 import tempfile
 from zipfile import ZipFile
 
-from pandas import DataFrame, read_csv, to_datetime
+from pandas import DataFrame, PeriodIndex, read_csv, to_datetime
 
+from pandas_datareader._output import detach_index, from_pandas
 from pandas_datareader.base import _BaseReader
 from pandas_datareader.compat import PYTHON_LT_3_10, StringIO
 
@@ -140,6 +141,24 @@ class FamaFrenchReader(_BaseReader):
         datasets["DESCR"] = descr + "\n".join(table_descr)
 
         return datasets
+
+    def _present_tidy(self, datasets: dict) -> dict:
+        """Convert each table to the requested backend; the ``'DESCR'`` string entry stays as-is.
+
+        Monthly and annual tables carry period-start timestamps in their ``Date`` column; both
+        presenters contain identical rows because truncation happens during parsing.
+        """
+        converted = {}
+        for key, table in datasets.items():
+            if not isinstance(table, DataFrame):
+                converted[key] = table
+                continue
+            frame = table.copy(deep=False)
+            if isinstance(frame.index, PeriodIndex):
+                frame.index = frame.index.to_timestamp(how="start")
+            tidy, _ = detach_index(frame)
+            converted[key] = from_pandas(tidy, self.output_type)
+        return converted
 
     def get_available_datasets(self) -> list[str]:
         """

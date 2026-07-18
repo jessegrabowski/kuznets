@@ -1,9 +1,11 @@
+import narwhals.stable.v2 as nw
 import pandas as pd
 from pandas import testing as tm
 import pytest
 
 from pandas_datareader import data as web
 from pandas_datareader.famafrench import _URL, get_available_datasets
+from tests._backends import BACKENDS, as_narwhals, skip_unless_installed
 from tests._mock import live_or_record, patch_session_get, service_up, tolerate_outage
 
 pytestmark = pytest.mark.stable
@@ -123,3 +125,53 @@ class TestFamaFrenchLive:
             assert me[0].shape == (12, 21)
             prior = web.DataReader("Prior_2-12_Breakpoints", "famafrench", start="2010-01-01", end="2010-12-01")
             assert prior[0].shape == (12, 22)
+
+
+class TestFamaFrenchBackends:
+    # This retires the base-presenter NotImplementedError guard for FamaFrenchReader
+    # (plans/narwhals step-06): non-pandas output must succeed, as a dict of native frames.
+    @pytest.mark.parametrize("output_type", BACKENDS)
+    def test_dict_of_native_frames_with_period_start_dates(self, monkeypatch, datapath, output_type):
+        skip_unless_installed(output_type)
+        patch_session_get(
+            monkeypatch,
+            {"F-F_Research_Data_Factors": datapath("data", "famafrench", "F-F_Research_Data_Factors_CSV.zip")},
+        )
+        as_pandas = web.DataReader("F-F_Research_Data_Factors", "famafrench")
+        tidy = web.DataReader("F-F_Research_Data_Factors", "famafrench", output_type=output_type)
+
+        assert isinstance(tidy, dict)
+        assert set(tidy) == set(as_pandas)
+        assert tidy["DESCR"] == as_pandas["DESCR"]
+
+        monthly = as_narwhals(tidy[0])
+        assert monthly.columns[0] == "Date"
+        assert monthly.schema["Date"] == nw.Datetime
+        assert len(monthly) == len(as_pandas[0])
+        expected_first = as_pandas[0].index[0].to_timestamp(how="start").to_pydatetime()
+        assert monthly["Date"].to_list()[0] == expected_first
+
+        annual = as_narwhals(tidy[1])
+        assert len(annual) == len(as_pandas[1])
+        assert annual["Date"].to_list()[0].month == 1
+
+    @pytest.mark.parametrize("output_type", BACKENDS)
+    def test_daily_tables_and_row_parity_after_truncation(self, monkeypatch, datapath, output_type):
+        skip_unless_installed(output_type)
+        patch_session_get(
+            monkeypatch,
+            {
+                "F-F_Research_Data_Factors_daily": datapath(
+                    "data", "famafrench", "F-F_Research_Data_Factors_daily_CSV.zip"
+                )
+            },
+        )
+        kwargs = {"start": "2010-01-01", "end": "2010-12-31"}
+        as_pandas = web.DataReader("F-F_Research_Data_Factors_daily", "famafrench", **kwargs)
+        tidy = web.DataReader("F-F_Research_Data_Factors_daily", "famafrench", output_type=output_type, **kwargs)
+
+        daily = as_narwhals(tidy[0])
+        assert daily.schema["Date"] == nw.Datetime
+        assert len(daily) == len(as_pandas[0])
+        first_column = as_pandas[0].columns[0]
+        assert daily[first_column].to_list() == as_pandas[0][first_column].tolist()
