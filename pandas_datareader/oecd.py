@@ -1,5 +1,6 @@
 from pandas import DataFrame, DatetimeIndex
 
+from pandas_datareader._output import filter_date_range
 from pandas_datareader.base import _BaseReader
 from pandas_datareader.io import read_jsdmx
 
@@ -38,21 +39,19 @@ class OECDReader(_BaseReader):
             "dimensionAtObservation": "AllDimensions",
         }
 
-    def _read_lines(self, out: dict) -> DataFrame:
-        """Parse the OECD SDMX-JSON response into a DataFrame.
+    def _read_lines(self, out: dict) -> dict:
+        """Pass the parsed SDMX-JSON response through as the payload for the presenters."""
+        return out
 
-        Parameters
-        ----------
-        out : dict
-            Parsed SDMX-JSON response.
-
-        Returns
-        -------
-        df : DataFrame
-            OECD data for the requested dataflow, indexed by time.
-        """
-        df = read_jsdmx(out)
+    def _present_pandas(self, payload: dict) -> DataFrame:
+        """Pivot the observations into the wide time-indexed frame, truncated to the range."""
+        df = read_jsdmx(payload)
         # Non-calendar period codes stay as a string index and can't be sliced by datetime bounds.
         if isinstance(df.index, DatetimeIndex):
             df = df.truncate(self.start, self.end)
         return df
+
+    def _present_tidy(self, payload: dict):
+        """Build the long native frame and filter it to the requested range."""
+        frame = read_jsdmx(payload, output_type=self.output_type)
+        return filter_date_range(frame, start=self.start, end=self.end)
