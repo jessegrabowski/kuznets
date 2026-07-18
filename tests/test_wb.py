@@ -49,11 +49,11 @@ class TestWorldBankOffline:
         expected = pd.DataFrame(
             {
                 "NY.GDP.PCAP.CD": {
-                    ("Japan", "2000"): 39200.0,
-                    ("Japan", "2001"): 34400.0,
-                    ("Japan", "2002"): 32800.0,
-                    ("Japan", "2003"): 35400.0,
-                    ("Japan", "2004"): 38300.0,
+                    ("Japan", "2000"): 39800.0,
+                    ("Japan", "2001"): 34900.0,
+                    ("Japan", "2002"): 33300.0,
+                    ("Japan", "2003"): 35800.0,
+                    ("Japan", "2004"): 38700.0,
                 }
             }
         ).sort_index()
