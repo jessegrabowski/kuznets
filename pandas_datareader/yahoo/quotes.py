@@ -39,8 +39,8 @@ class YahooQuotesReader(_BaseReader):
         """API URL."""
         return "https://query1.finance.yahoo.com/v7/finance/quote"
 
-    def read(self) -> DataFrame:
-        """Read quotes for one or more symbols.
+    def _read_core(self) -> DataFrame:
+        """Fetch quotes for one or more symbols.
 
         Returns
         -------

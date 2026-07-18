@@ -75,8 +75,8 @@ class EcondbReader(_BaseReader):
 
         return f"{self._URL}?{self.symbols}&format=json&page_size=500&expand=both"
 
-    def read(self) -> pd.DataFrame:
-        """Read data from the EconDB API.
+    def _read_core(self) -> pd.DataFrame:
+        """Fetch data from the EconDB API.
 
         Returns
         -------

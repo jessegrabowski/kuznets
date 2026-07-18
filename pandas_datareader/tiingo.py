@@ -130,8 +130,8 @@ class TiingoIEXHistoricalReader(_BaseReader):
         df = df.set_index(["symbol", "date"])
         return df
 
-    def read(self) -> pd.DataFrame:
-        """Read data from connector.
+    def _read_core(self) -> pd.DataFrame:
+        """Fetch data for every requested symbol.
 
         Returns
         -------
@@ -253,8 +253,8 @@ class TiingoDailyReader(_BaseReader):
         df = df.set_index(["symbol", "date"])
         return df
 
-    def read(self) -> pd.DataFrame:
-        """Read data from connector.
+    def _read_core(self) -> pd.DataFrame:
+        """Fetch data for every requested symbol.
 
         Returns
         -------

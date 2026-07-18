@@ -10,15 +10,15 @@ class YahooActionReader(YahooDailyReader):
     correspond with dividend and stock split ex-dates.
     """
 
-    def read(self) -> DataFrame | dict[str, DataFrame]:
-        """Read action data.
+    def _read_core(self) -> DataFrame | dict[str, DataFrame]:
+        """Fetch action data.
 
         Returns
         -------
         DataFrame or dict of str to DataFrame
             If multiple symbols, returns a dict keyed by symbol.
         """
-        data = super().read()
+        data = super()._read_core()
         actions = {}
         if isinstance(data.columns, MultiIndex):
             data = data.swaplevel(0, 1, axis=1)
@@ -62,26 +62,26 @@ def _get_one_action(data: DataFrame) -> DataFrame:
 class YahooDivReader(YahooActionReader):
     """Get historical dividend data from Yahoo Finance."""
 
-    def read(self) -> DataFrame:
-        """Read dividend data only.
+    def _read_core(self) -> DataFrame:
+        """Fetch dividend data only.
 
         Returns
         -------
         df : DataFrame
         """
-        data = super().read()
+        data = super()._read_core()
         return data[data["action"] == "DIVIDEND"]
 
 
 class YahooSplitReader(YahooActionReader):
     """Get historical stock split data from Yahoo Finance."""
 
-    def read(self) -> DataFrame:
-        """Read split data only.
+    def _read_core(self) -> DataFrame:
+        """Fetch split data only.
 
         Returns
         -------
         df : DataFrame
         """
-        data = super().read()
+        data = super()._read_core()
         return data[data["action"] == "SPLIT"]

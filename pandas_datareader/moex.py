@@ -190,8 +190,8 @@ class MoexReader(_DailyBaseReader):
             b = dfs[0]
         return b
 
-    def read(self) -> pd.DataFrame:
-        """Read data from the primary board for each ticker.
+    def _read_core(self) -> pd.DataFrame:
+        """Fetch data from the primary board for each ticker.
 
         Returns
         -------

@@ -73,8 +73,8 @@ class AVForexReader(AlphaVantage):
         params.update(self.optional_params)
         return params
 
-    def read(self) -> pd.DataFrame:
-        """Read exchange rate data for all currency pairs.
+    def _read_core(self) -> pd.DataFrame:
+        """Fetch exchange rate data for all currency pairs.
 
         Returns
         -------
@@ -86,7 +86,7 @@ class AVForexReader(AlphaVantage):
                 "from_currency": self.from_curr[pair],
                 "to_currency": self.to_curr[pair],
             }
-            data = super().read()
+            data = super()._read_core()
             result.append(data)
         df = pd.concat(result, axis=1)
         df.columns = self.symbols
