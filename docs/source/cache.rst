@@ -26,6 +26,12 @@ passing a ``requests_cache.Session`` to ``DataReader`` or ``Options`` using the
 
 Below is an example with Yahoo! Finance. The session parameter is implemented for all datareaders.
 
+.. note::
+
+   ``requests_cache`` sessions are not thread-safe. Multi-symbol daily reads fetch concurrently by
+   default, so pass ``max_workers=1`` alongside a caching session (see
+   :ref:`remote_data.concurrent`).
+
 .. ipython:: python
     :okexcept:
 

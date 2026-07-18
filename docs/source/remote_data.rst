@@ -53,6 +53,61 @@ The following sources have been previously supported but are fully working in th
 
 It should be noted, that various sources support different kinds of data, so not all sources implement the same methods and the data elements returned might also differ.
 
+.. _remote_data.output_backends:
+
+Output backends
+===============
+
+Every reader and :func:`~pandas_datareader.data.DataReader` (excepting the Yahoo ``Options``
+class) accept an ``output_type`` argument
+selecting the dataframe library of the returned data: ``'pandas'`` (the default), ``'polars'``,
+``'pyarrow'`` (alias ``'arrow'``), or ``'dask'``. Backends other than pandas are optional
+dependencies -- install them with the matching extra, e.g. ``pip install pandas-datareader[polars]``
+-- and requesting an unavailable backend raises ``ImportError`` before any network request is made.
+
+pandas output is exactly what it has always been: row indexes (``DatetimeIndex``, ``PeriodIndex``,
+symbol/date and country/year MultiIndexes) and the wide multi-symbol panel with
+``(Attributes, Symbols)`` columns are pandas presentation. Every other backend receives *tidy*
+frames instead -- dates and identifiers are plain columns, and there is one row per observation:
+
+* Single-symbol daily data carries a datetime ``Date`` column plus the price columns.
+* Multi-symbol daily data is long: one row per ``(Date, Symbol)`` with plain OHLCV columns, sorted
+  by both. Symbols that failed to download appear as all-null rows (a ``SymbolWarning`` is issued
+  either way).
+* OECD and Eurostat return one row per observation: a display-labeled column per SDMX dimension
+  plus a float64 ``value``. Period codes -- annual, monthly, daily, quarterly, semester, and ISO
+  week -- parse to period-start timestamps identically on every backend; codes the parser does not
+  recognize leave the time column as strings.
+* Fama-French keeps its dict container: each table is a native frame with a datetime ``Date``
+  column (period-start timestamps for the monthly and annual tables), and the ``'DESCR'`` entry
+  stays a string.
+* Yahoo actions with multiple symbols return a single long ``Date, Symbol, action, value`` frame
+  (pandas keeps its dict of per-symbol frames).
+* Tiingo metadata is one row per symbol (pandas keeps its fields-by-symbol frame).
+
+.. code-block:: ipython
+
+   In [1]: import pandas_datareader.data as web
+
+   In [2]: df = web.DataReader(["AAPL", "MSFT"], "stooq", output_type="polars")
+
+   In [3]: df.columns
+   Out[3]: ['Date', 'Symbol', 'Open', 'High', 'Low', 'Close', 'Volume']
+
+.. _remote_data.concurrent:
+
+Concurrent downloads
+====================
+
+Multi-symbol daily readers (Yahoo daily, dividends, and actions, Stooq, Quandl, and Yahoo FX) issue
+one HTTP request per symbol. The ``max_workers`` argument (default 5) controls how many of those
+requests run concurrently; ``max_workers=1`` restores fully sequential fetching. Results are
+deterministic regardless of the worker count.
+
+Keep the value modest for rate-limited hosts. Worker threads share the reader's session -- fine for
+the default session, whose connection pooling is thread-safe -- but pass ``max_workers=1`` when
+supplying a session that is not, such as a ``requests_cache`` session (see :ref:`cache`).
+
 .. _remote_data.tiingo:
 
 Tiingo
