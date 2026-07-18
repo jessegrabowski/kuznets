@@ -1,5 +1,6 @@
 from pandas import DataFrame
 
+from pandas_datareader._output import make_frame
 from pandas_datareader._utils import RemoteDataError
 from pandas_datareader.base import _BaseReader
 from pandas_datareader.yahoo._auth import fetch_crumb
@@ -41,13 +42,13 @@ class YahooQuotesReader(_BaseReader):
         """API URL."""
         return "https://query1.finance.yahoo.com/v7/finance/quote"
 
-    def _read_core(self) -> DataFrame:
-        """Fetch quotes for one or more symbols.
+    def _read_core(self) -> list:
+        """Fetch quote records for one or more symbols.
 
         Returns
         -------
-        df : DataFrame
-            One row per symbol, indexed by ticker.
+        results : list of dict
+            One raw quote record per symbol.
         """
         symbols = [self.symbols] if isinstance(self.symbols, str) else list(self.symbols)
         crumb = fetch_crumb(self.session, self.headers, self.timeout)
@@ -56,7 +57,15 @@ class YahooQuotesReader(_BaseReader):
         results = results["quoteResponse"]["result"]
         if not results:
             raise RemoteDataError(f"No quotes fetched for {symbols}")
+        return results
 
+    def _present_pandas(self, results: list) -> DataFrame:
+        """One row per symbol indexed by ticker, with ``price`` copied from the regular market price."""
         df = DataFrame(results).set_index("symbol")
         df["price"] = df["regularMarketPrice"]
         return df
+
+    def _present_tidy(self, results: list):
+        """One row per symbol with ``symbol`` as a plain column, built record-natively."""
+        records = [{**record, "price": record.get("regularMarketPrice")} for record in results]
+        return make_frame(records, self.output_type)
