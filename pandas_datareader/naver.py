@@ -26,6 +26,7 @@ class NaverDailyReader(_DailyBaseReader):
         get_actions: bool = False,
         adjust_dividends: bool = True,
         output_type: str = "pandas",
+        max_workers: int | None = None,
     ) -> None:
         """
         Initialize the reader.
@@ -59,6 +60,9 @@ class NaverDailyReader(_DailyBaseReader):
         output_type : str, optional
             Backend of the returned data: 'pandas', 'polars', 'pyarrow' (alias 'arrow'), or 'dask'.
             Backends other than pandas must be installed separately. Default 'pandas'.
+        max_workers : int, optional
+            Unused; a single symbol needs one request. Accepted for signature compatibility with
+            the other daily readers. Default None.
         """
         if not isinstance(symbols, str):
             raise NotImplementedError("Bulk-fetching is not implemented")
@@ -72,6 +76,7 @@ class NaverDailyReader(_DailyBaseReader):
             session=session,
             chunksize=chunksize,
             output_type=output_type,
+            max_workers=max_workers,
         )
 
         self.headers = {

@@ -114,6 +114,7 @@ def DataReader(
     api_key: str | None = None,
     headers: dict | None = None,
     output_type: str = "pandas",
+    max_workers: int | None = None,
 ):
     """
     Import data from a number of online sources.
@@ -149,6 +150,10 @@ def DataReader(
     output_type : str, optional
         Backend of the returned data: 'pandas', 'polars', 'pyarrow' (alias 'arrow'), or 'dask'.
         Backends other than pandas must be installed separately. Default 'pandas'.
+    max_workers : int, optional
+        Number of concurrent requests for multi-symbol reads from the daily-price sources. Keep it
+        modest for rate-limited hosts, and pass 1 when supplying a session that is not thread-safe.
+        Default 5.
 
     Returns
     -------
@@ -214,6 +219,7 @@ def DataReader(
             pause=pause,
             session=session,
             output_type=output_type,
+            max_workers=max_workers,
         ).read()
 
     elif data_source == "bankofcanada":
@@ -237,6 +243,7 @@ def DataReader(
             pause=pause,
             session=session,
             output_type=output_type,
+            max_workers=max_workers,
         ).read()
 
     elif data_source == "fred":
@@ -302,6 +309,7 @@ def DataReader(
             session=session,
             api_key=api_key,
             output_type=output_type,
+            max_workers=max_workers,
         ).read()
     elif data_source == "moex":
         return MoexReader(
@@ -312,6 +320,7 @@ def DataReader(
             pause=pause,
             session=session,
             output_type=output_type,
+            max_workers=max_workers,
         ).read()
     elif data_source == "tiingo":
         return TiingoDailyReader(
@@ -334,6 +343,7 @@ def DataReader(
             pause=pause,
             session=session,
             output_type=output_type,
+            max_workers=max_workers,
         ).read()
 
     elif data_source == "yahoo-dividends":
@@ -348,6 +358,7 @@ def DataReader(
             session=session,
             interval="d",
             output_type=output_type,
+            max_workers=max_workers,
         ).read()
 
     elif data_source == "av-forex":
@@ -484,6 +495,7 @@ def DataReader(
             pause=pause,
             session=session,
             output_type=output_type,
+            max_workers=max_workers,
         ).read()
 
     else:
