@@ -15,6 +15,7 @@ from pandas_datareader._output import (
     to_datetime_col,
     validate_output_type,
 )
+from tests._backends import column_values, skip_unless_installed
 
 pytestmark = pytest.mark.stable
 
@@ -24,15 +25,6 @@ requires_dask = pytest.mark.skipif(importlib.util.find_spec("dask") is None, rea
 def dated_frame(index_name: str | None = "DATE") -> pd.DataFrame:
     index = pd.DatetimeIndex(["2020-01-01", "2020-01-02", "2020-01-03"], name=index_name)
     return pd.DataFrame({"GDP": [1.0, 2.0, 3.0], "CPI": [4.0, 5.0, 6.0]}, index=index)
-
-
-def column_values(frame, name: str) -> list:
-    return nw.from_native(frame, eager_only=True)[name].to_list()
-
-
-def skip_unless_installed(backend: str) -> None:
-    if backend != "pandas":
-        pytest.importorskip(backend)
 
 
 class TestValidateOutputType:
