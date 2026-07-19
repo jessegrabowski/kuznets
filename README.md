@@ -7,10 +7,8 @@ kuznets is a fork of [pydata/pandas-datareader](https://github.com/pydata/pandas
 renamed after diverging: readers are dataframe-agnostic, multi-symbol reads fetch concurrently,
 and the test suite runs offline against recorded responses.
 
-[![image](https://img.shields.io/pypi/v/kuznets.svg)](https://pypi.python.org/pypi/kuznets/)
-[![image](https://codecov.io/gh/jessegrabowski/kuznets/branch/master/graph/badge.svg)](https://codecov.io/gh/jessegrabowski/kuznets)
-[![image](https://readthedocs.org/projects/kuznets/badge/?version=latest)](https://kuznets.readthedocs.io/en/latest/)
-[![image](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![PyPI](https://img.shields.io/pypi/v/kuznets.svg)](https://pypi.org/project/kuznets/)
+[![Coverage](https://codecov.io/gh/jessegrabowski/kuznets/branch/main/graph/badge.svg)](https://codecov.io/gh/jessegrabowski/kuznets)
 [![License](https://img.shields.io/pypi/l/kuznets)](https://pypi.org/project/kuznets/)
 
 ## Installation
@@ -32,7 +30,7 @@ Every reader accepts an `output_type` argument to return polars, pyarrow, or das
 pandas, and multi-symbol daily reads fetch concurrently (tune with `max_workers`):
 
 ``` python
-pdr.DataReader(["AAPL", "MSFT"], "stooq", output_type="polars", max_workers=8)
+kz.DataReader(["AAPL", "MSFT"], "stooq", output_type="polars", max_workers=8)
 ```
 
 ## Documentation
