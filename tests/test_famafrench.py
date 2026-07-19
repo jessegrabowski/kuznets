@@ -3,8 +3,8 @@ import pandas as pd
 from pandas import testing as tm
 import pytest
 
-from pandas_datareader import data as web
-from pandas_datareader.famafrench import _URL, get_available_datasets
+from kuznets import data as web
+from kuznets.famafrench import _URL, get_available_datasets
 from tests._backends import BACKENDS, as_narwhals, skip_unless_installed
 from tests._mock import live_or_record, patch_session_get, service_up, tolerate_outage
 

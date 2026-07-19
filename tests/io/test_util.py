@@ -4,7 +4,7 @@ import narwhals.stable.v2 as nw
 import pandas as pd
 import pytest
 
-from pandas_datareader.io.util import (
+from kuznets.io.util import (
     _observations_to_records,
     _parse_period_code,
     _pivot_observations,

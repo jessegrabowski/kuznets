@@ -4,9 +4,9 @@ import narwhals.stable.v2 as nw
 import pandas as pd
 import pytest
 
-from pandas_datareader import data as web
-from pandas_datareader.compat import assert_frame_equal
-from pandas_datareader.quandl import QuandlReader
+from kuznets import data as web
+from kuznets.compat import assert_frame_equal
+from kuznets.quandl import QuandlReader
 from tests._backends import BACKENDS, as_narwhals, skip_unless_installed
 from tests._mock import patch_session_get
 

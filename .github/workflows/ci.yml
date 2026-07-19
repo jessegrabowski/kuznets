@@ -49,7 +49,7 @@ jobs:
           --durations=25
           -n 2
           --cov-config pyproject.toml
-          --cov=pandas_datareader
+          --cov=kuznets
           --cov-report xml:coverage.xml
           --cov-report term
           --junitxml=junit/test-results.xml

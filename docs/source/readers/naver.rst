@@ -1,7 +1,7 @@
 Naver Finance
 -------------
 
-.. py:module:: pandas_datareader.naver
+.. py:module:: kuznets.naver
 
 .. autoclass:: NaverDailyReader
    :members:

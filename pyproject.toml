@@ -3,14 +3,14 @@ requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
 
 [project]
-name = "pandas-datareader"
+name = "kuznets"
 dynamic = ["version"]
 requires-python = ">=3.12"
 license = {file = "LICENSE.md"}
 readme = {file = "README.md", content-type = "text/markdown"}
-description = "Pandas-compatible data readers. Formerly a component of pandas."
+description = "Economic and financial data readers for pandas, polars, pyarrow, and dask."
 authors = [
-  {name = "The PyData Development Team", email = "pydata@googlegroups.com"},
+  {name = "Jesse Grabowski", email = "jessegrabowski@gmail.com"},
 ]
 dependencies = [
     "lxml",
@@ -47,7 +47,7 @@ dask = [
     "dask[dataframe]",
 ]
 backends = [
-    "pandas-datareader[polars,pyarrow,dask]",
+    "kuznets[polars,pyarrow,dask]",
 ]
 dev = [
     "pre-commit",
@@ -59,7 +59,7 @@ dev = [
     "pytest-xdist",
     "pytest-cov",
     "wrapt",
-    "pandas-datareader[polars]",
+    "kuznets[polars]",
 ]
 docs = [
     "sphinx",
@@ -71,22 +71,22 @@ docs = [
 ]
 
 [project.urls]
-Homepage = "https://pandas.pydata.org"
-Documentation = "https://pandas-datareader.readthedocs.io/en/latest/"
-Repository = "https://github.com/pydata/pandas-datareader.git"
-"Bug Tracker" = "https://github.com/pydata/pandas-datareader/issues"
+Homepage = "https://github.com/jessegrabowski/kuznets"
+Documentation = "https://kuznets.readthedocs.io/en/latest/"
+Repository = "https://github.com/jessegrabowski/kuznets.git"
+"Bug Tracker" = "https://github.com/jessegrabowski/kuznets/issues"
 
 
 [tool.hatch.version]
 source = "vcs"
 
 [tool.hatch.build.targets.wheel]
-packages = ["pandas_datareader"]
+packages = ["kuznets"]
 
 [tool.ruff]
 target-version = "py312"
 line-length = 120
-exclude = ["pandas_datareader/_version.py"]
+exclude = ["kuznets/_version.py"]
 
 [tool.ruff.lint]
 select = [
@@ -105,7 +105,7 @@ ignore = [
 ]
 
 [tool.ruff.lint.isort]
-known-first-party = ["pandas_datareader"]
+known-first-party = ["kuznets"]
 combine-as-imports = true
 force-sort-within-sections = true
 
@@ -140,9 +140,9 @@ filterwarnings =[
 
 
 [tool.coverage.run]
-source = ["pandas_datareader"]
+source = ["kuznets"]
 branch = true
-include = ["*/pandas_datareader/*"]
+include = ["*/kuznets/*"]
 omit = [
     "*/_version.py",
     "*/yahoo/*",
@@ -155,7 +155,7 @@ exclude_lines = [
     "raise ImmediateDeprecationError",
     "pass",
 ]
-include = ["*/pandas_datareader/*"]
+include = ["*/kuznets/*"]
 omit = [
     "*/_version.py",
     "*/yahoo/*",

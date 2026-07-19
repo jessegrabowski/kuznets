@@ -1,6 +1,6 @@
 .. _remote_data:
 
-.. currentmodule:: pandas_datareader
+.. currentmodule:: kuznets
 
 .. ipython:: python
    :suppress:
@@ -23,7 +23,7 @@ Remote Data Access
 
 .. _remote_data.data_reader:
 
-Functions from :mod:`pandas_datareader.data` and :mod:`pandas_datareader.wb`
+Functions from :mod:`kuznets.data` and :mod:`kuznets.wb`
 extract data from various Internet sources into a pandas DataFrame.
 Currently the following sources are supported and tested:
 
@@ -58,11 +58,11 @@ It should be noted, that various sources support different kinds of data, so not
 Output backends
 ===============
 
-Every reader and :func:`~pandas_datareader.data.DataReader` (excepting the Yahoo ``Options``
+Every reader and :func:`~kuznets.data.DataReader` (excepting the Yahoo ``Options``
 class) accept an ``output_type`` argument
 selecting the dataframe library of the returned data: ``'pandas'`` (the default), ``'polars'``,
 ``'pyarrow'`` (alias ``'arrow'``), or ``'dask'``. Backends other than pandas are optional
-dependencies -- install them with the matching extra, e.g. ``pip install pandas-datareader[polars]``
+dependencies -- install them with the matching extra, e.g. ``pip install kuznets[polars]``
 -- and requesting an unavailable backend raises ``ImportError`` before any network request is made.
 
 pandas output is exactly what it has always been: row indexes (``DatetimeIndex``, ``PeriodIndex``,
@@ -87,7 +87,7 @@ frames instead -- dates and identifiers are plain columns, and there is one row 
 
 .. code-block:: ipython
 
-   In [1]: import pandas_datareader.data as web
+   In [1]: import kuznets.data as web
 
    In [2]: df = web.DataReader(["AAPL", "MSFT"], "stooq", output_type="polars")
 
@@ -121,9 +121,9 @@ writing).
 .. code-block:: ipython
 
    In [1]: import os
-   In [2]: import pandas_datareader as pdr
+   In [2]: import kuznets as kz
 
-   In [3]: df = pdr.get_data_tiingo('GOOG', api_key=os.getenv('TIINGO_API_KEY'))
+   In [3]: df = kz.get_data_tiingo('GOOG', api_key=os.getenv('TIINGO_API_KEY'))
    In [4]: df.head()
                                    close    high     low     open  volume  adjClose  adjHigh  adjLow  adjOpen  adjVolume  divCash  splitFactor
    symbol date
@@ -167,7 +167,7 @@ The following endpoints are available:
 
     In [2]: from datetime import datetime
 
-    In [3]: import pandas_datareader.data as web
+    In [3]: import kuznets.data as web
 
     In [4]: f = web.DataReader("AAPL", "av-daily", start=datetime(2017, 2, 9),
        ...:                    end=datetime(2017, 5, 24),
@@ -203,7 +203,7 @@ as "FROM/TO" as in "USD/JPY".
 
     In [1]: import os
 
-    In [2]: import pandas_datareader.data as web
+    In [2]: import kuznets.data as web
 
     In [3]: f = web.DataReader("USD/JPY", "av-forex",
         ...:                    api_key=os.getenv('ALPHAVANTAGE_API_KEY'))
@@ -228,7 +228,7 @@ Multiple pairs are are allowable:
 
     In [1]: import os
 
-    In [2]: import pandas_datareader.data as web
+    In [2]: import kuznets.data as web
 
     In [3]: f = web.DataReader(["USD/JPY", "BTC/CNY"], "av-forex",
        ...:                    api_key=os.getenv('ALPHAVANTAGE_API_KEY'))
@@ -265,9 +265,9 @@ for United States, is as simple as taking the ticker segment from the URL path
 
     In [1]: import os
 
-    In [2]: import pandas_datareader as pdr
+    In [2]: import kuznets as kz
 
-    In [3]: f = pdr.get_data_econdb('ticker=RGDPUS')
+    In [3]: f = kz.get_data_econdb('ticker=RGDPUS')
     In [4]: f.head()
     Out[4]:
     TableName                                                      T10106
@@ -293,9 +293,9 @@ such as the Eurostat's `GDP and main components <https://www.econdb.com/dataset/
 
     In [1]: import os
 
-    In [2]: import pandas_datareader as pdr
+    In [2]: import kuznets as kz
 
-    In [3]: df = pdr.get_data_econdb('dataset=NAMQ_10_GDP&v=Geopolitical entity (reporting)'
+    In [3]: df = kz.get_data_econdb('dataset=NAMQ_10_GDP&v=Geopolitical entity (reporting)'
                                      '&h=TIME&from=2018-05-01&to=2021-01-01'
                                      '&GEO=[UK,ES,IT,DE,FR,CH,AT]&NA_ITEM=[B1GQ]'
                                      '&S_ADJ=[SCA]&UNIT=[CLV10_MNAC]')
@@ -354,7 +354,7 @@ the data quality is not always good.
 
 .. code-block:: ipython
 
-    In [1]: import pandas_datareader.data as web
+    In [1]: import kuznets.data as web
 
     In [2]: symbol = 'WIKI/AAPL'  # or 'AAPL.US'
 
@@ -375,7 +375,7 @@ FRED
 .. ipython:: python
    :okexcept:
 
-    import pandas_datareader.data as web
+    import kuznets.data as web
     import datetime
     start = datetime.datetime(2010, 1, 1)
     end = datetime.datetime(2013, 1, 27)
@@ -399,8 +399,8 @@ The ``get_available_datasets`` function returns a list of all available datasets
 .. ipython:: python
    :okexcept:
 
-    from pandas_datareader.famafrench import get_available_datasets
-    import pandas_datareader.data as web
+    from kuznets.famafrench import get_available_datasets
+    import kuznets.data as web
     len(get_available_datasets())
     ds = web.DataReader('5_Industry_Portfolios', 'famafrench')
     print(ds['DESCR'])
@@ -426,7 +426,7 @@ constant dollars in North America, you would use the ``search`` function:
 
 .. code-block:: python
 
-    In [1]: from pandas_datareader import wb
+    In [1]: from kuznets import wb
     In [2]: matches = wb.search('gdp.*capita.*const')
 
 
@@ -534,7 +534,7 @@ The ``country`` argument accepts a string or list of mixed
 `two <http://en.wikipedia.org/wiki/ISO_3166-1_alpha-2>`__ or `three <http://en.wikipedia.org/wiki/ISO_3166-1_alpha-3>`__ character
 ISO country codes, as well as dynamic `World Bank exceptions <https://datahelpdesk.worldbank.org/knowledgebase/articles/898590-api-country-queries>`__ to the ISO standards.
 
-For a list of the the hard-coded country codes (used solely for error handling logic) see ``pandas_datareader.wb.country_codes``.
+For a list of the the hard-coded country codes (used solely for error handling logic) see ``kuznets.wb.country_codes``.
 
 Problematic Country Codes & Indicators
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -591,7 +591,7 @@ The following example downloads 'Trade Union Density' data.
 .. ipython:: python
    :okexcept:
 
-    import pandas_datareader.data as web
+    import kuznets.data as web
 
     df = web.DataReader('OECD.ELS.SAE,DSD_TUD_CBC@DF_TUD,1.0', 'oecd')
 
@@ -615,7 +615,7 @@ Specify a Eurostat dataset ID to get the corresponding data. The example below d
 .. ipython:: python
    :okexcept:
 
-    import pandas_datareader.data as web
+    import kuznets.data as web
 
     df = web.DataReader('ert_h_eur_a', 'eurostat')
     df
@@ -635,7 +635,7 @@ Download mutual fund index prices for the Thrift Savings Plan (TSP).
 .. ipython:: python
    :okexcept:
 
-    import pandas_datareader.tsp as tsp
+    import kuznets.tsp as tsp
     tspreader = tsp.TSPReader(start='2015-10-1', end='2015-12-31')
     tspreader.read()
 
@@ -652,7 +652,7 @@ available. More information on the `field <http://www.nasdaqtrader.com/trader.as
 
 .. code-block:: python
 
-    In [12]: from pandas_datareader.nasdaq_trader import get_nasdaq_symbols
+    In [12]: from kuznets.nasdaq_trader import get_nasdaq_symbols
     In [13]: symbols = get_nasdaq_symbols()
     In [14]: print(symbols.loc['IBM'])
         Nasdaq Traded                                                    True
@@ -678,7 +678,7 @@ Google finance doesn't provide common index data download. The Stooq site has th
 .. ipython:: python
    :okexcept:
 
-    import pandas_datareader.data as web
+    import kuznets.data as web
     f = web.DataReader('^DJI', 'stooq')
     f[:10]
 
@@ -688,20 +688,20 @@ MOEX Data
 =========
 The Moscow Exchange (MOEX) provides historical data.
 
-``pandas_datareader.get_data_moex(*args)`` is equivalent to
-``pandas_datareader.moex.MoexReader(*args).read()``
+``kuznets.get_data_moex(*args)`` is equivalent to
+``kuznets.moex.MoexReader(*args).read()``
 
 .. ipython:: python
    :okexcept:
 
-   import pandas_datareader as pdr
-   f = pdr.get_data_moex(['USD000UTSTOM', 'MAGN'], '2020-07-02', '2020-07-07')
+   import kuznets as kz
+   f = kz.get_data_moex(['USD000UTSTOM', 'MAGN'], '2020-07-02', '2020-07-07')
    f.head()
 
-   f = pdr.moex.MoexReader('SBER', '2020-07-02', '2020-07-03').read()
+   f = kz.moex.MoexReader('SBER', '2020-07-02', '2020-07-03').read()
    f.head()
 
-   f = pdr.moex.MoexReader('SBER', '2020-07-02', '2020-07-03').read_all_boards()
+   f = kz.moex.MoexReader('SBER', '2020-07-02', '2020-07-03').read_all_boards()
    f.head()
 
 .. _remote_data.naver:
@@ -714,7 +714,7 @@ Naver Finance Data
 .. ipython:: python
    :okexcept:
 
-   import pandas_datareader.data as web
+   import kuznets.data as web
    df = web.DataReader('005930', 'naver', start='2019-09-10', end='2019-10-09')
    df.head()
 
@@ -742,7 +742,7 @@ The following endpoints are available:
 .. ipython:: python
    :okexcept:
 
-   import pandas_datareader.data as web
+   import kuznets.data as web
    import pandas as pd
    import datetime as dt
    df = web.DataReader('GE', 'yahoo', start='2019-09-10', end='2019-10-09')

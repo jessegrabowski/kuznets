@@ -1,7 +1,7 @@
 Econdb
 --------
 
-.. py:module:: pandas_datareader.econdb
+.. py:module:: kuznets.econdb
 
 .. autoclass:: EcondbReader
    :members:

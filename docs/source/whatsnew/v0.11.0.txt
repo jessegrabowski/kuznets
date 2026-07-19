@@ -5,6 +5,8 @@ v0.11.0
 
 Highlights include:
 
+This is the first release under the name **kuznets**, a fork of pandas-datareader.
+
 New Features
 ~~~~~~~~~~~~
 
@@ -12,7 +14,7 @@ New Features
   returned data: ``'pandas'`` (default, unchanged output), ``'polars'``, ``'pyarrow'`` (alias
   ``'arrow'``), or ``'dask'``. Non-pandas backends receive tidy frames -- dates and identifiers as
   plain columns, multi-symbol data one row per (date, symbol) -- and install via extras, e.g.
-  ``pip install pandas-datareader[polars]``. See :ref:`remote_data.output_backends`.
+  ``pip install kuznets[polars]``. See :ref:`remote_data.output_backends`.
 - Multi-symbol daily reads fetch concurrently; the new ``max_workers`` argument (default 5)
   controls the thread count. Pass ``max_workers=1`` for sequential fetching or when supplying a
   session that is not thread-safe. See :ref:`remote_data.concurrent`.

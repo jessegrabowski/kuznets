@@ -1,7 +1,7 @@
 Fama-French Data (Ken French's Data Library)
 --------------------------------------------
 
-.. py:module:: pandas_datareader.famafrench
+.. py:module:: kuznets.famafrench
 
 .. autoclass:: FamaFrenchReader
    :members:

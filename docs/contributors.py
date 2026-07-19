@@ -10,7 +10,7 @@ from github import Github
 # or using an access token
 g = Github(os.environ.get("GITHUB_API_KEY"))
 
-repo = g.get_repo("pydata/pandas-datareader")
+repo = g.get_repo("jessegrabowski/kuznets")
 
 start = dt.datetime(2019, 9, 26, 0, 0, 0)
 pulls = repo.get_pulls(state="closed", sort="updated", base="master", direction="desc")

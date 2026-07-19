@@ -3,7 +3,7 @@ Other Data Sources
 Web interfaces are constantly evolving and so there is constant
 evolution in this space.  There are a number of noteworthy Python
 packages that integrate into the PyData ecosystem that are
-more narrowly focused than pandas-datareader.
+more narrowly focused than kuznets.
 
 
 Alpha Vantage

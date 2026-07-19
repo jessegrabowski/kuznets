@@ -1,31 +1,31 @@
 Yahoo Finance
 ----------------------------
 
-.. py:module:: pandas_datareader.yahoo.daily
+.. py:module:: kuznets.yahoo.daily
 
 .. autoclass:: YahooDailyReader
    :members:
    :inherited-members:
 
-.. py:module:: pandas_datareader.yahoo.fx
+.. py:module:: kuznets.yahoo.fx
 
 .. autoclass:: YahooFXReader
    :members:
    :inherited-members:
 
-.. py:module:: pandas_datareader.yahoo.options
+.. py:module:: kuznets.yahoo.options
 
 .. autoclass:: Options
    :members:
    :inherited-members:
 
-.. py:module:: pandas_datareader.yahoo.quotes
+.. py:module:: kuznets.yahoo.quotes
 
 .. autoclass:: YahooQuotesReader
    :members:
    :inherited-members:
 
-.. py:module:: pandas_datareader.yahoo.actions
+.. py:module:: kuznets.yahoo.actions
 
 .. autoclass:: YahooActionReader
    :members:

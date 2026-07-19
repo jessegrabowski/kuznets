@@ -5,9 +5,9 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from pandas_datareader import data as web
-from pandas_datareader._utils import RemoteDataError
-from pandas_datareader.fred import FRED_API_URL, FRED_CSV_URL, FredReader
+from kuznets import data as web
+from kuznets._utils import RemoteDataError
+from kuznets.fred import FRED_API_URL, FRED_CSV_URL, FredReader
 from tests._backends import BACKENDS, as_narwhals, skip_unless_installed
 from tests._mock import live_or_record, make_response, patch_session_get, tolerate_outage
 
@@ -116,7 +116,7 @@ class TestFredBackends:
     def test_multiple_series_outer_join_keeps_nulls(self, monkeypatch, datapath, output_type):
         skip_unless_installed(output_type)
         monkeypatch.delenv("FRED_API_KEY", raising=False)
-        monkeypatch.setattr("pandas_datareader.fred.time.sleep", lambda seconds: None)
+        monkeypatch.setattr("kuznets.fred.time.sleep", lambda seconds: None)
         patch_session_get(
             monkeypatch,
             {

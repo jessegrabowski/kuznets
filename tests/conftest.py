@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from pandas_datareader import config
+from kuznets import config
 
 
 @pytest.fixture(autouse=True)
@@ -14,7 +14,7 @@ def isolate_config(monkeypatch):
     environment; tests that need a clean environment clear specific vars themselves.
     """
     config.options.reset()
-    monkeypatch.setenv("PANDAS_DATAREADER_CONFIG", "/nonexistent/pandas-datareader.toml")
+    monkeypatch.setenv("PANDAS_DATAREADER_CONFIG", "/nonexistent/kuznets.toml")
     config.reload_config()
     yield
     config.options.reset()

@@ -1,7 +1,7 @@
 import pytest
 
-from pandas_datareader import data as web
-from pandas_datareader.moex import MoexReader
+from kuznets import data as web
+from kuznets.moex import MoexReader
 from tests._backends import BACKENDS, as_narwhals, skip_unless_installed
 from tests._mock import from_fixtures, patch_session_get, service_up, tolerate_outage
 

@@ -1,7 +1,7 @@
 Moscow Exchange (MOEX)
 ----------------------
 
-.. py:module:: pandas_datareader.moex
+.. py:module:: kuznets.moex
 
 .. autoclass:: MoexReader
    :members:

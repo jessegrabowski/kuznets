@@ -131,7 +131,7 @@ def patch_session_get(monkeypatch, handler, *, record: bool = False) -> None:
     """Replace ``requests.Session.get`` with *handler* for the duration of a test.
 
     Patching the unbound method covers every session instance, including those built in
-    :func:`pandas_datareader._utils._init_session` and the Yahoo crumb/cookie helpers.
+    :func:`kuznets._utils._init_session` and the Yahoo crumb/cookie helpers.
 
     Parameters
     ----------
