@@ -7,6 +7,15 @@ license. Parts of NumPy, SciPy, numpydoc, bottleneck, which all have
 BSD-compatible licenses, are included. Their licenses follow the pandas
 license.
 
+kuznets license
+===============
+
+Copyright (c) 2026, Jesse Grabowski
+All rights reserved.
+
+kuznets is a fork of pandas-datareader and is distributed under the same 3-clause BSD license,
+reproduced below with its original copyright notices.
+
 pandas license
 ==============
 

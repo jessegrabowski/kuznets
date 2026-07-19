@@ -1,6 +1,6 @@
 import pytest
 
-from pandas_datareader import config
+from kuznets import config
 
 pytestmark = pytest.mark.stable
 
@@ -103,10 +103,10 @@ class TestConfigFile:
     def test_path_default_xdg(self, monkeypatch):
         monkeypatch.delenv("PANDAS_DATAREADER_CONFIG", raising=False)
         monkeypatch.setenv("XDG_CONFIG_HOME", "/cfg")
-        assert config.config_path().as_posix() == "/cfg/pandas-datareader/config.toml"
+        assert config.config_path().as_posix() == "/cfg/kuznets/config.toml"
 
     def test_path_default_home(self, monkeypatch):
         monkeypatch.delenv("PANDAS_DATAREADER_CONFIG", raising=False)
         monkeypatch.delenv("XDG_CONFIG_HOME", raising=False)
         monkeypatch.setattr(config.Path, "home", classmethod(lambda cls: config.Path("/home/me")))
-        assert config.config_path().as_posix() == "/home/me/.config/pandas-datareader/config.toml"
+        assert config.config_path().as_posix() == "/home/me/.config/kuznets/config.toml"

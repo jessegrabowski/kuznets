@@ -6,8 +6,8 @@ import pandas as pd
 import pytest
 import requests
 
-from pandas_datareader import base as base
-from pandas_datareader._utils import (
+from kuznets import base as base
+from kuznets._utils import (
     DEFAULT_USER_AGENT,
     RETRYABLE_STATUS_CODES,
     RemoteDataError,
@@ -69,7 +69,7 @@ class TestBaseReader:
 
     def test_created_session_advertises_user_agent(self):
         assert _init_session(None).headers["User-Agent"] == DEFAULT_USER_AGENT
-        assert DEFAULT_USER_AGENT.startswith("pandas-datareader")
+        assert DEFAULT_USER_AGENT.startswith("kuznets")
 
     def test_supplied_session_user_agent_preserved(self):
         session = requests.Session()
@@ -148,7 +148,7 @@ class TestOutputType:
     def test_missing_backend_raises_import_error_before_any_request(self, monkeypatch):
         patch_session_get(monkeypatch, from_fixtures({}))
         monkeypatch.setattr(importlib.util, "find_spec", lambda module: None)
-        with pytest.raises(ImportError, match=r"pandas-datareader\[polars\]"):
+        with pytest.raises(ImportError, match=r"kuznets\[polars\]"):
             base._BaseReader([], output_type="polars")
 
     def test_pandas_default_unchanged_through_dispatcher(self, monkeypatch):

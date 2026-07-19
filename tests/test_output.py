@@ -5,7 +5,7 @@ import pandas as pd
 import pandas.testing as tm
 import pytest
 
-from pandas_datareader._output import (
+from kuznets._output import (
     attach_index,
     concat_frames,
     detach_index,
@@ -62,7 +62,7 @@ class TestValidateOutputType:
 
     def test_missing_backend_raises_import_error_with_extra_hint(self, monkeypatch):
         monkeypatch.setattr(importlib.util, "find_spec", lambda module: None)
-        with pytest.raises(ImportError, match=r"pip install pandas-datareader\[polars\]"):
+        with pytest.raises(ImportError, match=r"pip install kuznets\[polars\]"):
             validate_output_type("polars")
 
     def test_missing_parent_module_raises_import_error(self, monkeypatch):

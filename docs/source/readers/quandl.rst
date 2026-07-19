@@ -1,7 +1,7 @@
 Quandl
 ------
 
-.. py:module:: pandas_datareader.quandl
+.. py:module:: kuznets.quandl
 
 .. autoclass:: QuandlReader
    :members:

@@ -1,7 +1,7 @@
 Bank of Canada
 --------------
 
-.. py:module:: pandas_datareader.bankofcanada
+.. py:module:: kuznets.bankofcanada
 
 .. autoclass:: BankOfCanadaReader
    :members:

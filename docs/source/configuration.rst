@@ -8,9 +8,9 @@ API keys and global request settings (default headers, retry count, pause, timeo
 a layered configuration. From highest to lowest precedence:
 
 #. an explicit argument to the reader (``api_key=``, ``headers=``, ``retry_count=``, …);
-#. the runtime ``pandas_datareader.options`` object;
+#. the runtime ``kuznets.options`` object;
 #. an environment variable (API keys only, e.g. ``FRED_API_KEY``);
-#. the config file ``~/.config/pandas-datareader/config.toml``;
+#. the config file ``~/.config/kuznets/config.toml``;
 #. the built-in default.
 
 A higher layer only overrides a lower one when it actually supplies a value, so you can set a global
@@ -22,19 +22,19 @@ Runtime options
 Set attributes on the module-level ``options`` object to influence every reader in the current
 session::
 
-    import pandas_datareader as pdr
+    import kuznets as kz
 
-    pdr.options.api_keys["fred"] = "my-fred-key"
-    pdr.options.headers = {"User-Agent": "my-app/1.0"}
-    pdr.options.timeout = 60
+    kz.options.api_keys["fred"] = "my-fred-key"
+    kz.options.headers = {"User-Agent": "my-app/1.0"}
+    kz.options.timeout = 60
 
-    pdr.options.reset()  # restore everything to unset
+    kz.options.reset()  # restore everything to unset
 
 Config file
 ===========
 
 For settings that should persist across sessions, create
-``~/.config/pandas-datareader/config.toml`` (or point ``PANDAS_DATAREADER_CONFIG`` at a file of your
+``~/.config/kuznets/config.toml`` (or point ``PANDAS_DATAREADER_CONFIG`` at a file of your
 choosing; ``XDG_CONFIG_HOME`` is honored as well):
 
 .. code-block:: toml
@@ -51,7 +51,7 @@ choosing; ``XDG_CONFIG_HOME`` is honored as well):
     pause = 0.5
     retry_count = 5
 
-The file is read once and cached; call ``pandas_datareader.config.reload_config()`` after editing it
+The file is read once and cached; call ``kuznets.config.reload_config()`` after editing it
 within a running session. Keep this file readable only by you, since it may contain secrets.
 
 Environment variables

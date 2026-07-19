@@ -3,8 +3,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from pandas_datareader import wb
-from pandas_datareader.wb import (
+from kuznets import wb
+from kuznets.wb import (
     WB_API_URL,
     WorldBankReader,
     download,
@@ -28,7 +28,7 @@ class TestWorldBankOffline:
     def test_indicators_are_paced(self, monkeypatch):
         # One pause between consecutive indicator requests, none before the first.
         sleeps = []
-        monkeypatch.setattr("pandas_datareader.wb.time.sleep", sleeps.append)
+        monkeypatch.setattr("kuznets.wb.time.sleep", sleeps.append)
         monkeypatch.setattr(
             WorldBankReader,
             "_read_one_data",

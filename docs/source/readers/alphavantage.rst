@@ -1,14 +1,14 @@
 AlphaVantage
 ------------
 
-.. py:module:: pandas_datareader.av.forex
+.. py:module:: kuznets.av.forex
 
 .. autoclass:: AVForexReader
    :members:
    :inherited-members:
 
 
-.. py:module:: pandas_datareader.av.time_series
+.. py:module:: kuznets.av.time_series
 
 .. autoclass:: AVTimeSeriesReader
 	:members:

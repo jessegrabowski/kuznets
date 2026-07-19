@@ -1,4 +1,4 @@
-name: pandas-datareader-dev
+name: kuznets-dev
 channels:
   - conda-forge
   - nodefaults
