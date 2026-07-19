@@ -15,3 +15,5 @@ env/
 .vscode/
 scratch.py
 .pixi/
+coverage.xml
+junit/
