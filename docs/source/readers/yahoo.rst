@@ -19,6 +19,12 @@ Yahoo Finance
    :members:
    :inherited-members:
 
+.. py:module:: kuznets.yahoo.fundamentals
+
+.. autoclass:: YahooFundamentalsReader
+   :members:
+   :inherited-members:
+
 .. py:module:: kuznets.yahoo.quotes
 
 .. autoclass:: YahooQuotesReader
