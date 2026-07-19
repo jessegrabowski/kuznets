@@ -19,6 +19,10 @@ New Features
   controls the thread count. Pass ``max_workers=1`` for sequential fetching or when supplying a
   session that is not thread-safe. See :ref:`remote_data.concurrent`.
 - ``read_jsdmx``, ``read_jstat``, and ``MoexReader.read_all_boards`` accept ``output_type``.
+- New ``YahooFundamentalsReader`` (``DataReader`` source ``yahoo-fundamentals``,
+  ``get_data_yahoo_fundamentals``) fetches financial-statement fundamentals -- balance sheet,
+  income statement, or cash flow -- per fiscal period from Yahoo Finance, at annual, quarterly, or
+  trailing-twelve-month frequency.
 
 Backwards incompatible changes
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
