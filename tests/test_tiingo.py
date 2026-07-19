@@ -4,7 +4,7 @@ import narwhals.stable.v2 as nw
 import pandas as pd
 import pytest
 
-from pandas_datareader.tiingo import (
+from kuznets.tiingo import (
     TiingoDailyReader,
     TiingoIEXHistoricalReader,
     TiingoMetaDataReader,

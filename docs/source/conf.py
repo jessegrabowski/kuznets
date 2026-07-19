@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# pandas-datareader documentation build configuration file, created by
+# kuznets documentation build configuration file, created by
 # sphinx-quickstart on Thu Jan 18 13:34:14 2018.
 #
 # This file is execfile()d with the current directory set to its
@@ -13,7 +13,7 @@
 # serve to show the default.
 import datetime as dt
 
-import pandas_datareader as pdr
+import kuznets
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
@@ -58,8 +58,8 @@ source_suffix = ".rst"
 master_doc = "index"
 
 # General information about the project.
-project = "pandas-datareader"
-copyright = "2020, The PyData Development Team"
+project = "kuznets"
+copyright = "2026, Jesse Grabowski; 2014-2021, The PyData Development Team"
 author = "The PyData Development Team"
 
 # The version info for the project you're documenting, acts as replacement for
@@ -67,15 +67,15 @@ author = "The PyData Development Team"
 # built documents.
 #
 # The short X.Y version.
-version = pdr.__version__.split("+")[0]
+version = kuznets.__version__.split("+")[0]
 
-if "+" in pdr.__version__:
-    commit = pdr.__version__.split("dev")[1]
+if "+" in kuznets.__version__:
+    commit = kuznets.__version__.split("dev")[1]
     commits_since_tag, commit_hash = commit.split("+")
     commit = " (+" + commits_since_tag + ", " + commit_hash + ")"
     version += commit
 # The full version, including alpha/beta/rc tags.
-release = pdr.__version__
+release = kuznets.__version__
 
 # Write version and build date
 with open("_version.txt", "w") as version_file:
@@ -108,14 +108,13 @@ todo_include_todos = True
 html_theme = "pydata_sphinx_theme"
 html_theme_options = {
     "external_links": [],
-    "github_url": "https://github.com/pydata/pandas-datareader",
+    "github_url": "https://github.com/jessegrabowski/kuznets",
 }
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
 #
-html_logo = "./_static/images/pandas-datareader-plain.svg"
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
@@ -138,7 +137,7 @@ html_sidebars = {
 # -- Options for HTMLHelp output ------------------------------------------
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = "pandas-datareaderdoc"
+htmlhelp_basename = "kuznetsdoc"
 
 
 # -- Options for LaTeX output ---------------------------------------------
@@ -164,8 +163,8 @@ latex_elements = {
 latex_documents = [
     (
         master_doc,
-        "pandas-datareader.tex",
-        "pandas-datareader Documentation",
+        "kuznets.tex",
+        "kuznets Documentation",
         "pydata",
         "manual",
     )
@@ -176,7 +175,7 @@ latex_documents = [
 
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
-man_pages = [(master_doc, "pandas-datareader", "pandas-datareader Documentation", [author], 1)]
+man_pages = [(master_doc, "kuznets", "kuznets Documentation", [author], 1)]
 
 
 # -- Options for Texinfo output -------------------------------------------
@@ -187,10 +186,10 @@ man_pages = [(master_doc, "pandas-datareader", "pandas-datareader Documentation"
 texinfo_documents = [
     (
         master_doc,
-        "pandas-datareader",
-        "pandas-datareader Documentation",
+        "kuznets",
+        "kuznets Documentation",
         author,
-        "pandas-datareader",
+        "kuznets",
         "One line description of project.",
         "Miscellaneous",
     )
@@ -202,6 +201,6 @@ intersphinx_mapping = {"python": ("https://docs.python.org/3", None)}
 
 
 extlinks = {
-    "issue": ("https://github.com/pydata/pandas-datareader/issues/%s", "GH %s"),
-    "wiki": ("https://github.com/pydata/pandas-datareader/wiki/%s", "wiki %s"),
+    "issue": ("https://github.com/jessegrabowski/kuznets/issues/%s", "GH %s"),
+    "wiki": ("https://github.com/jessegrabowski/kuznets/wiki/%s", "wiki %s"),
 }

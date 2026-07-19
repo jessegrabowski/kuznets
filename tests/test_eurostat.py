@@ -2,8 +2,8 @@ import narwhals.stable.v2 as nw
 import pandas as pd
 import pytest
 
-from pandas_datareader import data as web
-from pandas_datareader.eurostat import EurostatReader
+from kuznets import data as web
+from kuznets.eurostat import EurostatReader
 from tests._backends import BACKENDS, as_narwhals, skip_unless_installed
 from tests._mock import live_or_record, patch_session_get, tolerate_outage
 

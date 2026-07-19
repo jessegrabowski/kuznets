@@ -1,7 +1,7 @@
 import pandas as pd
 import pytest
 
-from pandas_datareader.io import read_jsdmx
+from kuznets.io import read_jsdmx
 
 pytestmark = pytest.mark.stable
 

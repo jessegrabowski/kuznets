@@ -1,7 +1,7 @@
 Organisation for Economic Co-operation and Development (OECD)
 -------------------------------------------------------------
 
-.. py:module:: pandas_datareader.oecd
+.. py:module:: kuznets.oecd
 
 .. autoclass:: OECDReader
    :members:

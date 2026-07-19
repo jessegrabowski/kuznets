@@ -1,7 +1,7 @@
 Eurostat
 --------
 
-.. py:module:: pandas_datareader.eurostat
+.. py:module:: kuznets.eurostat
 
 .. autoclass:: EurostatReader
    :members:

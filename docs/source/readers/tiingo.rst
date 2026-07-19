@@ -1,7 +1,7 @@
 Tiingo
 ------
 
-.. py:module:: pandas_datareader.tiingo
+.. py:module:: kuznets.tiingo
 
 .. autoclass:: TiingoDailyReader
    :members:

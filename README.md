@@ -1,49 +1,51 @@
-# pandas-datareader
+# kuznets
 
-Up to date remote data access for pandas, works for multiple versions of
-pandas.
+Remote data access for economic and financial data — FRED, OECD, Eurostat, World Bank,
+Fama-French, Yahoo Finance, and more — returned as pandas, polars, pyarrow, or dask frames.
 
-[![image](https://img.shields.io/pypi/v/pandas-datareader.svg)](https://pypi.python.org/pypi/pandas-datareader/)
-[![image](https://codecov.io/gh/pydata/pandas-datareader/branch/master/graph/badge.svg)](https://codecov.io/gh/pydata/pandas-datareader)
-[![image](https://readthedocs.org/projects/pandas-datareader/badge/?version=latest)](https://pandas-datareader.readthedocs.io/en/latest/)
-[![image](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
-[![License](https://img.shields.io/pypi/l/pandas-datareader)](https://pypi.org/project/pandas-datareader/)
+kuznets is a fork of [pydata/pandas-datareader](https://github.com/pydata/pandas-datareader),
+renamed after diverging: readers are dataframe-agnostic, multi-symbol reads fetch concurrently,
+and the test suite runs offline against recorded responses.
+
+[![PyPI](https://img.shields.io/pypi/v/kuznets.svg)](https://pypi.org/project/kuznets/)
+[![Coverage](https://codecov.io/gh/jessegrabowski/kuznets/branch/main/graph/badge.svg)](https://codecov.io/gh/jessegrabowski/kuznets)
+[![License](https://img.shields.io/pypi/l/kuznets)](https://pypi.org/project/kuznets/)
 
 ## Installation
 
 Install using `pip`
 
 ``` shell
-pip install pandas-datareader
+pip install kuznets
 ```
 
 ## Usage
 
 ``` python
-import pandas_datareader as pdr
-pdr.get_data_fred('GS10')
+import kuznets as kz
+kz.get_data_fred('GS10')
 ```
 
 Every reader accepts an `output_type` argument to return polars, pyarrow, or dask frames instead of
 pandas, and multi-symbol daily reads fetch concurrently (tune with `max_workers`):
 
 ``` python
-pdr.DataReader(["AAPL", "MSFT"], "stooq", output_type="polars", max_workers=8)
+kz.DataReader(["AAPL", "MSFT"], "stooq", output_type="polars", max_workers=8)
 ```
 
 ## Documentation
 
-[Stable documentation](https://pydata.github.io/pandas-datareader/) is available on
-[github.io](https://pydata.github.io/pandas-datareader/). A second copy of the stable
-documentation is hosted on [read the docs](https://pandas-datareader.readthedocs.io/)
+[Stable documentation](https://pydata.github.io/kuznets/) is available on
+[github.io](https://pydata.github.io/kuznets/). A second copy of the stable
+documentation is hosted on [read the docs](https://kuznets.readthedocs.io/)
 for more details.
 
-[Development documentation](https://pydata.github.io/pandas-datareader/devel/) is available
+[Development documentation](https://pydata.github.io/kuznets/devel/) is available
 for the latest changes in master.
 
 ### Requirements
 
-Using pandas datareader requires the following packages:
+Using kuznets requires the following packages:
 
 -   pandas>=3.0
 -   narwhals>=2.0
@@ -53,7 +55,7 @@ Using pandas datareader requires the following packages:
 Non-pandas output backends are optional extras:
 
 ``` shell
-pip install pandas-datareader[polars]    # or [pyarrow], [dask], [backends]
+pip install kuznets[polars]    # or [pyarrow], [dask], [backends]
 ```
 
 Building the documentation additionally requires:
@@ -64,30 +66,28 @@ Building the documentation additionally requires:
 -   sphinx
 -   pydata_sphinx_theme
 
-Development and testing additionally requires:
-
--   black
--   coverage
--   codecov
--   coveralls
--   flake8
--   pytest
--   pytest-cov
--   wrapt
+Development and testing dependencies are defined in `pyproject.toml`: the `dev` extra for pip
+workflows, and the pixi `test`/`lint` features for the pixi workspace.
 
 ### Install latest development version
 
 ``` shell
-python -m pip install git+https://github.com/pydata/pandas-datareader.git
+python -m pip install git+https://github.com/jessegrabowski/kuznets.git
 ```
 
 or
 
 ``` shell
-git clone https://github.com/pydata/pandas-datareader.git
-cd pandas-datareader
+git clone https://github.com/jessegrabowski/kuznets.git
+cd kuznets
 python setup.py install
 ```
+
+### Development environment
+
+The repo is a [pixi](https://pixi.sh) workspace: `pixi install` creates the dev environment
+(editable install, test and lint tools), `pixi run test` runs the suite, and `pixi run -e py314
+test` runs it on another Python. `pip install -e ".[dev]"` in a virtualenv works too.
 
 ### Running the tests
 
