@@ -123,25 +123,12 @@ markers = [
 [tool.coverage.run]
 source = ["kuznets"]
 branch = true
-include = ["*/kuznets/*"]
-omit = [
-    "*/_version.py",
-    "*/yahoo/*",
-]
 
 [tool.coverage.report]
 exclude_lines = [
     "pragma: no cover",
     "raise NotImplementedError",
-    "raise ImmediateDeprecationError",
-    "pass",
 ]
-include = ["*/kuznets/*"]
-omit = [
-    "*/_version.py",
-    "*/yahoo/*",
-]
-ignore_errors = true
 
 [tool.pixi.workspace]
 channels = ["conda-forge"]
