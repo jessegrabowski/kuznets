@@ -726,11 +726,6 @@ Naver Finance Data
 Yahoo Finance Data
 ==================
 
-.. warning::
-
-    The Yahoo Finance reader is currently not working. PRs to fix are welcome.
-
-
 Yahoo Finance provides stock market data
 
 The following endpoints are available:
