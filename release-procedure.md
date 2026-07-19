@@ -1,18 +1,17 @@
-*   Tag commit
+# Release procedure
 
-        git tag -a x.x.x -m 'Version x.x.x'
+Releases are tag-driven; the version comes from the git tag via hatch-vcs and publishing uses
+PyPI trusted publishing (no tokens).
 
-*   and push to github
+1. Update `docs/source/whatsnew/` for the release and merge to `main`.
+2. Tag and push:
 
-        git push pandas-datareader master --tags
+        git tag -a vX.Y.Z -m "Version X.Y.Z"
+        git push origin vX.Y.Z
 
-*  Upload to PyPI
+3. The `Release` workflow builds the sdist and wheel and publishes to PyPI via the `pypi`
+   environment's trusted publisher.
 
-        git clean -xfd
-        python setup.py register sdist bdist_wheel --universal
-        twine upload dist/*
-
-*  Do a pull-request to the feedstock on [pandas-datareader-feedstock](https://github.com/conda-forge/pandas-datareader-feedstock/)
-
-        update the version
-        update the SHA256 (retrieve from PyPI)
+One-time setup (already done for future releases): a pending trusted publisher on PyPI for the
+`kuznets` project pointing at `jessegrabowski/kuznets`, workflow `release.yml`, environment
+`pypi`.
