@@ -1,7 +1,7 @@
 Federal Reserve Economic Data (FRED)
 ------------------------------------
 
-.. py:module:: pandas_datareader.fred
+.. py:module:: kuznets.fred
 
 .. autoclass:: FredReader
    :members:

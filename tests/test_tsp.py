@@ -1,7 +1,7 @@
 import narwhals.stable.v2 as nw
 import pytest
 
-from pandas_datareader import tsp
+from kuznets import tsp
 from tests._backends import BACKENDS, as_narwhals, skip_unless_installed
 from tests._mock import patch_session_get, service_up
 

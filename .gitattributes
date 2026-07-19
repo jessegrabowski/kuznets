@@ -1,4 +1,0 @@
-pandas_datareader/_version.py export-subst
-
-# Recorded HTTP responses: keep byte-exact (no EOL conversion) so replay matches what was recorded.
-tests/data/** -text

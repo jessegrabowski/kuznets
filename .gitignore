@@ -14,3 +14,6 @@ env/
 .pytest_cache/
 .vscode/
 scratch.py
+.pixi/
+coverage.xml
+junit/

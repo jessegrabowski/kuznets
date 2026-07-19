@@ -1,6 +1,6 @@
 import pytest
 
-from pandas_datareader import config
+from kuznets import config
 
 pytestmark = pytest.mark.stable
 
@@ -15,7 +15,7 @@ def clear_api_key_env(monkeypatch):
 def _write_config(tmp_path, monkeypatch, body):
     path = tmp_path / "config.toml"
     path.write_text(body)
-    monkeypatch.setenv("PANDAS_DATAREADER_CONFIG", str(path))
+    monkeypatch.setenv("KUZNETS_CONFIG", str(path))
     config.reload_config()
     return path
 
@@ -91,22 +91,22 @@ class TestConfigFile:
     def test_malformed_file_warns_and_is_empty(self, tmp_path, monkeypatch):
         path = tmp_path / "config.toml"
         path.write_text("this is = = not toml")
-        monkeypatch.setenv("PANDAS_DATAREADER_CONFIG", str(path))
+        monkeypatch.setenv("KUZNETS_CONFIG", str(path))
         with pytest.warns(UserWarning, match="unreadable"):
             assert config.reload_config() == {}
 
     def test_path_override_env(self, monkeypatch):
-        monkeypatch.setenv("PANDAS_DATAREADER_CONFIG", "/some/where/x.toml")
+        monkeypatch.setenv("KUZNETS_CONFIG", "/some/where/x.toml")
         # as_posix() normalizes separators so the assertion holds on Windows too.
         assert config.config_path().as_posix() == "/some/where/x.toml"
 
     def test_path_default_xdg(self, monkeypatch):
-        monkeypatch.delenv("PANDAS_DATAREADER_CONFIG", raising=False)
+        monkeypatch.delenv("KUZNETS_CONFIG", raising=False)
         monkeypatch.setenv("XDG_CONFIG_HOME", "/cfg")
-        assert config.config_path().as_posix() == "/cfg/pandas-datareader/config.toml"
+        assert config.config_path().as_posix() == "/cfg/kuznets/config.toml"
 
     def test_path_default_home(self, monkeypatch):
-        monkeypatch.delenv("PANDAS_DATAREADER_CONFIG", raising=False)
+        monkeypatch.delenv("KUZNETS_CONFIG", raising=False)
         monkeypatch.delenv("XDG_CONFIG_HOME", raising=False)
         monkeypatch.setattr(config.Path, "home", classmethod(lambda cls: config.Path("/home/me")))
-        assert config.config_path().as_posix() == "/home/me/.config/pandas-datareader/config.toml"
+        assert config.config_path().as_posix() == "/home/me/.config/kuznets/config.toml"

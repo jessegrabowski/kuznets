@@ -4,11 +4,11 @@ import pandas as pd
 import pytest
 import requests
 
-from pandas_datareader import data as web
-from pandas_datareader._utils import RemoteDataError
-from pandas_datareader.data import YahooDailyReader
-from pandas_datareader.yahoo._auth import _CRUMB_URL
-from pandas_datareader.yahoo.fx import YahooFXReader
+from kuznets import data as web
+from kuznets._utils import RemoteDataError
+from kuznets.data import YahooDailyReader
+from kuznets.yahoo._auth import _CRUMB_URL
+from kuznets.yahoo.fx import YahooFXReader
 from tests._backends import BACKENDS, as_narwhals, skip_unless_installed
 from tests._mock import from_fixtures, live_or_record, make_response, patch_session_get, tolerate_outage
 

@@ -5,8 +5,8 @@ import narwhals.stable.v2 as nw
 import pandas as pd
 import pytest
 
-from pandas_datareader import data as web
-from pandas_datareader._utils import RemoteDataError
+from kuznets import data as web
+from kuznets._utils import RemoteDataError
 from tests._backends import BACKENDS, as_narwhals, skip_unless_installed
 from tests._mock import make_response, patch_session_get
 

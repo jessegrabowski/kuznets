@@ -1,9 +1,9 @@
 import narwhals.stable.v2 as nw
 import pytest
 
-from pandas_datareader import data as web
-from pandas_datareader._utils import SymbolWarning
-from pandas_datareader.data import get_data_stooq
+from kuznets import data as web
+from kuznets._utils import SymbolWarning
+from kuznets.data import get_data_stooq
 from tests._backends import BACKENDS, as_narwhals, skip_unless_installed
 from tests._mock import make_response, patch_session_get, service_up
 

@@ -3,8 +3,8 @@ import ftplib
 import narwhals.stable.v2 as nw
 import pytest
 
-from pandas_datareader import data as web, nasdaq_trader
-from pandas_datareader._utils import RemoteDataError
+from kuznets import data as web, nasdaq_trader
+from kuznets._utils import RemoteDataError
 from tests._backends import BACKENDS, as_narwhals, skip_unless_installed
 from tests._mock import RECORD
 

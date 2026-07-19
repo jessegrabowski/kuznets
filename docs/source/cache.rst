@@ -1,6 +1,6 @@
 .. _cache:
 
-.. currentmodule:: pandas-datareader
+.. currentmodule:: kuznets
 
 .. ipython:: python
    :suppress:
@@ -20,7 +20,7 @@ Caching queries
 Making the same request repeatedly can use a lot of bandwidth, slow down your
 code and may result in your IP being banned.
 
-``pandas-datareader`` allows you to cache queries using ``requests_cache`` by
+``kuznets`` allows you to cache queries using ``requests_cache`` by
 passing a ``requests_cache.Session`` to ``DataReader`` or ``Options`` using the
 ``session`` parameter.
 
@@ -35,8 +35,8 @@ Below is an example with Yahoo! Finance. The session parameter is implemented fo
 .. ipython:: python
     :okexcept:
 
-    import pandas_datareader.data as web
-    from pandas_datareader.yahoo.headers import DEFAULT_HEADERS
+    import kuznets.data as web
+    from kuznets.yahoo.headers import DEFAULT_HEADERS
     import datetime
     import requests_cache
     expire_after = datetime.timedelta(days=3)

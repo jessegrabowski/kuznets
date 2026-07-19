@@ -1,6 +1,6 @@
 .. _whatsnew:
 
-.. currentmodule:: pandas-datareader
+.. currentmodule:: kuznets
 
 .. ipython:: python
    :suppress:

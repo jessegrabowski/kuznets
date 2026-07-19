@@ -3,7 +3,7 @@ import importlib.util
 import pandas as pd
 import pytest
 
-from pandas_datareader.data import DataReader
+from kuznets.data import DataReader
 from tests._mock import make_response, patch_session_get
 
 pytestmark = pytest.mark.stable
@@ -22,7 +22,7 @@ class TestDataReader:
     def test_missing_backend_raises_before_any_request(self, monkeypatch):
         patch_session_get(monkeypatch, {})
         monkeypatch.setattr(importlib.util, "find_spec", lambda module: None)
-        with pytest.raises(ImportError, match=r"pandas-datareader\[polars\]"):
+        with pytest.raises(ImportError, match=r"kuznets\[polars\]"):
             DataReader("GDP", "fred", output_type="polars")
 
     def test_polars_output_end_to_end(self, monkeypatch, datapath):
@@ -42,7 +42,7 @@ class TestDataReader:
     def test_nasdaq_output_type_converts_symbols(self, monkeypatch):
         polars = pytest.importorskip("polars")
         listing = pd.DataFrame({"Security Name": ["Apple Inc."]}, index=pd.Index(["AAPL"], name="Symbol"))
-        monkeypatch.setattr("pandas_datareader.data.get_nasdaq_symbols", lambda **kwargs: listing)
+        monkeypatch.setattr("kuznets.data.get_nasdaq_symbols", lambda **kwargs: listing)
 
         as_pandas = DataReader("symbols", "nasdaq")
         pd.testing.assert_frame_equal(as_pandas, listing)
