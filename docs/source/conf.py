@@ -13,7 +13,7 @@
 # serve to show the default.
 import datetime as dt
 
-import kuznets as pdr
+import kuznets
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
@@ -67,15 +67,15 @@ author = "The PyData Development Team"
 # built documents.
 #
 # The short X.Y version.
-version = pdr.__version__.split("+")[0]
+version = kuznets.__version__.split("+")[0]
 
-if "+" in pdr.__version__:
-    commit = pdr.__version__.split("dev")[1]
+if "+" in kuznets.__version__:
+    commit = kuznets.__version__.split("dev")[1]
     commits_since_tag, commit_hash = commit.split("+")
     commit = " (+" + commits_since_tag + ", " + commit_hash + ")"
     version += commit
 # The full version, including alpha/beta/rc tags.
-release = pdr.__version__
+release = kuznets.__version__
 
 # Write version and build date
 with open("_version.txt", "w") as version_file:
@@ -115,7 +115,6 @@ html_theme_options = {
 # further.  For a list of options available for each theme, see the
 # documentation.
 #
-html_logo = "./_static/images/kuznets-plain.svg"
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,

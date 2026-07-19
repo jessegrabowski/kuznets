@@ -45,7 +45,7 @@ for the latest changes in master.
 
 ### Requirements
 
-Using pandas datareader requires the following packages:
+Using kuznets requires the following packages:
 
 -   pandas>=3.0
 -   narwhals>=2.0
