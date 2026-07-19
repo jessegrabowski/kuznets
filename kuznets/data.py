@@ -28,6 +28,7 @@ from kuznets.tiingo import (
 )
 from kuznets.yahoo.actions import YahooActionReader, YahooDivReader
 from kuznets.yahoo.daily import YahooDailyReader
+from kuznets.yahoo.fundamentals import YahooFundamentalsReader
 from kuznets.yahoo.options import Options
 from kuznets.yahoo.quotes import YahooQuotesReader
 
@@ -39,6 +40,7 @@ __all__ = [
     "get_data_quandl",
     "get_data_yahoo",
     "get_data_yahoo_actions",
+    "get_data_yahoo_fundamentals",
     "get_nasdaq_symbols",
     "get_quote_yahoo",
     "get_data_stooq",
@@ -69,6 +71,10 @@ def get_data_econdb(*args, **kwargs):
 
 def get_data_yahoo_actions(*args, **kwargs):
     return YahooActionReader(*args, **kwargs).read()
+
+
+def get_data_yahoo_fundamentals(*args, **kwargs):
+    return YahooFundamentalsReader(*args, **kwargs).read()
 
 
 def get_quote_yahoo(*args, **kwargs):
@@ -189,6 +195,7 @@ def DataReader(
         "tiingo",
         "yahoo-actions",
         "yahoo-dividends",
+        "yahoo-fundamentals",
         "av-forex",
         "av-forex-daily",
         "av-daily",
@@ -357,6 +364,18 @@ def DataReader(
             pause=pause,
             session=session,
             interval="d",
+            output_type=output_type,
+            max_workers=max_workers,
+        ).read()
+
+    elif data_source == "yahoo-fundamentals":
+        return YahooFundamentalsReader(
+            symbols=name,
+            start=start,
+            end=end,
+            retry_count=retry_count,
+            pause=pause,
+            session=session,
             output_type=output_type,
             max_workers=max_workers,
         ).read()

@@ -5,9 +5,10 @@ import pytest
 import requests
 
 from kuznets import data as web
-from kuznets._utils import RemoteDataError
+from kuznets._utils import RemoteDataError, SymbolWarning
 from kuznets.data import YahooDailyReader
 from kuznets.yahoo._auth import _CRUMB_URL
+from kuznets.yahoo.fundamentals import BALANCE_SHEET_SERIES, YahooFundamentalsReader
 from kuznets.yahoo.fx import YahooFXReader
 from tests._backends import BACKENDS, as_narwhals, skip_unless_installed
 from tests._mock import from_fixtures, live_or_record, make_response, patch_session_get, tolerate_outage
@@ -20,6 +21,18 @@ _AUTH = {"fc.yahoo.com": make_response(b""), "getcrumb": make_response(b"testcru
 # never change, so exact assertions stay stable across re-recordings.
 _CHART_START = "2020-01-01"
 _CHART_END = "2020-12-31"
+
+# A closed range of completed AAPL fiscal years, so the recorded statement set never shifts.
+_FUND_START = "2020-01-01"
+_FUND_END = "2024-12-31"
+
+# The fundamentals endpoint reports "no data" as a result entry holding only meta, no observations.
+_FUND_EMPTY = {"timeseries": {"result": [{"meta": {"symbol": ["NOPE"], "type": ["annualTotalAssets"]}}], "error": None}}
+
+
+def _fundamentals_offline(monkeypatch, datapath, *symbols):
+    fixture = datapath("data", "yahoo", "fundamentals_aapl.json")
+    patch_session_get(monkeypatch, from_fixtures({f"finance/timeseries/{symbol}": fixture for symbol in symbols}))
 
 
 def _chart_offline(monkeypatch, datapath, symbol):
@@ -109,6 +122,81 @@ class TestYahooOffline:
         with pytest.raises(ValueError):
             YahooDailyReader("F", interval="NOT VALID")
 
+    def test_fundamentals_balance_sheet_is_parsed(self, monkeypatch, datapath):
+        _fundamentals_offline(monkeypatch, datapath, "AAPL")
+        df = web.get_data_yahoo_fundamentals("AAPL", start=_FUND_START, end=_FUND_END)
+
+        assert isinstance(df.index, pd.DatetimeIndex)
+        assert df.index.name == "Date"
+        assert df.index.is_monotonic_increasing
+        assert set(df.columns) <= set(BALANCE_SHEET_SERIES)
+        # Columns come back in preset presentation order, not response order.
+        assert list(df.columns) == [item for item in BALANCE_SHEET_SERIES if item in df.columns]
+        assert (df.dtypes == np.float64).all()
+        assert (df["TotalAssets"] > 0).all()
+        assert (df["TotalAssets"] >= df["CurrentAssets"]).all()
+
+    def test_fundamentals_multi_symbol(self, monkeypatch, datapath):
+        _fundamentals_offline(monkeypatch, datapath, "AAPL", "MSFT")
+        df = web.DataReader(["AAPL", "MSFT"], "yahoo-fundamentals", start=_FUND_START, end=_FUND_END)
+
+        assert df.index.names == ["Symbol", "Date"]
+        assert sorted(df.index.get_level_values("Symbol").unique()) == ["AAPL", "MSFT"]
+        assert (df["TotalAssets"] > 0).all()
+
+    def test_fundamentals_failed_symbol_is_dropped(self, monkeypatch, datapath):
+        fixture = datapath("data", "yahoo", "fundamentals_aapl.json")
+        mapping = {"finance/timeseries/AAPL": fixture, "finance/timeseries/NOPE": make_response(json=_FUND_EMPTY)}
+        patch_session_get(monkeypatch, from_fixtures(mapping))
+
+        with pytest.warns(SymbolWarning, match="NOPE"):
+            df = web.DataReader(["AAPL", "NOPE"], "yahoo-fundamentals", start=_FUND_START, end=_FUND_END)
+        assert list(df.index.get_level_values("Symbol").unique()) == ["AAPL"]
+
+    def test_fundamentals_no_data_raises(self, monkeypatch):
+        patch_session_get(monkeypatch, from_fixtures({"finance/timeseries/NOPE": make_response(json=_FUND_EMPTY)}))
+        with pytest.raises(RemoteDataError):
+            web.get_data_yahoo_fundamentals("NOPE", start=_FUND_START, end=_FUND_END)
+
+    def test_fundamentals_series_selects_columns(self, monkeypatch, datapath):
+        _fundamentals_offline(monkeypatch, datapath, "AAPL")
+        df = web.get_data_yahoo_fundamentals(
+            "AAPL", start=_FUND_START, end=_FUND_END, series=["NetDebt", "TotalAssets"]
+        )
+        # Only the requested items survive, in the requested order.
+        assert list(df.columns) == ["NetDebt", "TotalAssets"]
+
+    def test_fundamentals_series_accepts_bare_string(self, monkeypatch, datapath):
+        _fundamentals_offline(monkeypatch, datapath, "AAPL")
+        df = web.get_data_yahoo_fundamentals("AAPL", start=_FUND_START, end=_FUND_END, series="TotalAssets")
+        assert list(df.columns) == ["TotalAssets"]
+
+    def test_fundamentals_all_null_series_is_dropped(self, monkeypatch):
+        payload = {
+            "timeseries": {
+                "result": [
+                    {
+                        "meta": {"type": ["annualTotalAssets"]},
+                        "annualTotalAssets": [{"asOfDate": "2024-09-30", "reportedValue": None}],
+                    },
+                    {
+                        "meta": {"type": ["annualNetDebt"]},
+                        "annualNetDebt": [{"asOfDate": "2024-09-30", "reportedValue": {"raw": 5.0}}],
+                    },
+                ]
+            }
+        }
+        patch_session_get(monkeypatch, from_fixtures({"finance/timeseries/AAPL": make_response(json=payload)}))
+        df = web.get_data_yahoo_fundamentals("AAPL", start=_FUND_START, end=_FUND_END)
+        # An item whose every reportedValue is null must not survive as an all-NaN column.
+        assert list(df.columns) == ["NetDebt"]
+
+    def test_fundamentals_invalid_arguments_raise(self):
+        with pytest.raises(ValueError, match="freq"):
+            YahooFundamentalsReader("AAPL", freq="monthly")
+        with pytest.raises(ValueError, match="statement"):
+            YahooFundamentalsReader("AAPL", statement="10-K")
+
 
 @pytest.mark.network
 class TestYahooLive:
@@ -143,6 +231,18 @@ class TestYahooLive:
             df = web.get_quote_yahoo(["AAPL", "GOOG"])
             assert sorted(df.index) == ["AAPL", "GOOG"]
             assert "marketCap" in df.columns
+
+    def test_fundamentals_shape(self, monkeypatch, datapath):
+        live_or_record(
+            monkeypatch,
+            {"finance/timeseries/AAPL": datapath("data", "yahoo", "fundamentals_aapl.json")},
+            _CRUMB_URL,
+        )
+        with tolerate_outage():
+            df = web.get_data_yahoo_fundamentals("AAPL", start=_FUND_START, end=_FUND_END)
+            assert "TotalAssets" in df.columns
+            assert len(df) >= 3
+            assert (df["TotalAssets"] > 0).all()
 
 
 class TestYahooBackends:
@@ -260,6 +360,35 @@ class TestYahooBackends:
         assert {"PairCode", "Date"} <= set(tidy.columns)
         assert sorted(set(tidy["PairCode"].to_list())) == ["AUDUSD", "EURUSD"]
         assert len(tidy) == len(as_pandas)
+
+    @pytest.mark.parametrize("output_type", BACKENDS)
+    def test_fundamentals_single_tidy(self, monkeypatch, datapath, output_type):
+        skip_unless_installed(output_type)
+        _fundamentals_offline(monkeypatch, datapath, "AAPL")
+        as_pandas = web.get_data_yahoo_fundamentals("AAPL", start=_FUND_START, end=_FUND_END)
+        tidy = as_narwhals(
+            web.get_data_yahoo_fundamentals("AAPL", start=_FUND_START, end=_FUND_END, output_type=output_type)
+        )
+
+        assert tidy.columns[0] == "Date"
+        assert tidy.schema["Date"] == nw.Datetime
+        assert len(tidy) == len(as_pandas)
+        assert tidy["TotalAssets"].to_list() == as_pandas["TotalAssets"].tolist()
+
+    @pytest.mark.parametrize("output_type", BACKENDS)
+    def test_fundamentals_multi_tidy(self, monkeypatch, datapath, output_type):
+        skip_unless_installed(output_type)
+        _fundamentals_offline(monkeypatch, datapath, "AAPL", "MSFT")
+        wide = web.DataReader(["AAPL", "MSFT"], "yahoo-fundamentals", start=_FUND_START, end=_FUND_END)
+        tidy = as_narwhals(
+            web.DataReader(
+                ["AAPL", "MSFT"], "yahoo-fundamentals", start=_FUND_START, end=_FUND_END, output_type=output_type
+            )
+        )
+
+        assert tidy.columns[:2] == ["Date", "Symbol"]
+        assert sorted(set(tidy["Symbol"].to_list())) == ["AAPL", "MSFT"]
+        assert len(tidy) == len(wide)
 
     @pytest.mark.parametrize("output_type", BACKENDS)
     def test_dividends_single_long(self, monkeypatch, datapath, output_type):
