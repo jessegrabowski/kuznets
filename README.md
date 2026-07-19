@@ -68,16 +68,8 @@ Building the documentation additionally requires:
 -   sphinx
 -   pydata_sphinx_theme
 
-Development and testing additionally requires:
-
--   black
--   coverage
--   codecov
--   coveralls
--   flake8
--   pytest
--   pytest-cov
--   wrapt
+Development and testing dependencies are defined in `pyproject.toml`: the `dev` extra for pip
+workflows, and the pixi `test`/`lint` features for the pixi workspace.
 
 ### Install latest development version
 
@@ -92,6 +84,12 @@ git clone https://github.com/jessegrabowski/kuznets.git
 cd kuznets
 python setup.py install
 ```
+
+### Development environment
+
+The repo is a [pixi](https://pixi.sh) workspace: `pixi install` creates the dev environment
+(editable install, test and lint tools), `pixi run test` runs the suite, and `pixi run -e py314
+test` runs it on another Python. `pip install -e ".[dev]"` in a virtualenv works too.
 
 ### Running the tests
 

@@ -18,46 +18,36 @@ jobs:
       - uses: pre-commit/action@v3.0.1
 
   tests:
-    name: Tests (${{ matrix.os }})
+    name: Tests (${{ matrix.os }}, ${{ matrix.environment }})
     needs: pre-commit
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
+        environment: [default, py313, py314]
 
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0  # needed for hatch-vcs
 
-      - uses: actions/setup-python@v5
+      - uses: prefix-dev/setup-pixi@v0.10.0
         with:
-          python-version: "3.12"
-
-      - name: Install package and dev dependencies
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install -e ".[dev]"
+          pixi-version: v0.70.2
+          environments: ${{ matrix.environment }}
+          cache: true
 
       - name: List installed packages
-        run: python -m pip list
+        run: pixi list -e ${{ matrix.environment }}
 
       - name: Run tests
-        run: >
-          pytest tests
-          --durations=25
-          -n 2
-          --cov-config pyproject.toml
-          --cov=kuznets
-          --cov-report xml:coverage.xml
-          --cov-report term
-          --junitxml=junit/test-results.xml
+        run: pixi run -e ${{ matrix.environment }} test-cov
 
       - name: Upload coverage to Codecov
         if: always()
         uses: codecov/codecov-action@v5
         with:
           files: coverage.xml
-          flags: ${{ matrix.os }}
+          flags: ${{ matrix.os }}-${{ matrix.environment }}
           fail_ci_if_error: false

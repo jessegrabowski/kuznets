@@ -142,3 +142,59 @@ omit = [
     "*/yahoo/*",
 ]
 ignore_errors = true
+
+[tool.pixi.workspace]
+channels = ["conda-forge"]
+platforms = ["osx-arm64", "linux-64", "win-64"]
+
+[tool.pixi.dependencies]
+lxml = "*"
+narwhals = ">=2.0"
+pandas = ">=3.0"
+requests = "*"
+
+[tool.pixi.pypi-dependencies]
+kuznets = { path = ".", editable = true }
+
+[tool.pixi.feature.test.dependencies]
+pytest = ">=8"
+pytest-cov = "*"
+pytest-xdist = "*"
+coverage = "*"
+wrapt = "*"
+polars = "*"
+pyarrow = "*"
+dask = "*"
+
+[tool.pixi.feature.lint.dependencies]
+pre-commit = "*"
+ruff = "*"
+
+[tool.pixi.feature.docs.dependencies]
+sphinx = "*"
+ipython = "*"
+matplotlib = "*"
+requests-cache = "*"
+pydata-sphinx-theme = "*"
+pickleshare = "*"
+
+[tool.pixi.feature.py312.dependencies]
+python = "3.12.*"
+
+[tool.pixi.feature.py313.dependencies]
+python = "3.13.*"
+
+[tool.pixi.feature.py314.dependencies]
+python = "3.14.*"
+
+[tool.pixi.environments]
+default = { features = ["test", "lint", "py312"], solve-group = "py312" }
+py313 = { features = ["test", "py313"] }
+py314 = { features = ["test", "py314"] }
+docs = { features = ["docs", "py312"], solve-group = "py312" }
+
+[tool.pixi.tasks]
+test = "pytest"
+test-cov = "pytest tests --durations=25 -n 2 --cov-config pyproject.toml --cov=kuznets --cov-report xml:coverage.xml --cov-report term --junitxml=junit/test-results.xml"
+lint = "pre-commit run --all-files"
+fmt = "ruff format ."
