@@ -44,7 +44,12 @@ Contents:
    cache.rst
    see-also.rst
    readers/index
-   whatsnew.rst
+
+Release notes
+-------------
+
+Release notes are generated from merged pull requests and published with each
+`GitHub release <https://github.com/jessegrabowski/kuznets/releases>`__.
 
 Documentation
 -------------
