@@ -726,11 +726,6 @@ Naver Finance Data
 Yahoo Finance Data
 ==================
 
-.. warning::
-
-    The Yahoo Finance reader is currently not working. PRs to fix are welcome.
-
-
 Yahoo Finance provides stock market data
 
 The following endpoints are available:
@@ -738,6 +733,9 @@ The following endpoints are available:
 * ``yahoo`` - retrieve daily stock prices (high, open, close, volume and adjusted close)
 * ``yahoo-actions`` - retrieve historical corporate actions (dividends and stock splits)
 * ``yahoo-dividends`` - retrieve historical dividends
+* ``yahoo-fundamentals`` - retrieve financial-statement fundamentals (annual balance sheet by
+  default; use :class:`~kuznets.yahoo.fundamentals.YahooFundamentalsReader` directly for income
+  statements, cash flows, quarterly or trailing periods, or specific line items)
 
 .. ipython:: python
    :okexcept:
@@ -755,3 +753,6 @@ The following endpoints are available:
 
    dividends = web.DataReader('IBM', 'yahoo-dividends', start, end)
    dividends.head()
+
+   balance_sheet = web.DataReader('AAPL', 'yahoo-fundamentals', start, end)
+   balance_sheet[['TotalAssets', 'StockholdersEquity', 'NetDebt']]
