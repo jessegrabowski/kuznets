@@ -17,3 +17,5 @@ scratch.py
 .pixi/
 coverage.xml
 junit/
+cache.sqlite
+docs/source/_version.txt
