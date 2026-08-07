@@ -1,0 +1,39 @@
+name: mypy
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/mypy.yml"
+      - "kuznets/**"
+      - "pyproject.toml"
+      - "pixi.lock"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.head_ref || github.sha }}
+  cancel-in-progress: true
+
+permissions: {}
+
+jobs:
+  mypy:
+    name: mypy
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0  # needed for hatch-vcs
+          persist-credentials: false
+
+      - uses: prefix-dev/setup-pixi@a09b6247153796b190642a2b53fac4241043cf6f # v0.10.0
+        with:
+          pixi-version: v0.70.2
+          environments: default
+          cache: true
+
+      # kuznets ships py.typed, so its annotations are part of the public contract.
+      - name: Run mypy
+        run: pixi run -e default typecheck

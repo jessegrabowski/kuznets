@@ -1,8 +1,8 @@
 import pandas as pd
 
-from kuznets._output import filter_date_range, make_frame
 from kuznets.base import _BaseReader
 from kuznets.io.util import _parse_period_code
+from kuznets.output import filter_date_range, make_frame
 
 
 class EcondbReader(_BaseReader):
@@ -10,6 +10,8 @@ class EcondbReader(_BaseReader):
 
     .. versionadded:: 0.5.0
     """
+
+    symbols: str
 
     _URL = "https://www.econdb.com/api/series/"
     _format = None
@@ -20,8 +22,8 @@ class EcondbReader(_BaseReader):
         symbols: str,
         start=None,
         end=None,
-        retry_count: int = 3,
-        pause: float = 0.1,
+        retry_count: int | None = None,
+        pause: float | None = None,
         session=None,
         freq: str | None = None,
         output_type: str = "pandas",
@@ -46,10 +48,10 @@ class EcondbReader(_BaseReader):
             Starting date.
         end : str, int, date, datetime, or Timestamp, optional
             Ending date.
-        retry_count : int, default 3
-            Number of times to retry query request.
-        pause : float, default 0.1
-            Time, in seconds, to pause between consecutive queries of chunks.
+        retry_count : int, optional
+            Number of times to retry query request. Falls back to the configured default.
+        pause : float, optional
+            Time, in seconds, to pause between consecutive queries of chunks. Falls back to the configured default.
         session : Session, optional
             ``requests.sessions.Session`` instance to be used.
         freq : str, optional
@@ -113,7 +115,7 @@ class EcondbReader(_BaseReader):
                     head[k] = "-1:None"
             if head != "":  # this additional metadata is not blank
                 series.columns = pd.MultiIndex.from_tuples(
-                    [[show_func(x) for x in head.values()]],
+                    [tuple(show_func(x) for x in head.values())],
                     names=[show_func(x) for x in head.keys()],
                 )
             else:

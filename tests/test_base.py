@@ -1,18 +1,25 @@
 import datetime as dt
 import importlib.util
+import io
 import threading
 
 import pandas as pd
 import pytest
 import requests
 
-from kuznets import base as base
-from kuznets._utils import (
+from kuznets import base as base, config
+from kuznets.av.forex import AVForexReader
+from kuznets.av.time_series import AVTimeSeriesReader
+from kuznets.econdb import EcondbReader
+from kuznets.tsp import TSPReader
+from kuznets.utils import (
     DEFAULT_USER_AGENT,
     RETRYABLE_STATUS_CODES,
     RemoteDataError,
     _init_session,
 )
+from kuznets.wb import WorldBankReader
+from kuznets.yahoo.quotes import YahooQuotesReader
 from tests._mock import from_fixtures, make_response, patch_session_get
 
 pytestmark = pytest.mark.stable
@@ -56,6 +63,20 @@ class TestBaseReader:
     def test_invalid_url(self):
         with pytest.raises(NotImplementedError):
             _ = base._BaseReader([]).url
+
+    @pytest.mark.parametrize(
+        ("header", "expected"),
+        [("Date", "Date"), ("", None), ("Dat\xe9", "Dat")],
+        ids=["named", "unnamed", "non-ascii"],
+    )
+    def test_read_lines_index_name(self, header, expected):
+        # A blank first-column header leaves the index unnamed, which must not be treated as a
+        # string to strip; non-ascii characters in a named index are dropped.
+        csv = io.StringIO(f"{header},Open\n2020-01-02,10\n2020-01-03,11\n")
+        rs = base._BaseReader([])._read_lines(csv)
+
+        assert list(rs.columns) == ["Open"]
+        assert rs.index.name == expected
 
     def test_invalid_format(self):
         b = base._BaseReader([])
@@ -123,12 +144,38 @@ class TestRetryStrategy:
         assert retry.total == 7
         assert retry.backoff_factor == 0.5
 
+    @pytest.mark.parametrize(
+        "make_reader",
+        [
+            lambda: EcondbReader(symbols="ticker=RGDPUS"),
+            lambda: AVForexReader(symbols="USD/JPY", api_key="fake"),
+            lambda: AVTimeSeriesReader(symbols="AAPL", api_key="fake"),
+            lambda: TSPReader(),
+            lambda: WorldBankReader(symbols="NY.GDP.PCAP.KD"),
+            lambda: YahooQuotesReader(symbols="AAPL"),
+        ],
+        ids=["econdb", "av-forex", "av-time-series", "tsp", "world-bank", "yahoo-quotes"],
+    )
+    def test_readers_fall_back_to_configured_retry_count(self, make_reader):
+        # These readers each defaulted retry_count/pause to literals, which silently shadowed
+        # options and the config file.
+        config.options.retry_count = 7
+        config.options.pause = 0.5
+        retry = _retry_strategy(make_reader().session)
+
+        assert retry.total == 7
+        assert retry.backoff_factor == 0.5
+
 
 class TestDailyBaseReader:
     def test_get_params(self):
         b = base._DailyBaseReader()
         with pytest.raises(NotImplementedError):
             b._get_params()
+
+    def test_read_without_symbols_raises(self):
+        with pytest.raises(ValueError, match="requires at least one symbol"):
+            base._DailyBaseReader().read()
 
 
 class _CsvOutputReader(base._BaseReader):

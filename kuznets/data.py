@@ -2,12 +2,11 @@
 Module contains tools for collecting data from various remote sources.
 """
 
-import datetime
+from typing import Any, Literal, cast, overload
 
-from pandas import Timestamp
+from pandas import DataFrame
 import requests
 
-from kuznets._output import PANDAS, detach_index, from_pandas, validate_output_type
 from kuznets.av.forex import AVForexReader
 from kuznets.av.time_series import AVTimeSeriesReader
 from kuznets.bankofcanada import BankOfCanadaReader
@@ -19,6 +18,7 @@ from kuznets.moex import MoexReader
 from kuznets.nasdaq_trader import get_nasdaq_symbols
 from kuznets.naver import NaverDailyReader
 from kuznets.oecd import OECDReader
+from kuznets.output import PANDAS, detach_index, from_pandas, validate_output_type
 from kuznets.quandl import QuandlReader
 from kuznets.stooq import StooqDailyReader
 from kuznets.tiingo import (
@@ -26,6 +26,7 @@ from kuznets.tiingo import (
     TiingoIEXHistoricalReader,
     TiingoQuoteReader,
 )
+from kuznets.typing import BackendName, DateLike, Frame, Headers, OutputType, Symbols
 from kuznets.yahoo.actions import YahooActionReader, YahooDivReader
 from kuznets.yahoo.daily import YahooDailyReader
 from kuznets.yahoo.fundamentals import YahooFundamentalsReader
@@ -49,79 +50,888 @@ __all__ = [
 ]
 
 
-def get_data_alphavantage(*args, **kwargs):
-    return AVTimeSeriesReader(*args, **kwargs).read()
+_DATA_SOURCES = {
+    "yahoo",
+    "bankofcanada",
+    "stooq",
+    "fred",
+    "famafrench",
+    "oecd",
+    "eurostat",
+    "nasdaq",
+    "quandl",
+    "moex",
+    "tiingo",
+    "yahoo-actions",
+    "yahoo-dividends",
+    "yahoo-fundamentals",
+    "av-forex",
+    "av-forex-daily",
+    "av-daily",
+    "av-daily-adjusted",
+    "av-weekly",
+    "av-weekly-adjusted",
+    "av-monthly",
+    "av-monthly-adjusted",
+    "av-intraday",
+    "econdb",
+    "naver",
+}
 
 
-def get_data_fred(*args, **kwargs):
-    return FredReader(*args, **kwargs).read()
+def _single_symbol(name: Symbols, data_source: str) -> str:
+    """Return *name* as a lone symbol, raising ValueError for the list form."""
+    if isinstance(name, str):
+        return name
+    raise ValueError(f"data_source={data_source!r} reads one symbol at a time, but got {name!r}")
 
 
-def get_data_famafrench(*args, **kwargs):
-    return FamaFrenchReader(*args, **kwargs).read()
+# Each entry point below is declared twice: reading with the default 'pandas' backend yields a
+# pandas object, and reading with any other backend yields that backend's native frame. The bodies
+# construct their reader with named arguments, so a signature that drifts from its reader is a type
+# error rather than a silent lie.
 
 
-def get_data_yahoo(*args, **kwargs):
-    return YahooDailyReader(*args, **kwargs).read()
+@overload
+def get_data_alphavantage(
+    symbols: str | None = None,
+    function: str = "TIME_SERIES_DAILY",
+    start: DateLike | None = None,
+    end: DateLike | None = None,
+    retry_count: int | None = None,
+    pause: float | None = None,
+    session: requests.Session | None = None,
+    chunksize: int = 25,
+    api_key: str | None = None,
+    output_type: Literal["pandas"] = "pandas",
+) -> DataFrame: ...
+@overload
+def get_data_alphavantage(
+    symbols: str | None = None,
+    function: str = "TIME_SERIES_DAILY",
+    start: DateLike | None = None,
+    end: DateLike | None = None,
+    retry_count: int | None = None,
+    pause: float | None = None,
+    session: requests.Session | None = None,
+    chunksize: int = 25,
+    api_key: str | None = None,
+    output_type: BackendName = ...,
+) -> Frame: ...
+def get_data_alphavantage(
+    symbols: str | None = None,
+    function: str = "TIME_SERIES_DAILY",
+    start: DateLike | None = None,
+    end: DateLike | None = None,
+    retry_count: int | None = None,
+    pause: float | None = None,
+    session: requests.Session | None = None,
+    chunksize: int = 25,
+    api_key: str | None = None,
+    output_type: OutputType = "pandas",
+) -> Frame:
+    """Read an Alpha Vantage time series. See :class:`~kuznets.av.time_series.AVTimeSeriesReader`."""
+    return AVTimeSeriesReader(
+        symbols=symbols,
+        function=function,
+        start=start,
+        end=end,
+        retry_count=retry_count,
+        pause=pause,
+        session=session,
+        chunksize=chunksize,
+        api_key=api_key,
+        output_type=output_type,
+    ).read()
 
 
-def get_data_econdb(*args, **kwargs):
-    return EcondbReader(*args, **kwargs).read()
+@overload
+def get_data_fred(
+    symbols: Symbols,
+    start: DateLike | None = None,
+    end: DateLike | None = None,
+    retry_count: int | None = None,
+    pause: float | None = None,
+    timeout: float | None = None,
+    session: requests.Session | None = None,
+    freq: str | None = None,
+    headers: Headers | None = None,
+    output_type: Literal["pandas"] = "pandas",
+    api_key: str | None = None,
+) -> DataFrame: ...
+@overload
+def get_data_fred(
+    symbols: Symbols,
+    start: DateLike | None = None,
+    end: DateLike | None = None,
+    retry_count: int | None = None,
+    pause: float | None = None,
+    timeout: float | None = None,
+    session: requests.Session | None = None,
+    freq: str | None = None,
+    headers: Headers | None = None,
+    output_type: BackendName = ...,
+    api_key: str | None = None,
+) -> Frame: ...
+def get_data_fred(
+    symbols: Symbols,
+    start: DateLike | None = None,
+    end: DateLike | None = None,
+    retry_count: int | None = None,
+    pause: float | None = None,
+    timeout: float | None = None,
+    session: requests.Session | None = None,
+    freq: str | None = None,
+    headers: Headers | None = None,
+    output_type: OutputType = "pandas",
+    api_key: str | None = None,
+) -> Frame:
+    """Read one or more FRED series. See :class:`~kuznets.fred.FredReader`."""
+    return FredReader(
+        symbols=symbols,
+        start=start,
+        end=end,
+        retry_count=retry_count,
+        pause=pause,
+        timeout=timeout,
+        session=session,
+        freq=freq,
+        headers=headers,
+        output_type=output_type,
+        api_key=api_key,
+    ).read()
 
 
-def get_data_yahoo_actions(*args, **kwargs):
-    return YahooActionReader(*args, **kwargs).read()
+@overload
+def get_data_famafrench(
+    symbols: Symbols | DataFrame | None,
+    start: DateLike | None = None,
+    end: DateLike | None = None,
+    retry_count: int | None = None,
+    pause: float | None = None,
+    timeout: float | None = None,
+    session: requests.Session | None = None,
+    freq: str | None = None,
+    headers: Headers | None = None,
+    output_type: Literal["pandas"] = "pandas",
+) -> dict[int | str, DataFrame | str]: ...
+@overload
+def get_data_famafrench(
+    symbols: Symbols | DataFrame | None,
+    start: DateLike | None = None,
+    end: DateLike | None = None,
+    retry_count: int | None = None,
+    pause: float | None = None,
+    timeout: float | None = None,
+    session: requests.Session | None = None,
+    freq: str | None = None,
+    headers: Headers | None = None,
+    output_type: BackendName = ...,
+) -> dict[int | str, Frame | str]: ...
+def get_data_famafrench(
+    symbols: Symbols | DataFrame | None,
+    start: DateLike | None = None,
+    end: DateLike | None = None,
+    retry_count: int | None = None,
+    pause: float | None = None,
+    timeout: float | None = None,
+    session: requests.Session | None = None,
+    freq: str | None = None,
+    headers: Headers | None = None,
+    output_type: OutputType = "pandas",
+) -> dict[int | str, Any]:
+    """Read a Fama/French dataset. See :class:`~kuznets.famafrench.FamaFrenchReader`.
+
+    Returns one entry per table in the dataset, keyed by table number, plus a ``'DESCR'`` entry
+    holding the dataset's text description.
+    """
+    # Alone among the readers, FamaFrench yields a dict of tables rather than a single frame.
+    return cast(
+        "dict[int | str, Any]",
+        FamaFrenchReader(
+            symbols=symbols,
+            start=start,
+            end=end,
+            retry_count=retry_count,
+            pause=pause,
+            timeout=timeout,
+            session=session,
+            freq=freq,
+            headers=headers,
+            output_type=output_type,
+        ).read(),
+    )
 
 
-def get_data_yahoo_fundamentals(*args, **kwargs):
-    return YahooFundamentalsReader(*args, **kwargs).read()
+@overload
+def get_data_yahoo(
+    symbols: Symbols | DataFrame | None = None,
+    start: DateLike | None = None,
+    end: DateLike | None = None,
+    retry_count: int | None = None,
+    pause: float | None = None,
+    session: requests.Session | None = None,
+    adjust_price: bool = False,
+    ret_index: bool = False,
+    chunksize: int = 1,
+    interval: str = "d",
+    get_actions: bool = False,
+    adjust_dividends: bool = True,
+    output_type: Literal["pandas"] = "pandas",
+    max_workers: int | None = None,
+) -> DataFrame: ...
+@overload
+def get_data_yahoo(
+    symbols: Symbols | DataFrame | None = None,
+    start: DateLike | None = None,
+    end: DateLike | None = None,
+    retry_count: int | None = None,
+    pause: float | None = None,
+    session: requests.Session | None = None,
+    adjust_price: bool = False,
+    ret_index: bool = False,
+    chunksize: int = 1,
+    interval: str = "d",
+    get_actions: bool = False,
+    adjust_dividends: bool = True,
+    output_type: BackendName = ...,
+    max_workers: int | None = None,
+) -> Frame: ...
+def get_data_yahoo(
+    symbols: Symbols | DataFrame | None = None,
+    start: DateLike | None = None,
+    end: DateLike | None = None,
+    retry_count: int | None = None,
+    pause: float | None = None,
+    session: requests.Session | None = None,
+    adjust_price: bool = False,
+    ret_index: bool = False,
+    chunksize: int = 1,
+    interval: str = "d",
+    get_actions: bool = False,
+    adjust_dividends: bool = True,
+    output_type: OutputType = "pandas",
+    max_workers: int | None = None,
+) -> Frame:
+    """Read daily Yahoo Finance prices. See :class:`~kuznets.yahoo.daily.YahooDailyReader`."""
+    return YahooDailyReader(
+        symbols=symbols,
+        start=start,
+        end=end,
+        retry_count=retry_count,
+        pause=pause,
+        session=session,
+        adjust_price=adjust_price,
+        ret_index=ret_index,
+        chunksize=chunksize,
+        interval=interval,
+        get_actions=get_actions,
+        adjust_dividends=adjust_dividends,
+        output_type=output_type,
+        max_workers=max_workers,
+    ).read()
 
 
-def get_quote_yahoo(*args, **kwargs):
-    return YahooQuotesReader(*args, **kwargs).read()
+@overload
+def get_data_econdb(
+    symbols: str,
+    start: DateLike | None = None,
+    end: DateLike | None = None,
+    retry_count: int | None = None,
+    pause: float | None = None,
+    session: requests.Session | None = None,
+    freq: str | None = None,
+    output_type: Literal["pandas"] = "pandas",
+) -> DataFrame: ...
+@overload
+def get_data_econdb(
+    symbols: str,
+    start: DateLike | None = None,
+    end: DateLike | None = None,
+    retry_count: int | None = None,
+    pause: float | None = None,
+    session: requests.Session | None = None,
+    freq: str | None = None,
+    output_type: BackendName = ...,
+) -> Frame: ...
+def get_data_econdb(
+    symbols: str,
+    start: DateLike | None = None,
+    end: DateLike | None = None,
+    retry_count: int | None = None,
+    pause: float | None = None,
+    session: requests.Session | None = None,
+    freq: str | None = None,
+    output_type: OutputType = "pandas",
+) -> Frame:
+    """Read an Econdb series or dataset. See :class:`~kuznets.econdb.EcondbReader`."""
+    return EcondbReader(
+        symbols=symbols,
+        start=start,
+        end=end,
+        retry_count=retry_count,
+        pause=pause,
+        session=session,
+        freq=freq,
+        output_type=output_type,
+    ).read()
 
 
-def get_data_quandl(*args, **kwargs):
-    return QuandlReader(*args, **kwargs).read()
+@overload
+def get_data_yahoo_actions(
+    symbols: Symbols | DataFrame | None = None,
+    start: DateLike | None = None,
+    end: DateLike | None = None,
+    retry_count: int | None = None,
+    pause: float | None = None,
+    session: requests.Session | None = None,
+    adjust_price: bool = False,
+    ret_index: bool = False,
+    chunksize: int = 1,
+    interval: str = "d",
+    get_actions: bool = False,
+    adjust_dividends: bool = True,
+    output_type: Literal["pandas"] = "pandas",
+    max_workers: int | None = None,
+) -> DataFrame: ...
+@overload
+def get_data_yahoo_actions(
+    symbols: Symbols | DataFrame | None = None,
+    start: DateLike | None = None,
+    end: DateLike | None = None,
+    retry_count: int | None = None,
+    pause: float | None = None,
+    session: requests.Session | None = None,
+    adjust_price: bool = False,
+    ret_index: bool = False,
+    chunksize: int = 1,
+    interval: str = "d",
+    get_actions: bool = False,
+    adjust_dividends: bool = True,
+    output_type: BackendName = ...,
+    max_workers: int | None = None,
+) -> Frame: ...
+def get_data_yahoo_actions(
+    symbols: Symbols | DataFrame | None = None,
+    start: DateLike | None = None,
+    end: DateLike | None = None,
+    retry_count: int | None = None,
+    pause: float | None = None,
+    session: requests.Session | None = None,
+    adjust_price: bool = False,
+    ret_index: bool = False,
+    chunksize: int = 1,
+    interval: str = "d",
+    get_actions: bool = False,
+    adjust_dividends: bool = True,
+    output_type: OutputType = "pandas",
+    max_workers: int | None = None,
+) -> Frame:
+    """Read Yahoo dividend and split actions. See :class:`~kuznets.yahoo.actions.YahooActionReader`."""
+    return YahooActionReader(
+        symbols=symbols,
+        start=start,
+        end=end,
+        retry_count=retry_count,
+        pause=pause,
+        session=session,
+        adjust_price=adjust_price,
+        ret_index=ret_index,
+        chunksize=chunksize,
+        interval=interval,
+        get_actions=get_actions,
+        adjust_dividends=adjust_dividends,
+        output_type=output_type,
+        max_workers=max_workers,
+    ).read()
 
 
-def get_data_moex(*args, **kwargs):
-    return MoexReader(*args, **kwargs).read()
+@overload
+def get_data_yahoo_fundamentals(
+    symbols: Symbols | None = None,
+    start: DateLike | None = None,
+    end: DateLike | None = None,
+    retry_count: int | None = None,
+    pause: float | None = None,
+    session: requests.Session | None = None,
+    freq: str = "annual",
+    statement: str = "balance-sheet",
+    series: str | list[str] | None = None,
+    output_type: Literal["pandas"] = "pandas",
+    max_workers: int | None = None,
+) -> DataFrame: ...
+@overload
+def get_data_yahoo_fundamentals(
+    symbols: Symbols | None = None,
+    start: DateLike | None = None,
+    end: DateLike | None = None,
+    retry_count: int | None = None,
+    pause: float | None = None,
+    session: requests.Session | None = None,
+    freq: str = "annual",
+    statement: str = "balance-sheet",
+    series: str | list[str] | None = None,
+    output_type: BackendName = ...,
+    max_workers: int | None = None,
+) -> Frame: ...
+def get_data_yahoo_fundamentals(
+    symbols: Symbols | None = None,
+    start: DateLike | None = None,
+    end: DateLike | None = None,
+    retry_count: int | None = None,
+    pause: float | None = None,
+    session: requests.Session | None = None,
+    freq: str = "annual",
+    statement: str = "balance-sheet",
+    series: str | list[str] | None = None,
+    output_type: OutputType = "pandas",
+    max_workers: int | None = None,
+) -> Frame:
+    """Read Yahoo fundamentals. See :class:`~kuznets.yahoo.fundamentals.YahooFundamentalsReader`."""
+    return YahooFundamentalsReader(
+        symbols=symbols,
+        start=start,
+        end=end,
+        retry_count=retry_count,
+        pause=pause,
+        session=session,
+        freq=freq,
+        statement=statement,
+        series=series,
+        output_type=output_type,
+        max_workers=max_workers,
+    ).read()
 
 
-def get_data_stooq(*args, **kwargs):
-    return StooqDailyReader(*args, **kwargs).read()
+@overload
+def get_quote_yahoo(
+    symbols: Symbols | None = None,
+    start: DateLike | None = None,
+    end: DateLike | None = None,
+    retry_count: int | None = None,
+    pause: float | None = None,
+    session: requests.Session | None = None,
+    output_type: Literal["pandas"] = "pandas",
+) -> DataFrame: ...
+@overload
+def get_quote_yahoo(
+    symbols: Symbols | None = None,
+    start: DateLike | None = None,
+    end: DateLike | None = None,
+    retry_count: int | None = None,
+    pause: float | None = None,
+    session: requests.Session | None = None,
+    output_type: BackendName = ...,
+) -> Frame: ...
+def get_quote_yahoo(
+    symbols: Symbols | None = None,
+    start: DateLike | None = None,
+    end: DateLike | None = None,
+    retry_count: int | None = None,
+    pause: float | None = None,
+    session: requests.Session | None = None,
+    output_type: OutputType = "pandas",
+) -> Frame:
+    """Read Yahoo quotes. See :class:`~kuznets.yahoo.quotes.YahooQuotesReader`."""
+    return YahooQuotesReader(
+        symbols=symbols,
+        start=start,
+        end=end,
+        retry_count=retry_count,
+        pause=pause,
+        session=session,
+        output_type=output_type,
+    ).read()
 
 
-def get_data_tiingo(*args, **kwargs):
-    return TiingoDailyReader(*args, **kwargs).read()
+@overload
+def get_data_quandl(
+    symbols: Symbols,
+    start: DateLike | None = None,
+    end: DateLike | None = None,
+    retry_count: int | None = None,
+    pause: float | None = None,
+    session: requests.Session | None = None,
+    chunksize: int = 25,
+    api_key: str | None = None,
+    output_type: Literal["pandas"] = "pandas",
+    max_workers: int | None = None,
+) -> DataFrame: ...
+@overload
+def get_data_quandl(
+    symbols: Symbols,
+    start: DateLike | None = None,
+    end: DateLike | None = None,
+    retry_count: int | None = None,
+    pause: float | None = None,
+    session: requests.Session | None = None,
+    chunksize: int = 25,
+    api_key: str | None = None,
+    output_type: BackendName = ...,
+    max_workers: int | None = None,
+) -> Frame: ...
+def get_data_quandl(
+    symbols: Symbols,
+    start: DateLike | None = None,
+    end: DateLike | None = None,
+    retry_count: int | None = None,
+    pause: float | None = None,
+    session: requests.Session | None = None,
+    chunksize: int = 25,
+    api_key: str | None = None,
+    output_type: OutputType = "pandas",
+    max_workers: int | None = None,
+) -> Frame:
+    """Read a Quandl dataset. See :class:`~kuznets.quandl.QuandlReader`."""
+    return QuandlReader(
+        symbols=symbols,
+        start=start,
+        end=end,
+        retry_count=retry_count,
+        pause=pause,
+        session=session,
+        chunksize=chunksize,
+        api_key=api_key,
+        output_type=output_type,
+        max_workers=max_workers,
+    ).read()
 
 
-def get_iex_data_tiingo(*args, **kwargs):
-    return TiingoIEXHistoricalReader(*args, **kwargs).read()
+@overload
+def get_data_moex(
+    symbols: Symbols | DataFrame | None = None,
+    start: DateLike | None = None,
+    end: DateLike | None = None,
+    retry_count: int | None = None,
+    pause: float | None = None,
+    session: requests.Session | None = None,
+    chunksize: int = 25,
+    output_type: Literal["pandas"] = "pandas",
+    max_workers: int | None = None,
+) -> DataFrame: ...
+@overload
+def get_data_moex(
+    symbols: Symbols | DataFrame | None = None,
+    start: DateLike | None = None,
+    end: DateLike | None = None,
+    retry_count: int | None = None,
+    pause: float | None = None,
+    session: requests.Session | None = None,
+    chunksize: int = 25,
+    output_type: BackendName = ...,
+    max_workers: int | None = None,
+) -> Frame: ...
+def get_data_moex(
+    symbols: Symbols | DataFrame | None = None,
+    start: DateLike | None = None,
+    end: DateLike | None = None,
+    retry_count: int | None = None,
+    pause: float | None = None,
+    session: requests.Session | None = None,
+    chunksize: int = 25,
+    output_type: OutputType = "pandas",
+    max_workers: int | None = None,
+) -> Frame:
+    """Read Moscow Exchange prices. See :class:`~kuznets.moex.MoexReader`."""
+    return MoexReader(
+        symbols=symbols,
+        start=start,
+        end=end,
+        retry_count=retry_count,
+        pause=pause,
+        session=session,
+        chunksize=chunksize,
+        output_type=output_type,
+        max_workers=max_workers,
+    ).read()
 
 
-def get_quotes_tiingo(*args, **kwargs):
-    return TiingoQuoteReader(*args, **kwargs).read()
+@overload
+def get_data_stooq(
+    symbols: Symbols | DataFrame | None = None,
+    start: DateLike | None = None,
+    end: DateLike | None = None,
+    retry_count: int | None = None,
+    pause: float | None = None,
+    session: requests.Session | None = None,
+    chunksize: int = 25,
+    output_type: Literal["pandas"] = "pandas",
+    max_workers: int | None = None,
+) -> DataFrame: ...
+@overload
+def get_data_stooq(
+    symbols: Symbols | DataFrame | None = None,
+    start: DateLike | None = None,
+    end: DateLike | None = None,
+    retry_count: int | None = None,
+    pause: float | None = None,
+    session: requests.Session | None = None,
+    chunksize: int = 25,
+    output_type: BackendName = ...,
+    max_workers: int | None = None,
+) -> Frame: ...
+def get_data_stooq(
+    symbols: Symbols | DataFrame | None = None,
+    start: DateLike | None = None,
+    end: DateLike | None = None,
+    retry_count: int | None = None,
+    pause: float | None = None,
+    session: requests.Session | None = None,
+    chunksize: int = 25,
+    output_type: OutputType = "pandas",
+    max_workers: int | None = None,
+) -> Frame:
+    """Read Stooq daily prices. See :class:`~kuznets.stooq.StooqDailyReader`."""
+    return StooqDailyReader(
+        symbols=symbols,
+        start=start,
+        end=end,
+        retry_count=retry_count,
+        pause=pause,
+        session=session,
+        chunksize=chunksize,
+        output_type=output_type,
+        max_workers=max_workers,
+    ).read()
 
 
-def get_exchange_rate_av(*args, **kwargs):
-    return AVForexReader(*args, **kwargs).read()
+@overload
+def get_data_tiingo(
+    symbols: Symbols,
+    start: DateLike | None = None,
+    end: DateLike | None = None,
+    retry_count: int | None = None,
+    pause: float | None = None,
+    timeout: float | None = None,
+    session: requests.Session | None = None,
+    freq: str | None = None,
+    api_key: str | None = None,
+    output_type: Literal["pandas"] = "pandas",
+) -> DataFrame: ...
+@overload
+def get_data_tiingo(
+    symbols: Symbols,
+    start: DateLike | None = None,
+    end: DateLike | None = None,
+    retry_count: int | None = None,
+    pause: float | None = None,
+    timeout: float | None = None,
+    session: requests.Session | None = None,
+    freq: str | None = None,
+    api_key: str | None = None,
+    output_type: BackendName = ...,
+) -> Frame: ...
+def get_data_tiingo(
+    symbols: Symbols,
+    start: DateLike | None = None,
+    end: DateLike | None = None,
+    retry_count: int | None = None,
+    pause: float | None = None,
+    timeout: float | None = None,
+    session: requests.Session | None = None,
+    freq: str | None = None,
+    api_key: str | None = None,
+    output_type: OutputType = "pandas",
+) -> Frame:
+    """Read Tiingo daily prices. See :class:`~kuznets.tiingo.TiingoDailyReader`."""
+    return TiingoDailyReader(
+        symbols=symbols,
+        start=start,
+        end=end,
+        retry_count=retry_count,
+        pause=pause,
+        timeout=timeout,
+        session=session,
+        freq=freq,
+        api_key=api_key,
+        output_type=output_type,
+    ).read()
 
 
-def DataReader(
-    name: str | list[str],
-    data_source: str | None = None,
-    start: str | int | datetime.date | datetime.datetime | Timestamp | None = None,
-    end: str | int | datetime.date | datetime.datetime | Timestamp | None = None,
+@overload
+def get_iex_data_tiingo(
+    symbols: Symbols,
+    start: DateLike | None = None,
+    end: DateLike | None = None,
+    retry_count: int | None = None,
+    pause: float | None = None,
+    timeout: float | None = None,
+    session: requests.Session | None = None,
+    freq: str | None = None,
+    api_key: str | None = None,
+    output_type: Literal["pandas"] = "pandas",
+) -> DataFrame: ...
+@overload
+def get_iex_data_tiingo(
+    symbols: Symbols,
+    start: DateLike | None = None,
+    end: DateLike | None = None,
+    retry_count: int | None = None,
+    pause: float | None = None,
+    timeout: float | None = None,
+    session: requests.Session | None = None,
+    freq: str | None = None,
+    api_key: str | None = None,
+    output_type: BackendName = ...,
+) -> Frame: ...
+def get_iex_data_tiingo(
+    symbols: Symbols,
+    start: DateLike | None = None,
+    end: DateLike | None = None,
+    retry_count: int | None = None,
+    pause: float | None = None,
+    timeout: float | None = None,
+    session: requests.Session | None = None,
+    freq: str | None = None,
+    api_key: str | None = None,
+    output_type: OutputType = "pandas",
+) -> Frame:
+    """Read Tiingo IEX intraday history. See :class:`~kuznets.tiingo.TiingoIEXHistoricalReader`."""
+    return TiingoIEXHistoricalReader(
+        symbols=symbols,
+        start=start,
+        end=end,
+        retry_count=retry_count,
+        pause=pause,
+        timeout=timeout,
+        session=session,
+        freq=freq,
+        api_key=api_key,
+        output_type=output_type,
+    ).read()
+
+
+@overload
+def get_quotes_tiingo(
+    symbols: Symbols,
+    start: DateLike | None = None,
+    end: DateLike | None = None,
+    retry_count: int | None = None,
+    pause: float | None = None,
+    timeout: float | None = None,
+    session: requests.Session | None = None,
+    freq: str | None = None,
+    api_key: str | None = None,
+    output_type: Literal["pandas"] = "pandas",
+) -> DataFrame: ...
+@overload
+def get_quotes_tiingo(
+    symbols: Symbols,
+    start: DateLike | None = None,
+    end: DateLike | None = None,
+    retry_count: int | None = None,
+    pause: float | None = None,
+    timeout: float | None = None,
+    session: requests.Session | None = None,
+    freq: str | None = None,
+    api_key: str | None = None,
+    output_type: BackendName = ...,
+) -> Frame: ...
+def get_quotes_tiingo(
+    symbols: Symbols,
+    start: DateLike | None = None,
+    end: DateLike | None = None,
+    retry_count: int | None = None,
+    pause: float | None = None,
+    timeout: float | None = None,
+    session: requests.Session | None = None,
+    freq: str | None = None,
+    api_key: str | None = None,
+    output_type: OutputType = "pandas",
+) -> Frame:
+    """Read Tiingo symbol metadata. See :class:`~kuznets.tiingo.TiingoQuoteReader`."""
+    return TiingoQuoteReader(
+        symbols=symbols,
+        start=start,
+        end=end,
+        retry_count=retry_count,
+        pause=pause,
+        timeout=timeout,
+        session=session,
+        freq=freq,
+        api_key=api_key,
+        output_type=output_type,
+    ).read()
+
+
+@overload
+def get_exchange_rate_av(
+    symbols: Symbols | None = None,
     retry_count: int | None = None,
     pause: float | None = None,
     session: requests.Session | None = None,
     api_key: str | None = None,
-    headers: dict | None = None,
-    output_type: str = "pandas",
+    output_type: Literal["pandas"] = "pandas",
+) -> DataFrame: ...
+@overload
+def get_exchange_rate_av(
+    symbols: Symbols | None = None,
+    retry_count: int | None = None,
+    pause: float | None = None,
+    session: requests.Session | None = None,
+    api_key: str | None = None,
+    output_type: BackendName = ...,
+) -> Frame: ...
+def get_exchange_rate_av(
+    symbols: Symbols | None = None,
+    retry_count: int | None = None,
+    pause: float | None = None,
+    session: requests.Session | None = None,
+    api_key: str | None = None,
+    output_type: OutputType = "pandas",
+) -> Frame:
+    """Read an Alpha Vantage exchange rate. See :class:`~kuznets.av.forex.AVForexReader`."""
+    return AVForexReader(
+        symbols=symbols,
+        retry_count=retry_count,
+        pause=pause,
+        session=session,
+        api_key=api_key,
+        output_type=output_type,
+    ).read()
+
+
+@overload
+def DataReader(
+    name: Symbols,
+    data_source: str | None = None,
+    start: DateLike | None = None,
+    end: DateLike | None = None,
+    retry_count: int | None = None,
+    pause: float | None = None,
+    session: requests.Session | None = None,
+    api_key: str | None = None,
+    headers: Headers | None = None,
+    output_type: Literal["pandas"] = "pandas",
     max_workers: int | None = None,
-):
+) -> DataFrame: ...
+@overload
+def DataReader(
+    name: Symbols,
+    data_source: str | None = None,
+    start: DateLike | None = None,
+    end: DateLike | None = None,
+    retry_count: int | None = None,
+    pause: float | None = None,
+    session: requests.Session | None = None,
+    api_key: str | None = None,
+    headers: Headers | None = None,
+    output_type: BackendName = ...,
+    max_workers: int | None = None,
+) -> Frame: ...
+def DataReader(
+    name: Symbols,
+    data_source: str | None = None,
+    start: DateLike | None = None,
+    end: DateLike | None = None,
+    retry_count: int | None = None,
+    pause: float | None = None,
+    session: requests.Session | None = None,
+    api_key: str | None = None,
+    headers: Headers | None = None,
+    output_type: OutputType = "pandas",
+    max_workers: int | None = None,
+) -> Frame:
     """
     Import data from a number of online sources.
 
@@ -181,39 +991,11 @@ def DataReader(
     ff = DataReader("6_Portfolios_2x3", "famafrench")
     ff = DataReader("F-F_ST_Reversal_Factor", "famafrench")
     """
-    expected_source = [
-        "yahoo",
-        "bankofcanada",
-        "stooq",
-        "fred",
-        "famafrench",
-        "oecd",
-        "eurostat",
-        "nasdaq",
-        "quandl",
-        "moex",
-        "tiingo",
-        "yahoo-actions",
-        "yahoo-dividends",
-        "yahoo-fundamentals",
-        "av-forex",
-        "av-forex-daily",
-        "av-daily",
-        "av-daily-adjusted",
-        "av-weekly",
-        "av-weekly-adjusted",
-        "av-monthly",
-        "av-monthly-adjusted",
-        "av-intraday",
-        "econdb",
-        "naver",
-    ]
-
-    if data_source not in expected_source:
+    if data_source not in _DATA_SOURCES:
         msg = f"data_source={data_source!r} is not implemented"
         raise NotImplementedError(msg)
 
-    output_type = validate_output_type(output_type)
+    backend = validate_output_type(output_type)
 
     if data_source == "yahoo":
         return YahooDailyReader(
@@ -225,7 +1007,7 @@ def DataReader(
             retry_count=retry_count,
             pause=pause,
             session=session,
-            output_type=output_type,
+            output_type=backend,
             max_workers=max_workers,
         ).read()
 
@@ -237,7 +1019,7 @@ def DataReader(
             retry_count=retry_count,
             pause=pause,
             session=session,
-            output_type=output_type,
+            output_type=backend,
         ).read()
 
     elif data_source == "stooq":
@@ -249,7 +1031,7 @@ def DataReader(
             retry_count=retry_count,
             pause=pause,
             session=session,
-            output_type=output_type,
+            output_type=backend,
             max_workers=max_workers,
         ).read()
 
@@ -263,7 +1045,7 @@ def DataReader(
             session=session,
             api_key=api_key,
             headers=headers,
-            output_type=output_type,
+            output_type=backend,
         ).read()
 
     elif data_source == "famafrench":
@@ -274,7 +1056,7 @@ def DataReader(
             retry_count=retry_count,
             pause=pause,
             session=session,
-            output_type=output_type,
+            output_type=backend,
         ).read()
 
     elif data_source == "oecd":
@@ -285,7 +1067,7 @@ def DataReader(
             retry_count=retry_count,
             pause=pause,
             session=session,
-            output_type=output_type,
+            output_type=backend,
         ).read()
     elif data_source == "eurostat":
         return EurostatReader(
@@ -295,16 +1077,16 @@ def DataReader(
             retry_count=retry_count,
             pause=pause,
             session=session,
-            output_type=output_type,
+            output_type=backend,
         ).read()
     elif data_source == "nasdaq":
         if name != "symbols":
             raise ValueError(f"Only the string 'symbols' is supported for Nasdaq, not {name!r}")
         nasdaq_symbols = get_nasdaq_symbols(retry_count=retry_count, pause=pause)
-        if output_type == PANDAS:
+        if backend == PANDAS:
             return nasdaq_symbols
         tidy, _ = detach_index(nasdaq_symbols)
-        return from_pandas(tidy, output_type)
+        return from_pandas(tidy, backend)
 
     elif data_source == "quandl":
         return QuandlReader(
@@ -315,7 +1097,7 @@ def DataReader(
             pause=pause,
             session=session,
             api_key=api_key,
-            output_type=output_type,
+            output_type=backend,
             max_workers=max_workers,
         ).read()
     elif data_source == "moex":
@@ -326,7 +1108,7 @@ def DataReader(
             retry_count=retry_count,
             pause=pause,
             session=session,
-            output_type=output_type,
+            output_type=backend,
             max_workers=max_workers,
         ).read()
     elif data_source == "tiingo":
@@ -338,7 +1120,7 @@ def DataReader(
             pause=pause,
             session=session,
             api_key=api_key,
-            output_type=output_type,
+            output_type=backend,
         ).read()
 
     elif data_source == "yahoo-actions":
@@ -349,7 +1131,7 @@ def DataReader(
             retry_count=retry_count,
             pause=pause,
             session=session,
-            output_type=output_type,
+            output_type=backend,
             max_workers=max_workers,
         ).read()
 
@@ -364,7 +1146,7 @@ def DataReader(
             pause=pause,
             session=session,
             interval="d",
-            output_type=output_type,
+            output_type=backend,
             max_workers=max_workers,
         ).read()
 
@@ -376,7 +1158,7 @@ def DataReader(
             retry_count=retry_count,
             pause=pause,
             session=session,
-            output_type=output_type,
+            output_type=backend,
             max_workers=max_workers,
         ).read()
 
@@ -387,12 +1169,12 @@ def DataReader(
             pause=pause,
             session=session,
             api_key=api_key,
-            output_type=output_type,
+            output_type=backend,
         ).read()
 
     elif data_source == "av-forex-daily":
         return AVTimeSeriesReader(
-            symbols=name,
+            symbols=_single_symbol(name, data_source),
             function="FX_DAILY",
             start=start,
             end=end,
@@ -400,12 +1182,12 @@ def DataReader(
             pause=pause,
             session=session,
             api_key=api_key,
-            output_type=output_type,
+            output_type=backend,
         ).read()
 
     elif data_source == "av-daily":
         return AVTimeSeriesReader(
-            symbols=name,
+            symbols=_single_symbol(name, data_source),
             function="TIME_SERIES_DAILY",
             start=start,
             end=end,
@@ -413,12 +1195,12 @@ def DataReader(
             pause=pause,
             session=session,
             api_key=api_key,
-            output_type=output_type,
+            output_type=backend,
         ).read()
 
     elif data_source == "av-daily-adjusted":
         return AVTimeSeriesReader(
-            symbols=name,
+            symbols=_single_symbol(name, data_source),
             function="TIME_SERIES_DAILY_ADJUSTED",
             start=start,
             end=end,
@@ -426,12 +1208,12 @@ def DataReader(
             pause=pause,
             session=session,
             api_key=api_key,
-            output_type=output_type,
+            output_type=backend,
         ).read()
 
     elif data_source == "av-weekly":
         return AVTimeSeriesReader(
-            symbols=name,
+            symbols=_single_symbol(name, data_source),
             function="TIME_SERIES_WEEKLY",
             start=start,
             end=end,
@@ -439,12 +1221,12 @@ def DataReader(
             pause=pause,
             session=session,
             api_key=api_key,
-            output_type=output_type,
+            output_type=backend,
         ).read()
 
     elif data_source == "av-weekly-adjusted":
         return AVTimeSeriesReader(
-            symbols=name,
+            symbols=_single_symbol(name, data_source),
             function="TIME_SERIES_WEEKLY_ADJUSTED",
             start=start,
             end=end,
@@ -452,12 +1234,12 @@ def DataReader(
             pause=pause,
             session=session,
             api_key=api_key,
-            output_type=output_type,
+            output_type=backend,
         ).read()
 
     elif data_source == "av-monthly":
         return AVTimeSeriesReader(
-            symbols=name,
+            symbols=_single_symbol(name, data_source),
             function="TIME_SERIES_MONTHLY",
             start=start,
             end=end,
@@ -465,12 +1247,12 @@ def DataReader(
             pause=pause,
             session=session,
             api_key=api_key,
-            output_type=output_type,
+            output_type=backend,
         ).read()
 
     elif data_source == "av-monthly-adjusted":
         return AVTimeSeriesReader(
-            symbols=name,
+            symbols=_single_symbol(name, data_source),
             function="TIME_SERIES_MONTHLY_ADJUSTED",
             start=start,
             end=end,
@@ -478,12 +1260,12 @@ def DataReader(
             pause=pause,
             session=session,
             api_key=api_key,
-            output_type=output_type,
+            output_type=backend,
         ).read()
 
     elif data_source == "av-intraday":
         return AVTimeSeriesReader(
-            symbols=name,
+            symbols=_single_symbol(name, data_source),
             function="TIME_SERIES_INTRADAY",
             start=start,
             end=end,
@@ -491,18 +1273,18 @@ def DataReader(
             pause=pause,
             session=session,
             api_key=api_key,
-            output_type=output_type,
+            output_type=backend,
         ).read()
 
     elif data_source == "econdb":
         return EcondbReader(
-            symbols=name,
+            symbols=_single_symbol(name, data_source),
             start=start,
             end=end,
             retry_count=retry_count,
             pause=pause,
             session=session,
-            output_type=output_type,
+            output_type=backend,
         ).read()
 
     elif data_source == "naver":
@@ -513,7 +1295,7 @@ def DataReader(
             retry_count=retry_count,
             pause=pause,
             session=session,
-            output_type=output_type,
+            output_type=backend,
             max_workers=max_workers,
         ).read()
 

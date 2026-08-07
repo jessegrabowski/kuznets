@@ -1,5 +1,6 @@
 import datetime as dt
 from importlib.metadata import PackageNotFoundError, version
+from typing import cast
 
 from pandas import Timestamp, to_datetime
 import requests
@@ -7,6 +8,7 @@ from requests.adapters import HTTPAdapter
 from urllib3.util import Retry
 
 from kuznets.compat import is_number
+from kuznets.typing import DateLike, Headers
 
 try:
     DEFAULT_USER_AGENT = f"kuznets/{version('kuznets')}"
@@ -27,8 +29,8 @@ class RemoteDataError(IOError):
 
 
 def _sanitize_dates(
-    start: str | int | dt.date | dt.datetime | Timestamp,
-    end: str | int | dt.date | dt.datetime | Timestamp,
+    start: DateLike | None,
+    end: DateLike | None,
 ) -> tuple[Timestamp, Timestamp]:
     """
     Return (timestamp_start, timestamp_end) tuple.
@@ -37,10 +39,10 @@ def _sanitize_dates(
 
     Parameters
     ----------
-    start : str, int, date, datetime, or Timestamp
-        Desired start date.
-    end : str, int, date, datetime, or Timestamp
-        Desired end date.
+    start : str, int, date, datetime, or Timestamp, optional
+        Desired start date. Default None.
+    end : str, int, date, datetime, or Timestamp, optional
+        Desired end date. Default None.
 
     Returns
     -------
@@ -51,33 +53,32 @@ def _sanitize_dates(
     """
     if is_number(start):
         # regard int as year
-        start = dt.datetime(start, 1, 1)
+        start = dt.datetime(cast(int, start), 1, 1)
+    elif start is None:
+        # default to 5 years before today
+        start = dt.date.today() - dt.timedelta(days=365 * 5)
 
     if is_number(end):
-        end = dt.datetime(end, 1, 1)
-
-    if start is None:
-        # default to 5 years before today
-        today = dt.date.today()
-        start = today - dt.timedelta(days=365 * 5)
-    if end is None:
+        end = dt.datetime(cast(int, end), 1, 1)
+    elif end is None:
         # default to today
         end = dt.date.today()
+
     try:
-        start = to_datetime(start)
-        end = to_datetime(end)
+        start_stamp = to_datetime(start)
+        end_stamp = to_datetime(end)
     except (TypeError, ValueError) as exc:
         raise ValueError("Invalid date format.") from exc
-    if start > end:
+    if start_stamp > end_stamp:
         raise ValueError("start must be an earlier date than end")
-    return start, end
+    return start_stamp, end_stamp
 
 
 def _init_session(
     session: requests.Session | None,
     retry_count: int = 3,
     pause: float = 0.1,
-    headers: dict | None = None,
+    headers: Headers | None = None,
 ) -> requests.Session:
     """
     Initialize a requests session with a retry strategy.

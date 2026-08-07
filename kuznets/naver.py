@@ -4,21 +4,25 @@ from xml.etree import ElementTree
 
 import numpy as np
 from pandas import DataFrame, to_datetime, to_numeric
+import requests
 
 from kuznets.base import _DailyBaseReader
+from kuznets.typing import DateLike, Symbols
 
 
 class NaverDailyReader(_DailyBaseReader):
     """Fetch daily historical data from Naver Finance."""
 
+    symbols: str
+
     def __init__(
         self,
-        symbols: str | None = None,
-        start=None,
-        end=None,
-        retry_count: int = 3,
-        pause: float = 0.1,
-        session=None,
+        symbols: Symbols | None = None,
+        start: DateLike | None = None,
+        end: DateLike | None = None,
+        retry_count: int | None = None,
+        pause: float | None = None,
+        session: requests.Session | None = None,
         adjust_price: bool = False,
         ret_index: bool = False,
         chunksize: int = 1,
@@ -39,10 +43,10 @@ class NaverDailyReader(_DailyBaseReader):
             Starting date.
         end : str, int, date, datetime, or Timestamp, optional
             Ending date.
-        retry_count : int, default 3
-            Number of times to retry query request.
-        pause : float, default 0.1
-            Time, in seconds, to pause between retries.
+        retry_count : int, optional
+            Number of times to retry query request. Falls back to the configured default.
+        pause : float, optional
+            Time, in seconds, to pause between retries. Falls back to the configured default.
         session : Session, optional
             ``requests.sessions.Session`` instance to be used.
         adjust_price : bool, default False
@@ -79,6 +83,7 @@ class NaverDailyReader(_DailyBaseReader):
             max_workers=max_workers,
         )
 
+        self._get_actions = get_actions
         self.headers = {
             "Sec-Fetch-Mode": "no-cors",
             "Referer": f"https://finance.naver.com/item/fchart.nhn?code={symbols}",
@@ -116,7 +121,7 @@ class NaverDailyReader(_DailyBaseReader):
         params = {"symbol": symbol, "timeframe": "day", "count": days, "requestType": 0}
         return params
 
-    def _read_one_data(self, url: str, params: dict) -> DataFrame:
+    def _read_one_data(self, url: str, params: dict | None) -> DataFrame:
         """Read one data from specified symbol.
 
         Parameters

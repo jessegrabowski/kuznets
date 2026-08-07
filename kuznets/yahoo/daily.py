@@ -1,9 +1,11 @@
 import time
 
 from pandas import DataFrame, Series, date_range, isnull, notnull, to_datetime
+import requests
 
 from kuznets.base import _DailyBaseReader
-from kuznets.yahoo.headers import DEFAULT_HEADERS
+from kuznets.typing import DateLike, Symbols
+from kuznets.yahoo.headers import DEFAULT_HEADERS, session_headers
 
 
 class YahooDailyReader(_DailyBaseReader):
@@ -11,21 +13,21 @@ class YahooDailyReader(_DailyBaseReader):
 
     def __init__(
         self,
-        symbols=None,
-        start=None,
-        end=None,
-        retry_count=3,
-        pause=0.1,
-        session=None,
-        adjust_price=False,
-        ret_index=False,
-        chunksize=1,
-        interval="d",
-        get_actions=False,
-        adjust_dividends=True,
-        output_type="pandas",
-        max_workers=None,
-    ):
+        symbols: Symbols | DataFrame | None = None,
+        start: DateLike | None = None,
+        end: DateLike | None = None,
+        retry_count: int | None = None,
+        pause: float | None = None,
+        session: requests.Session | None = None,
+        adjust_price: bool = False,
+        ret_index: bool = False,
+        chunksize: int = 1,
+        interval: str = "d",
+        get_actions: bool = False,
+        adjust_dividends: bool = True,
+        output_type: str = "pandas",
+        max_workers: int | None = None,
+    ) -> None:
         """
         Initialize the reader.
 
@@ -38,10 +40,11 @@ class YahooDailyReader(_DailyBaseReader):
             Starting date. Defaults to 5 years before current date.
         end : str, int, date, datetime, or Timestamp, optional
             Ending date.
-        retry_count : int, default 3
-            Number of times to retry query request.
-        pause : float, default 0.1
-            Time, in seconds, to pause between consecutive queries of chunks.
+        retry_count : int, optional
+            Number of times to retry query request. Falls back to the configured default.
+        pause : float, optional
+            Time, in seconds, to pause between consecutive queries of chunks. Falls back to the
+            configured default.
         session : Session, optional
             ``requests.sessions.Session`` instance to be used.
         adjust_price : bool, default False
@@ -77,10 +80,7 @@ class YahooDailyReader(_DailyBaseReader):
             max_workers=max_workers,
         )
 
-        if session is None:
-            self.headers = DEFAULT_HEADERS
-        else:
-            self.headers = session.headers
+        self.headers = DEFAULT_HEADERS if session is None else session_headers(session)
 
         self.adjust_price = adjust_price
         self.ret_index = ret_index
@@ -124,8 +124,9 @@ class YahooDailyReader(_DailyBaseReader):
             "symbol": symbol,
         }
 
-    def _read_one_data(self, url: str, params: dict) -> DataFrame:
+    def _read_one_data(self, url: str, params: dict | None) -> DataFrame:
         """Read price history for a single symbol from the Yahoo v8 chart API."""
+        params = dict(params or {})
         symbol = params.pop("symbol")
         resp = self._get_response(url.format(symbol), params=params, headers=self.headers)
 

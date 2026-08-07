@@ -7,9 +7,9 @@ from pandas import DataFrame, DatetimeIndex, MultiIndex, Series, concat, to_date
 from pandas.io.json import read_json
 from pandas.tseries.offsets import MonthEnd
 
-from kuznets._utils import RemoteDataError
 from kuznets.base import _OptionBaseReader
-from kuznets.yahoo._auth import fetch_crumb
+from kuznets.utils import RemoteDataError
+from kuznets.yahoo.auth import fetch_crumb
 from kuznets.yahoo.headers import DEFAULT_HEADERS
 
 # Items needed for options class
@@ -46,7 +46,7 @@ class Options(_OptionBaseReader):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.headers = DEFAULT_HEADERS
-        self._crumb = None
+        self._crumb: str | None = None
 
     def _get_crumb(self) -> str:
         """Return a cached Yahoo API crumb, fetching one on first use.

@@ -1,9 +1,9 @@
-from kuznets._output import validate_output_type
 from kuznets.io.util import (
     TIME_IDS,
     _load_json,
     _present_observations,
 )
+from kuznets.output import validate_output_type
 
 
 def read_jsdmx(path_or_buf, output_type: str = "pandas"):

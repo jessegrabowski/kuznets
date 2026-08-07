@@ -1,13 +1,14 @@
 import datetime as dt
 import re
 import tempfile
+from typing import Any
 from zipfile import ZipFile
 
 from pandas import DataFrame, PeriodIndex, read_csv, to_datetime
 
-from kuznets._output import detach_index, from_pandas
 from kuznets.base import _BaseReader
 from kuznets.compat import PYTHON_LT_3_10, StringIO
+from kuznets.output import detach_index, from_pandas
 
 _URL = "http://mba.tuck.dartmouth.edu/pages/faculty/ken.french/"
 _URL_PREFIX = "ftp/"
@@ -49,6 +50,8 @@ class FamaFrenchReader(_BaseReader):
     pandas.PeriodIndex, otherwise it's a pandas.DatetimeIndex.
     """
 
+    symbols: str
+
     @property
     def url(self) -> str:
         """API URL."""
@@ -78,7 +81,7 @@ class FamaFrenchReader(_BaseReader):
                     data = zf.open(zf.namelist()[0]).read().decode(encoding="cp1252")
         return data
 
-    def _read_one_data(self, url: str, params) -> dict[int | str, DataFrame]:
+    def _read_one_data(self, url: str, params) -> dict[int | str, Any]:
         params = {
             "index_col": 0,
         }
@@ -111,7 +114,8 @@ class FamaFrenchReader(_BaseReader):
             else:
                 tables.append(chunk)
 
-        datasets, table_desc = {}, []
+        datasets: dict[int | str, Any] = {}
+        table_desc: list[str] = []
         for i, src in enumerate(tables):
             match = re.search(r"^\s*,", src, re.M)  # the table starts there
             start = 0 if not match else match.start()
@@ -142,7 +146,7 @@ class FamaFrenchReader(_BaseReader):
 
         return datasets
 
-    def _present_tidy(self, datasets: dict) -> dict:
+    def _present_tidy(self, datasets: dict[int | str, Any]) -> dict[int | str, Any]:
         """Convert each table to the requested backend; the ``'DESCR'`` string entry stays as-is.
 
         Monthly and annual tables carry period-start timestamps in their ``Date`` column; both
@@ -177,7 +181,11 @@ class FamaFrenchReader(_BaseReader):
         response = self.session.get(_URL + "data_library.html")
         root = document_fromstring(response.content)
 
-        datasets = [e.attrib["href"] for e in root.findall(".//a") if "href" in e.attrib]
-        datasets = [ds for ds in datasets if ds.startswith(_URL_PREFIX) and ds.endswith(_URL_SUFFIX)]
+        hrefs = (e.attrib["href"] for e in root.findall(".//a") if "href" in e.attrib)
+        datasets = [
+            href
+            for href in hrefs
+            if isinstance(href, str) and href.startswith(_URL_PREFIX) and href.endswith(_URL_SUFFIX)
+        ]
 
         return [x[len(_URL_PREFIX) : -len(_URL_SUFFIX)] for x in datasets]

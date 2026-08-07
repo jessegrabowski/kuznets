@@ -72,8 +72,8 @@ frames instead -- dates and identifiers are plain columns, and there is one row 
 
 * Single-symbol daily data carries a datetime ``Date`` column plus the price columns.
 * Multi-symbol daily data is long: one row per ``(Date, Symbol)`` with plain OHLCV columns, sorted
-  by both. Symbols that failed to download appear as all-null rows (a ``SymbolWarning`` is issued
-  either way).
+  by both. Symbols that failed to download appear as all-null rows (a
+  :class:`~kuznets.utils.SymbolWarning` is issued either way).
 * OECD and Eurostat return one row per observation: a display-labeled column per SDMX dimension
   plus a float64 ``value``. Period codes -- annual, monthly, daily, quarterly, semester, and ISO
   week -- parse to period-start timestamps identically on every backend; codes the parser does not

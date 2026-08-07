@@ -3,8 +3,8 @@ import time
 
 from pandas import DataFrame, read_csv
 
-from kuznets._utils import RemoteDataError
 from kuznets.compat import StringIO
+from kuznets.utils import RemoteDataError
 
 _NASDAQ_TICKER_LOC = "/SymbolDirectory/nasdaqtraded.txt"
 _NASDAQ_FTP_SERVER = "ftp.nasdaqtrader.com"
@@ -51,7 +51,7 @@ def _download_nasdaq_symbols(timeout: float) -> DataFrame:
     except all_errors as err:
         raise RemoteDataError(f"Error connecting to {_NASDAQ_FTP_SERVER!r}: {err}") from err
 
-    lines = []
+    lines: list[str] = []
     try:
         ftp_session.retrlines("RETR " + _NASDAQ_TICKER_LOC, lines.append)
     except all_errors as err:
@@ -134,4 +134,5 @@ def get_nasdaq_symbols(
                 else:
                     time.sleep(pause)
 
+    assert _ticker_cache is not None
     return _ticker_cache

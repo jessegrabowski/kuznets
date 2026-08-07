@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 import tomllib
+from typing import Any, Literal, overload
 import warnings
 
 # Map a reader's short source name to the environment variable holding its API key.
@@ -53,7 +54,7 @@ class _Options:
 options = _Options()
 
 _UNLOADED = object()
-_config_cache = _UNLOADED
+_config_cache: Any = _UNLOADED
 
 
 def config_path() -> Path:
@@ -109,6 +110,10 @@ def reload_config() -> dict:
     return _file_config()
 
 
+@overload
+def get_api_key(source: str, api_key: str | None = ..., required: Literal[True] = ...) -> str: ...
+@overload
+def get_api_key(source: str, api_key: str | None = ..., *, required: Literal[False]) -> str | None: ...
 def get_api_key(source: str, api_key: str | None = None, required: bool = True) -> str | None:
     """Resolve an API key for *source* across the configuration layers.
 

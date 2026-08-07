@@ -42,6 +42,7 @@ Contents:
    remote_data.rst
    configuration.rst
    cache.rst
+   typing.rst
    see-also.rst
    readers/index
 

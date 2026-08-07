@@ -21,14 +21,11 @@ class YahooActionReader(YahooDailyReader):
         data = super()._read_core()
         if isinstance(data, dict):
             data = self._to_panel(data)
-        actions = {}
-        if isinstance(data.columns, MultiIndex):
-            data = data.swaplevel(0, 1, axis=1)
-            for s in data.columns.levels[0]:
-                actions[s] = _get_one_action(data[s])
-            return actions
-        else:
+        columns = data.columns
+        if not isinstance(columns, MultiIndex):
             return _get_one_action(data)
+        data = data.swaplevel(0, 1, axis=1)
+        return {symbol: _get_one_action(data[symbol]) for symbol in columns.levels[1]}
 
     def _present_pandas(self, payload):
         """The action payload (frame, or dict keyed by symbol) is already the pandas output."""
@@ -68,26 +65,33 @@ def _get_one_action(data: DataFrame) -> DataFrame:
 class YahooDivReader(YahooActionReader):
     """Get historical dividend data from Yahoo Finance."""
 
-    def _read_core(self) -> DataFrame:
+    def _read_core(self) -> DataFrame | dict[str, DataFrame]:
         """Fetch dividend data only.
 
         Returns
         -------
-        df : DataFrame
+        DataFrame or dict of str to DataFrame
+            If multiple symbols, returns a dict keyed by symbol.
         """
-        data = super()._read_core()
-        return data[data["action"] == "DIVIDEND"]
+        return _keep_action(super()._read_core(), "DIVIDEND")
 
 
 class YahooSplitReader(YahooActionReader):
     """Get historical stock split data from Yahoo Finance."""
 
-    def _read_core(self) -> DataFrame:
+    def _read_core(self) -> DataFrame | dict[str, DataFrame]:
         """Fetch split data only.
 
         Returns
         -------
-        df : DataFrame
+        DataFrame or dict of str to DataFrame
+            If multiple symbols, returns a dict keyed by symbol.
         """
-        data = super()._read_core()
-        return data[data["action"] == "SPLIT"]
+        return _keep_action(super()._read_core(), "SPLIT")
+
+
+def _keep_action(data: DataFrame | dict[str, DataFrame], action: str) -> DataFrame | dict[str, DataFrame]:
+    """Keep only the rows of *action*, per symbol when the payload covers several."""
+    if isinstance(data, dict):
+        return {symbol: frame[frame["action"] == action] for symbol, frame in data.items()}
+    return data[data["action"] == action]

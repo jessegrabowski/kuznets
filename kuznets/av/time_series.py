@@ -8,6 +8,8 @@ from kuznets.av import AlphaVantage
 class AVTimeSeriesReader(AlphaVantage):
     """Get data from Alpha Vantage Stock Time Series endpoints."""
 
+    symbols: str
+
     _FUNC_TO_DATA_KEY = {
         "TIME_SERIES_DAILY": "Time Series (Daily)",
         "TIME_SERIES_DAILY_ADJUSTED": "Time Series (Daily)",
@@ -25,8 +27,8 @@ class AVTimeSeriesReader(AlphaVantage):
         function: str = "TIME_SERIES_DAILY",
         start=None,
         end=None,
-        retry_count: int = 3,
-        pause: float = 0.1,
+        retry_count: int | None = None,
+        pause: float | None = None,
         session=None,
         chunksize: int = 25,
         api_key: str | None = None,
@@ -45,10 +47,10 @@ class AVTimeSeriesReader(AlphaVantage):
             Starting date. Defaults to 20 years before current date (3 days for intraday).
         end : str, int, date, datetime, or Timestamp, optional
             Ending date.
-        retry_count : int, default 3
-            Number of times to retry query request.
-        pause : float, default 0.1
-            Time, in seconds, to pause between consecutive queries of chunks.
+        retry_count : int, optional
+            Number of times to retry query request. Falls back to the configured default.
+        pause : float, optional
+            Time, in seconds, to pause between consecutive queries of chunks. Falls back to the configured default.
         session : Session, optional
             ``requests.sessions.Session`` instance to be used.
         chunksize : int, default 25

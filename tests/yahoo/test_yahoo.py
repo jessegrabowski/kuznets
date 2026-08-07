@@ -5,9 +5,9 @@ import pytest
 import requests
 
 from kuznets import data as web
-from kuznets._utils import RemoteDataError, SymbolWarning
 from kuznets.data import YahooDailyReader
-from kuznets.yahoo._auth import _CRUMB_URL
+from kuznets.utils import RemoteDataError, SymbolWarning
+from kuznets.yahoo.auth import _CRUMB_URL
 from kuznets.yahoo.fundamentals import BALANCE_SHEET_SERIES, YahooFundamentalsReader
 from kuznets.yahoo.fx import YahooFXReader
 from tests._backends import BACKENDS, as_narwhals, skip_unless_installed
@@ -196,6 +196,19 @@ class TestYahooOffline:
             YahooFundamentalsReader("AAPL", freq="monthly")
         with pytest.raises(ValueError, match="statement"):
             YahooFundamentalsReader("AAPL", statement="10-K")
+
+    def test_dividends_multi_symbol(self, monkeypatch, datapath):
+        # The multi-symbol payload is a dict of per-symbol frames, so the action filter has to be
+        # applied to each frame rather than to the dict.
+        patch_session_get(
+            monkeypatch,
+            from_fixtures({**_AUTH, "v8/finance/chart/": datapath("data", "yahoo", "chart_aapl_2020.json")}),
+        )
+        per_symbol = web.DataReader(["AAPL", "MSFT"], "yahoo-dividends", start=_CHART_START, end=_CHART_END)
+
+        assert set(per_symbol) == {"AAPL", "MSFT"}
+        for frame in per_symbol.values():
+            assert set(frame["action"]) == {"DIVIDEND"}
 
 
 @pytest.mark.network

@@ -1,8 +1,8 @@
 from pandas import DataFrame, DatetimeIndex
 
-from kuznets._output import filter_date_range
 from kuznets.base import _BaseReader
 from kuznets.io import read_jstat
+from kuznets.output import filter_date_range
 
 
 class EurostatReader(_BaseReader):

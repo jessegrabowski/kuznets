@@ -1,6 +1,4 @@
-"""
-Default header
-"""
+import requests
 
 DEFAULT_HEADERS = {
     "Connection": "keep-alive",
@@ -12,3 +10,9 @@ DEFAULT_HEADERS = {
         "(KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
     ),
 }
+
+
+def session_headers(session: requests.Session) -> dict[str, str]:
+    """Return a session's headers as a plain string mapping."""
+    # requests allows bytes header values; dropping them beats stringifying them into b'...'.
+    return {key: value for key, value in session.headers.items() if isinstance(value, str)}

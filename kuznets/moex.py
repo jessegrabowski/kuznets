@@ -2,15 +2,29 @@ import datetime as dt
 from io import StringIO
 
 import pandas as pd
+import requests
 
 from kuznets.base import _DailyBaseReader
-from kuznets.compat import is_list_like
+from kuznets.typing import DateLike, Symbols
 
 
 class MoexReader(_DailyBaseReader):
     """Get historical stock prices from the Moscow Exchange (MOEX)."""
 
-    def __init__(self, *args, **kwargs):
+    symbols: list[str]
+
+    def __init__(
+        self,
+        symbols: Symbols | pd.DataFrame | None = None,
+        start: DateLike | None = None,
+        end: DateLike | None = None,
+        retry_count: int | None = None,
+        pause: float | None = None,
+        session: requests.Session | None = None,
+        chunksize: int = 25,
+        output_type: str = "pandas",
+        max_workers: int | None = None,
+    ) -> None:
         """
         Initialize the reader.
 
@@ -23,31 +37,53 @@ class MoexReader(_DailyBaseReader):
             Starting date. Defaults to 20 years before current date.
         end : str, int, date, datetime, or Timestamp, optional
             Ending date.
-        retry_count : int, default 3
-            Number of times to retry query request.
-        pause : float, default 0.1
-            Time, in seconds, to pause between consecutive queries of chunks.
-        chunksize : int, default 25
-            Number of symbols to download consecutively before initiating pause.
+        retry_count : int, optional
+            Number of times to retry query request. Falls back to the configured default.
+        pause : float, optional
+            Time, in seconds, to pause between consecutive queries of chunks. Falls back to the
+            configured default.
         session : Session, optional
             ``requests.sessions.Session`` instance to be used.
+        chunksize : int, default 25
+            Number of symbols to download consecutively before initiating pause.
+        output_type : str, optional
+            Backend of the returned data: 'pandas', 'polars', 'pyarrow' (alias 'arrow'), or 'dask'.
+            Backends other than pandas must be installed separately. Default 'pandas'.
+        max_workers : int, optional
+            Number of concurrent requests for multi-symbol reads. Keep it modest for rate-limited
+            hosts, and pass 1 when supplying a session that is not thread-safe. Default 5.
 
         Notes
         -----
         To avoid being penalized by MOEX servers, pauses more than 0.1s between downloading 'chunks'
         of symbols can be specified.
         """
-        super().__init__(*args, **kwargs)
-        self.start = self.start.date()
+        super().__init__(
+            symbols=symbols,
+            start=start,
+            end=end,
+            retry_count=retry_count,
+            pause=pause,
+            session=session,
+            chunksize=chunksize,
+            output_type=output_type,
+            max_workers=max_workers,
+        )
+        # MOEX paginates by whole days and its rows carry bare dates, so the bounds are compared
+        # as dates; end_dt keeps the timestamp for the query parameter.
         self.end_dt = self.end
-        self.end = self.end.date()
+        self.start_date = self.start.date()
+        self.end_date = self.end.date()
 
-        if isinstance(self.symbols, pd.DataFrame):
-            self.symbols = self.symbols.index.tolist()
-        elif not is_list_like(self.symbols):
-            self.symbols = [self.symbols]
+        requested = symbols
+        if isinstance(requested, pd.DataFrame):
+            self.symbols = requested.index.tolist()
+        elif isinstance(requested, str):
+            self.symbols = [requested]
+        else:
+            self.symbols = list(requested or [])
 
-        self.__markets_n_engines = {}  # dicts for tuples of engines and markets
+        self.__markets_n_engines: dict[str, list[tuple[str, str]]] = {}
 
     __url_metadata = "https://iss.moex.com/iss/securities/{symbol}.csv"
     __url_data = "https://iss.moex.com/iss/history/engines/{engine}/markets/{market}/securities/{symbol}.csv"
@@ -150,7 +186,7 @@ class MoexReader(_DailyBaseReader):
             dfs = []  # an array of pandas dataframes per symbol to concatenate
 
             for i in range(len(urls)):
-                out_list = []
+                out_list: list[str] = []
                 date_column = None
 
                 while True:  # read in a loop with small date intervals
@@ -162,10 +198,10 @@ class MoexReader(_DailyBaseReader):
                         start_str = out_list[-1].split(";", 4)[date_column]
                         start = dt.datetime.strptime(start_str, "%Y-%m-%d").date()
                     else:
-                        start_str = self.start.strftime("%Y-%m-%d")
-                        start = self.start
+                        start_str = self.start_date.strftime("%Y-%m-%d")
+                        start = self.start_date
 
-                    if start > self.end or start > dt.date.today():
+                    if start > self.end_date or start > dt.date.today():
                         break
 
                     params = self._get_params(start_str)

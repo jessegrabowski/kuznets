@@ -1,9 +1,9 @@
 from pandas import DataFrame
 
-from kuznets._output import make_frame
-from kuznets._utils import RemoteDataError
 from kuznets.base import _BaseReader
-from kuznets.yahoo._auth import fetch_crumb
+from kuznets.output import make_frame
+from kuznets.utils import RemoteDataError
+from kuznets.yahoo.auth import fetch_crumb
 from kuznets.yahoo.headers import DEFAULT_HEADERS
 
 _DEFAULT_PARAMS = {
@@ -16,13 +16,15 @@ _DEFAULT_PARAMS = {
 class YahooQuotesReader(_BaseReader):
     """Get current Yahoo Finance quote for one or more symbols."""
 
+    symbols: str | list[str]
+
     def __init__(
         self,
         symbols: str | list[str] | None = None,
         start=None,
         end=None,
-        retry_count: int = 3,
-        pause: float = 0.1,
+        retry_count: int | None = None,
+        pause: float | None = None,
         session=None,
         output_type: str = "pandas",
     ) -> None:

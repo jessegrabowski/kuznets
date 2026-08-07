@@ -3,7 +3,7 @@ import sys
 from urllib.error import HTTPError
 
 from pandas.api.types import is_list_like, is_number
-from pandas.io import common as com
+import pandas.io.common as com
 from pandas.testing import assert_frame_equal
 
 __all__ = [

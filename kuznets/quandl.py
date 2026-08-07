@@ -1,27 +1,32 @@
 import re
 
 from pandas import DataFrame
+import requests
 
 from kuznets.base import _DailyBaseReader
 from kuznets.config import get_api_key
+from kuznets.typing import DateLike, Symbols
 
 
 class QuandlReader(_DailyBaseReader):
     """Get historical stock prices from Quandl."""
 
+    symbols: Symbols
+
     _BASE_URL = "https://www.quandl.com/api/v3/datasets/"
 
     def __init__(
         self,
-        symbols: str,
-        start=None,
-        end=None,
+        symbols: Symbols,
+        start: DateLike | None = None,
+        end: DateLike | None = None,
         retry_count: int | None = None,
         pause: float | None = None,
-        session=None,
+        session: requests.Session | None = None,
         chunksize: int = 25,
         api_key: str | None = None,
         output_type: str = "pandas",
+        max_workers: int | None = None,
     ) -> None:
         """
         Initialize the reader.
@@ -58,14 +63,27 @@ class QuandlReader(_DailyBaseReader):
         output_type : str, optional
             Backend of the returned data: 'pandas', 'polars', 'pyarrow' (alias 'arrow'), or 'dask'.
             Backends other than pandas must be installed separately. Default 'pandas'.
+        max_workers : int, optional
+            Number of concurrent requests for multi-symbol reads. Keep it modest for rate-limited
+            hosts, and pass 1 when supplying a session that is not thread-safe. Default 5.
         """
-        super().__init__(symbols, start, end, retry_count, pause, session, chunksize, output_type=output_type)
+        super().__init__(
+            symbols,
+            start,
+            end,
+            retry_count,
+            pause,
+            session,
+            chunksize,
+            output_type=output_type,
+            max_workers=max_workers,
+        )
         self.api_key = get_api_key("quandl", api_key)
 
     @property
     def url(self) -> str:
         """API URL."""
-        symbol = self.symbols if isinstance(self.symbols, str) else self.symbols[0]
+        symbol = self.symbols if isinstance(self.symbols, str) else list(self.symbols)[0]
         mm = self._fullmatch(r"([A-Z0-9]+)(([/\.])([A-Z0-9_]+))?", symbol)
         assert mm, f"Symbol '{symbol}' must conform to Quandl convention 'DB/SYM'"
         datasetname = "WIKI"

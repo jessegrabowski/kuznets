@@ -1,11 +1,11 @@
 import numpy as np
 
-from kuznets._output import validate_output_type
 from kuznets.io.util import (
     TIME_IDS,
     _load_json,
     _present_observations,
 )
+from kuznets.output import validate_output_type
 
 
 def read_jstat(path_or_buf, output_type: str = "pandas"):
@@ -35,7 +35,7 @@ def read_jstat(path_or_buf, output_type: str = "pandas"):
     for dim_id in dim_ids:
         category = data["dimension"][dim_id]["category"]
         index = category["index"]
-        codes = sorted(index, key=index.get) if isinstance(index, dict) else list(index)
+        codes = sorted(index, key=lambda code: index[code]) if isinstance(index, dict) else list(index)
         cat_codes.append(codes)
         label_maps.append(category.get("label", {}))
         dim_names.append(data["dimension"][dim_id].get("label", dim_id))
@@ -48,7 +48,7 @@ def read_jstat(path_or_buf, output_type: str = "pandas"):
             continue
         # JSON-stat values are keyed by the row-major offset into the cube described by `size`.
         coords = np.unravel_index(int(flat), sizes)
-        codes = tuple(dim_codes[c] for dim_codes, c in zip(cat_codes, coords, strict=True))
-        records.append((codes, value))
+        observation = tuple(dim_codes[c] for dim_codes, c in zip(cat_codes, coords, strict=True))
+        records.append((observation, value))
 
     return _present_observations(records, dim_names, label_maps, time_pos, output_type)

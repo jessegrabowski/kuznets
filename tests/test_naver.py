@@ -31,6 +31,12 @@ class TestNaverOffline:
         assert all(np.issubdtype(dtype, np.number) for dtype in df.dtypes)
         assert df["Close"].loc["2019-10-01"] == 49150
 
+    def test_get_actions_flag_is_stored(self):
+        # The constructor accepts and documents ``get_actions``; the property has to be able to
+        # read it back rather than raising AttributeError.
+        assert NaverDailyReader(symbols="005930").get_actions is False
+        assert NaverDailyReader(symbols="005930", get_actions=True).get_actions is True
+
     def test_bulk_fetch_not_implemented(self):
         with pytest.raises(NotImplementedError):
             DataReader(["005930", "000660"])

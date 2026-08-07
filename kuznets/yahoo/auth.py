@@ -1,10 +1,12 @@
 import requests
 
+from kuznets.typing import Headers
+
 _CRUMB_URL = "https://query1.finance.yahoo.com/v1/test/getcrumb"
 _COOKIE_URL = "https://fc.yahoo.com"
 
 
-def fetch_crumb(session: requests.Session, headers: dict, timeout: float) -> str:
+def fetch_crumb(session: requests.Session, headers: Headers | None, timeout: float) -> str:
     """Prime the session cookie and return a Yahoo API crumb.
 
     The v7 quote and options endpoints reject requests without a cookie/crumb pair. Fetch a cookie
@@ -14,7 +16,7 @@ def fetch_crumb(session: requests.Session, headers: dict, timeout: float) -> str
     ----------
     session : Session
         ``requests.sessions.Session`` whose cookie jar is primed in place.
-    headers : dict
+    headers : dict, optional
         Request headers (a browser ``User-Agent`` is required).
     timeout : float
         Per-request timeout, in seconds.
