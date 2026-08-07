@@ -716,9 +716,11 @@ class WorldBankReader(_BaseReader):
             individual countries (e.g. ``'US'``, ``'CA'`` or ``'USA'``, ``'CAN'``). The codes can be
             mixed.
         start : str, int, date, datetime, or Timestamp, optional
-            First year of the data series. Month and day are ignored.
+            Start of the data series. Month and day are used when ``freq`` is 'M' or 'Q', and
+            ignored otherwise.
         end : str, int, date, datetime, or Timestamp, optional
-            Last year of the data series (inclusive). Month and day are ignored.
+            End of the data series, inclusive. Month and day are used when ``freq`` is 'M' or 'Q',
+            and ignored otherwise.
         freq : str, optional
             Frequency or periodicity of the data (``'M'`` for monthly, ``'Q'`` for quarterly,
             ``'A'`` for annual). ``None`` defaults to annual.

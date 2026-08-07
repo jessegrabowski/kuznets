@@ -87,6 +87,19 @@ class TestWorldBankOffline:
         with pytest.warns(UserWarning, match="Non-standard ISO country codes: ZZ"):
             WorldBankReader(symbols="SP.POP.TOTL", countries=["USA", "ZZ"], errors="warn")
 
+    @pytest.mark.parametrize(
+        ("freq", "expected"),
+        [(None, "2020:2021"), ("M", "2020M07:2021M03"), ("Q", "2020Q3:2021Q1")],
+        ids=["annual", "monthly", "quarterly"],
+    )
+    def test_requested_window_honors_frequency(self, freq, expected):
+        # Month and day are only meaningful for the monthly and quarterly windows.
+        reader = WorldBankReader(
+            symbols="NY.GDP.PCAP.CD", countries="USA", start="2020-07-15", end="2021-03-15", freq=freq
+        )
+
+        assert reader.params["date"] == expected
+
     def test_bad_indicator_raises(self, monkeypatch, datapath):
         patch_session_get(
             monkeypatch,
