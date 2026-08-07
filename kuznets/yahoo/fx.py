@@ -49,7 +49,7 @@ class YahooFXReader(YahooDailyReader):
         try:
             # If a single symbol, (e.g., 'GOOG')
             if isinstance(self.symbols, str | int):
-                df = self._read_one_data(self.symbols)
+                df = self._read_one_symbol(self.symbols)
 
             # Or multiple symbols, (e.g., ['GOOG', 'AAPL', 'MSFT'])
             elif isinstance(self.symbols, DataFrame):
@@ -67,7 +67,7 @@ class YahooFXReader(YahooDailyReader):
         finally:
             self.close()
 
-    def _read_one_data(self, symbol: str) -> DataFrame:
+    def _read_one_symbol(self, symbol: str) -> DataFrame:
         """Read data for a single currency pair.
 
         Parameters
@@ -88,12 +88,12 @@ class YahooFXReader(YahooDailyReader):
         data = jsn["chart"]["result"][0]
         df = DataFrame(data["indicators"]["quote"][0])
         df.insert(0, "date", to_datetime(Series(data["timestamp"]), unit="s").dt.date)
-        df.columns = map(str.capitalize, df.columns)
+        df.columns = [str(column).capitalize() for column in df.columns]
         return df
 
     def _dl_mult_symbols(self, symbols):
         def fetch_one(sym):
-            df = self._read_one_data(sym)
+            df = self._read_one_symbol(sym)
             df["PairCode"] = sym
             return df
 

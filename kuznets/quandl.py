@@ -1,24 +1,28 @@
 import re
 
 from pandas import DataFrame
+import requests
 
 from kuznets.base import _DailyBaseReader
 from kuznets.config import get_api_key
+from kuznets.typing import DateLike, Symbols
 
 
 class QuandlReader(_DailyBaseReader):
     """Get historical stock prices from Quandl."""
 
+    symbols: Symbols
+
     _BASE_URL = "https://www.quandl.com/api/v3/datasets/"
 
     def __init__(
         self,
-        symbols: str,
-        start=None,
-        end=None,
+        symbols: Symbols,
+        start: DateLike | None = None,
+        end: DateLike | None = None,
         retry_count: int | None = None,
         pause: float | None = None,
-        session=None,
+        session: requests.Session | None = None,
         chunksize: int = 25,
         api_key: str | None = None,
         output_type: str = "pandas",
@@ -79,7 +83,7 @@ class QuandlReader(_DailyBaseReader):
     @property
     def url(self) -> str:
         """API URL."""
-        symbol = self.symbols if isinstance(self.symbols, str) else self.symbols[0]
+        symbol = self.symbols if isinstance(self.symbols, str) else list(self.symbols)[0]
         mm = self._fullmatch(r"([A-Z0-9]+)(([/\.])([A-Z0-9_]+))?", symbol)
         assert mm, f"Symbol '{symbol}' must conform to Quandl convention 'DB/SYM'"
         datasetname = "WIKI"

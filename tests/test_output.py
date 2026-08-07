@@ -334,3 +334,14 @@ class TestConcatFrames:
     def test_empty_sequence_raises(self):
         with pytest.raises(ValueError, match="at least one frame"):
             concat_frames([])
+
+
+def test_detach_index_round_trips_non_string_name():
+    # The returned name must match the column the index actually became, or attach_index cannot
+    # find it.
+    df = pd.DataFrame({"v": [1.0, 2.0]}, index=pd.Index([10, 20], name=5))
+    tidy, names = detach_index(df)
+
+    assert names == ["5"]
+    assert list(tidy.columns) == ["5", "v"]
+    assert attach_index(tidy, names).index.name == "5"

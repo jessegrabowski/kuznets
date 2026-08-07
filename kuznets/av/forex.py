@@ -9,6 +9,8 @@ _PAIR_FORMAT_ERROR = "Please input a currency pair formatted 'FROM/TO' or a list
 class AVForexReader(AlphaVantage):
     """Get Alpha Vantage Foreign Exchange (FX) exchange rate data."""
 
+    symbols: str | list[str]
+
     def __init__(
         self,
         symbols: str | list[str] | None = None,
@@ -48,9 +50,9 @@ class AVForexReader(AlphaVantage):
             api_key=api_key,
             output_type=output_type,
         )
-        self.from_curr = {}
-        self.to_curr = {}
-        self.optional_params = {}
+        self.from_curr: dict[str, str] = {}
+        self.to_curr: dict[str, str] = {}
+        self.optional_params: dict[str, str] = {}
         if symbols is None:
             raise ValueError(_PAIR_FORMAT_ERROR)
         self.symbols = [symbols] if isinstance(symbols, str) else list(symbols)
@@ -99,7 +101,7 @@ class AVForexReader(AlphaVantage):
             }
             data = super()._read_core()
             result.append(data)
-        df = pd.concat(result, axis=1)
+        df: pd.DataFrame = pd.concat(result, axis=1)
         df.columns = self.symbols
         return df
 

@@ -7,6 +7,8 @@ from kuznets.base import _BaseReader
 class TSPReader(_BaseReader):
     """Get historical TSP (Thrift Savings Plan) fund prices."""
 
+    symbols: list[str]
+
     all_symbols = frozenset(
         (
             "L Income",

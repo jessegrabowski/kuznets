@@ -4,21 +4,25 @@ from xml.etree import ElementTree
 
 import numpy as np
 from pandas import DataFrame, to_datetime, to_numeric
+import requests
 
 from kuznets.base import _DailyBaseReader
+from kuznets.typing import DateLike, Symbols
 
 
 class NaverDailyReader(_DailyBaseReader):
     """Fetch daily historical data from Naver Finance."""
 
+    symbols: str
+
     def __init__(
         self,
-        symbols: str | None = None,
-        start=None,
-        end=None,
+        symbols: Symbols | None = None,
+        start: DateLike | None = None,
+        end: DateLike | None = None,
         retry_count: int | None = None,
         pause: float | None = None,
-        session=None,
+        session: requests.Session | None = None,
         adjust_price: bool = False,
         ret_index: bool = False,
         chunksize: int = 1,
@@ -117,7 +121,7 @@ class NaverDailyReader(_DailyBaseReader):
         params = {"symbol": symbol, "timeframe": "day", "count": days, "requestType": 0}
         return params
 
-    def _read_one_data(self, url: str, params: dict) -> DataFrame:
+    def _read_one_data(self, url: str, params: dict | None) -> DataFrame:
         """Read one data from specified symbol.
 
         Parameters

@@ -1,8 +1,10 @@
 from collections.abc import Sequence
 import datetime
 import importlib.util
+from typing import Literal
 
 import narwhals.stable.v2 as nw
+from narwhals.stable.v2 import Implementation
 from narwhals.stable.v2.typing import IntoFrame
 import pandas as pd
 
@@ -16,6 +18,15 @@ _OPTIONAL_BACKENDS = {
     "dask": ("dask.dataframe", "dask"),
 }
 _ALIASES = {"arrow": "pyarrow"}
+
+# narwhals builds frames directly for these backends; 'dask' is built in pandas and made lazy.
+type _EagerBackend = Literal[Implementation.PANDAS, Implementation.POLARS, Implementation.PYARROW]
+
+_EAGER_BACKENDS: dict[str, _EagerBackend] = {
+    PANDAS: Implementation.PANDAS,
+    "polars": Implementation.POLARS,
+    "pyarrow": Implementation.PYARROW,
+}
 
 
 def validate_output_type(output_type: str) -> str:
@@ -91,13 +102,15 @@ def detach_index(df: pd.DataFrame) -> tuple[pd.DataFrame, list[str]]:
     """
     index = df.index
     if isinstance(index, pd.MultiIndex):
-        names = [name if name is not None else f"level_{position}" for position, name in enumerate(index.names)]
+        names = [str(name) if name is not None else f"level_{position}" for position, name in enumerate(index.names)]
         index = index.set_names(names)
     else:
         if index.name is None:
             fallback = "Date" if isinstance(index, pd.DatetimeIndex | pd.PeriodIndex) else "index"
             index = index.rename(fallback)
-        names = [index.name]
+        elif not isinstance(index.name, str):
+            index = index.rename(str(index.name))
+        names = [str(index.name)]
     return df.set_axis(index, axis=0).reset_index(), names
 
 
@@ -196,7 +209,7 @@ def make_frame(records: list[dict] | dict[str, list], output_type: str, schema: 
     if isinstance(records, dict):
         columns = records
     else:
-        keys = {}
+        keys: dict[str, None] = {}
         for record in records:
             for key in record:
                 keys[key] = None
@@ -205,8 +218,8 @@ def make_frame(records: list[dict] | dict[str, list], output_type: str, schema: 
         columns = {name: [] for name in schema}
     if output_type == "dask":
         # narwhals from_dict is eager-only; build in pandas and hand off lazily.
-        return nw.from_dict(columns, schema=schema, backend=PANDAS).lazy(backend="dask").to_native()
-    return nw.from_dict(columns, schema=schema, backend=output_type).to_native()
+        return nw.from_dict(columns, schema=schema, backend=Implementation.PANDAS).lazy(backend="dask").to_native()
+    return nw.from_dict(columns, schema=schema, backend=_EAGER_BACKENDS[output_type]).to_native()
 
 
 def observation_schema(dimension_names) -> dict:
@@ -334,4 +347,4 @@ def concat_frames(frames: Sequence[IntoFrame]):
     """
     if not frames:
         raise ValueError("concat_frames requires at least one frame")
-    return nw.concat([nw.from_native(frame) for frame in frames], how="vertical").to_native()
+    return nw.concat([nw.from_native(frame, eager_only=True) for frame in frames], how="vertical").to_native()

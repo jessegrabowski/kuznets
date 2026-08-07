@@ -8,6 +8,8 @@ from kuznets.av import AlphaVantage
 class AVTimeSeriesReader(AlphaVantage):
     """Get data from Alpha Vantage Stock Time Series endpoints."""
 
+    symbols: str
+
     _FUNC_TO_DATA_KEY = {
         "TIME_SERIES_DAILY": "Time Series (Daily)",
         "TIME_SERIES_DAILY_ADJUSTED": "Time Series (Daily)",

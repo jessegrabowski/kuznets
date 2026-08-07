@@ -46,7 +46,7 @@ class Options(_OptionBaseReader):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.headers = DEFAULT_HEADERS
-        self._crumb = None
+        self._crumb: str | None = None
 
     def _get_crumb(self) -> str:
         """Return a cached Yahoo API crumb, fetching one on first use.

@@ -16,6 +16,8 @@ _DEFAULT_PARAMS = {
 class YahooQuotesReader(_BaseReader):
     """Get current Yahoo Finance quote for one or more symbols."""
 
+    symbols: str | list[str]
+
     def __init__(
         self,
         symbols: str | list[str] | None = None,

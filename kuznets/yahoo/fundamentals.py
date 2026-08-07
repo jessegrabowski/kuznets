@@ -1,3 +1,4 @@
+from collections.abc import Sequence
 import time
 import warnings
 
@@ -6,7 +7,7 @@ from pandas import DataFrame, concat, to_datetime
 from kuznets.base import _DEFAULT_MAX_WORKERS, _BaseReader, _fetch_symbols_concurrently
 from kuznets.output import from_pandas
 from kuznets.utils import RemoteDataError, SymbolWarning
-from kuznets.yahoo.headers import DEFAULT_HEADERS
+from kuznets.yahoo.headers import DEFAULT_HEADERS, session_headers
 
 # Line items per statement, in presentation order. Yahoo silently omits items a company does not
 # report (e.g. Goodwill for Apple), so requesting the full set is safe for every symbol.
@@ -185,7 +186,7 @@ class YahooFundamentalsReader(_BaseReader):
         session=None,
         freq: str = "annual",
         statement: str = "balance-sheet",
-        series: list[str] | None = None,
+        series: str | list[str] | None = None,
         output_type: str = "pandas",
         max_workers: int | None = None,
     ) -> None:
@@ -214,9 +215,10 @@ class YahooFundamentalsReader(_BaseReader):
         statement : str, optional
             Statement preset to fetch: 'balance-sheet', 'income', or 'cash-flow'. Ignored when
             ``series`` is given. Default 'balance-sheet'.
-        series : list of str, optional
+        series : str or list of str, optional
             Exact line items to fetch, named without the frequency prefix (e.g. ``'TotalAssets'``,
-            not ``'annualTotalAssets'``). When omitted, the ``statement`` preset is fetched.
+            not ``'annualTotalAssets'``). A bare string fetches one item. When omitted, the
+            ``statement`` preset is fetched.
         output_type : str, optional
             Backend of the returned data: 'pandas', 'polars', 'pyarrow' (alias 'arrow'), or 'dask'.
             Backends other than pandas must be installed separately. Default 'pandas'.
@@ -236,16 +238,19 @@ class YahooFundamentalsReader(_BaseReader):
         )
         if freq not in _FREQS:
             raise ValueError(f"freq={freq!r} is not supported; choose one of {', '.join(map(repr, _FREQS))}")
+        requested: Sequence[str]
         if series is None:
             if statement not in _STATEMENT_SERIES:
                 valid = ", ".join(map(repr, _STATEMENT_SERIES))
                 raise ValueError(f"statement={statement!r} is not supported; choose one of {valid}")
-            series = _STATEMENT_SERIES[statement]
+            requested = _STATEMENT_SERIES[statement]
         elif isinstance(series, str):
-            series = [series]
-        self.series = tuple(series)
+            requested = [series]
+        else:
+            requested = series
+        self.series = tuple(requested)
         self.max_workers = _DEFAULT_MAX_WORKERS if max_workers is None else max_workers
-        self.headers = session.headers if session is not None else DEFAULT_HEADERS
+        self.headers = DEFAULT_HEADERS if session is None else session_headers(session)
 
     @property
     def url(self) -> str:

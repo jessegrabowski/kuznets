@@ -1,10 +1,12 @@
 import datetime as dt
+from typing import Literal
 
 import pandas as pd
 
 from kuznets.base import _BaseReader
 from kuznets.config import get_api_key
 from kuznets.output import make_frame
+from kuznets.typing import Payload
 
 
 def get_tiingo_symbols() -> pd.DataFrame:
@@ -24,7 +26,7 @@ def get_tiingo_symbols() -> pd.DataFrame:
     return pd.read_csv(url)
 
 
-def _records_to_pandas(payload: list, concat_axis: int) -> pd.DataFrame:
+def _records_to_pandas(payload: list, concat_axis: Literal[0, 1]) -> pd.DataFrame:
     """Replay the per-symbol frame construction and concatenate along ``concat_axis``."""
     frames = []
     for symbol, out in payload:
@@ -38,14 +40,16 @@ def _records_to_pandas(payload: list, concat_axis: int) -> pd.DataFrame:
 def _records_to_tidy(payload: list, output_type: str):
     """One row per record with ``symbol`` first; ISO dates parse in Python so every backend agrees."""
     records = [{"symbol": symbol, **record} for symbol, out in payload for record in out]
-    parsed = []
+    parsed: list[dt.datetime] = []
+    dates_are_iso = True
     for record in records:
         try:
             parsed.append(dt.datetime.fromisoformat(record["date"]))
         except (KeyError, TypeError, ValueError):
-            parsed = None
+            # A single unparseable date leaves every date as the string the API sent.
+            dates_are_iso = False
             break
-    if parsed is not None:
+    if dates_are_iso:
         for record, timestamp in zip(records, parsed, strict=True):
             record["date"] = timestamp
     return make_frame(records, output_type)
@@ -53,6 +57,8 @@ def _records_to_tidy(payload: list, output_type: str):
 
 class TiingoIEXHistoricalReader(_BaseReader):
     """Historical IEX data from Tiingo on equities, ETFs and mutual funds."""
+
+    symbols: str | list[str]
 
     def __init__(
         self,
@@ -103,7 +109,7 @@ class TiingoIEXHistoricalReader(_BaseReader):
             self.symbols = [self.symbols]
         self._symbol = ""
         self.api_key = get_api_key("tiingo", api_key)
-        self._concat_axis = 0
+        self._concat_axis: Literal[0, 1] = 0
 
     @property
     def url(self) -> str:
@@ -146,7 +152,7 @@ class TiingoIEXHistoricalReader(_BaseReader):
         out = self._get_response(url, params=params, headers=headers).json()
         return self._read_lines(out)
 
-    def _read_lines(self, out: list[dict]) -> list[dict]:
+    def _read_lines(self, out: Payload) -> Payload:
         """Pass the parsed JSON records through as the payload for the presenters."""
         return out
 
@@ -178,6 +184,8 @@ class TiingoIEXHistoricalReader(_BaseReader):
 
 class TiingoDailyReader(_BaseReader):
     """Historical daily data from Tiingo on equities, ETFs and mutual funds."""
+
+    symbols: str | list[str]
 
     def __init__(
         self,
@@ -226,7 +234,7 @@ class TiingoDailyReader(_BaseReader):
             self.symbols = [self.symbols]
         self._symbol = ""
         self.api_key = get_api_key("tiingo", api_key)
-        self._concat_axis = 0
+        self._concat_axis: Literal[0, 1] = 0
 
     @property
     def url(self) -> str:
@@ -235,7 +243,7 @@ class TiingoDailyReader(_BaseReader):
         return _url.format(ticker=self._symbol)
 
     @property
-    def params(self) -> dict:
+    def params(self) -> dict | None:
         """Parameters to use in API calls."""
         return {
             "startDate": self.start.strftime("%Y-%m-%d"),
@@ -268,7 +276,7 @@ class TiingoDailyReader(_BaseReader):
         out = self._get_response(url, params=params, headers=headers).json()
         return self._read_lines(out)
 
-    def _read_lines(self, out: list[dict]) -> list[dict]:
+    def _read_lines(self, out: Payload) -> Payload:
         """Pass the parsed JSON records through as the payload for the presenters."""
         return out
 
@@ -346,7 +354,7 @@ class TiingoMetaDataReader(TiingoDailyReader):
         super().__init__(
             symbols, start, end, retry_count, pause, timeout, session, freq, api_key, output_type=output_type
         )
-        self._concat_axis = 1
+        self._concat_axis: Literal[0, 1] = 1
 
     @property
     def url(self) -> str:
@@ -355,11 +363,11 @@ class TiingoMetaDataReader(TiingoDailyReader):
         return _url.format(ticker=self._symbol)
 
     @property
-    def params(self) -> None:
+    def params(self) -> dict | None:
         """Not used."""
         return None
 
-    def _read_lines(self, out: dict) -> dict:
+    def _read_lines(self, out: Payload) -> Payload:
         """Pass the parsed metadata mapping through as the payload for the presenters."""
         return out
 
@@ -382,6 +390,6 @@ class TiingoQuoteReader(TiingoDailyReader):
     """Read quotes (latest prices) from Tiingo."""
 
     @property
-    def params(self) -> None:
+    def params(self) -> dict | None:
         """Not used."""
         return None

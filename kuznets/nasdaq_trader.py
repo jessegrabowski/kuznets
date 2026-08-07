@@ -51,7 +51,7 @@ def _download_nasdaq_symbols(timeout: float) -> DataFrame:
     except all_errors as err:
         raise RemoteDataError(f"Error connecting to {_NASDAQ_FTP_SERVER!r}: {err}") from err
 
-    lines = []
+    lines: list[str] = []
     try:
         ftp_session.retrlines("RETR " + _NASDAQ_TICKER_LOC, lines.append)
     except all_errors as err:
@@ -134,4 +134,5 @@ def get_nasdaq_symbols(
                 else:
                     time.sleep(pause)
 
+    assert _ticker_cache is not None
     return _ticker_cache

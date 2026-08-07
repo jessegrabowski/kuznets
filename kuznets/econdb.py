@@ -11,6 +11,8 @@ class EcondbReader(_BaseReader):
     .. versionadded:: 0.5.0
     """
 
+    symbols: str
+
     _URL = "https://www.econdb.com/api/series/"
     _format = None
     _show = "labels"
@@ -113,7 +115,7 @@ class EcondbReader(_BaseReader):
                     head[k] = "-1:None"
             if head != "":  # this additional metadata is not blank
                 series.columns = pd.MultiIndex.from_tuples(
-                    [[show_func(x) for x in head.values()]],
+                    [tuple(show_func(x) for x in head.values())],
                     names=[show_func(x) for x in head.keys()],
                 )
             else:

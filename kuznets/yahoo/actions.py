@@ -21,14 +21,11 @@ class YahooActionReader(YahooDailyReader):
         data = super()._read_core()
         if isinstance(data, dict):
             data = self._to_panel(data)
-        actions = {}
-        if isinstance(data.columns, MultiIndex):
-            data = data.swaplevel(0, 1, axis=1)
-            for s in data.columns.levels[0]:
-                actions[s] = _get_one_action(data[s])
-            return actions
-        else:
+        columns = data.columns
+        if not isinstance(columns, MultiIndex):
             return _get_one_action(data)
+        data = data.swaplevel(0, 1, axis=1)
+        return {symbol: _get_one_action(data[symbol]) for symbol in columns.levels[1]}
 
     def _present_pandas(self, payload):
         """The action payload (frame, or dict keyed by symbol) is already the pandas output."""
@@ -73,7 +70,8 @@ class YahooDivReader(YahooActionReader):
 
         Returns
         -------
-        df : DataFrame
+        DataFrame or dict of str to DataFrame
+            If multiple symbols, returns a dict keyed by symbol.
         """
         return _keep_action(super()._read_core(), "DIVIDEND")
 
@@ -86,7 +84,8 @@ class YahooSplitReader(YahooActionReader):
 
         Returns
         -------
-        df : DataFrame
+        DataFrame or dict of str to DataFrame
+            If multiple symbols, returns a dict keyed by symbol.
         """
         return _keep_action(super()._read_core(), "SPLIT")
 

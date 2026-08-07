@@ -4,6 +4,7 @@ import sys
 
 __version__ = version("kuznets")
 
+from kuznets import typing
 from kuznets.config import options
 from kuznets.data import (
     DataReader,
@@ -29,6 +30,7 @@ PKG = Path(__file__).parent
 __all__ = [
     "__version__",
     "options",
+    "typing",
     "get_data_econdb",
     "get_data_famafrench",
     "get_data_yahoo",

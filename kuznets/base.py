@@ -1,3 +1,4 @@
+from collections.abc import Callable, Iterable
 from concurrent.futures import ThreadPoolExecutor
 import datetime
 from io import StringIO
@@ -5,11 +6,12 @@ from urllib.parse import urlencode
 import warnings
 
 import numpy as np
-from pandas import DataFrame, MultiIndex, Timestamp, concat, read_csv
+from pandas import DataFrame, MultiIndex, concat, read_csv
 import requests
 
 from kuznets.config import get_headers, get_setting
 from kuznets.output import PANDAS, detach_index, from_pandas, validate_output_type
+from kuznets.typing import DateLike, Frame, Headers, Payload, Symbols
 from kuznets.utils import (
     RemoteDataError,
     SymbolWarning,
@@ -20,7 +22,12 @@ from kuznets.utils import (
 _DEFAULT_MAX_WORKERS = 5
 
 
-def _fetch_symbols_concurrently(symbols, fetch_one, max_workers: int, catch: tuple = (OSError, KeyError)):
+def _fetch_symbols_concurrently(
+    symbols: Iterable[str],
+    fetch_one: Callable[[str], DataFrame],
+    max_workers: int,
+    catch: tuple[type[Exception], ...] = (OSError, KeyError),
+) -> list[tuple[str, DataFrame | Exception]]:
     """Fetch every symbol through a thread pool, preserving input order.
 
     Workers never warn or touch shared state; exceptions listed in ``catch`` are returned as the
@@ -45,7 +52,7 @@ def _fetch_symbols_concurrently(symbols, fetch_one, max_workers: int, catch: tup
         One ``(symbol, frame_or_exception)`` pair per symbol, in input order.
     """
 
-    def worker(symbol):
+    def worker(symbol: str) -> tuple[str, DataFrame | Exception]:
         try:
             return symbol, fetch_one(symbol)
         except catch as exc:
@@ -63,19 +70,19 @@ class _BaseReader:
     """Base class for all data readers."""
 
     _chunk_size = 1024 * 1024
-    _format = "string"
+    _format: str | None = "string"
 
     def __init__(
         self,
-        symbols: str | list[str],
-        start: str | int | datetime.date | datetime.datetime | Timestamp | None = None,
-        end: str | int | datetime.date | datetime.datetime | Timestamp | None = None,
+        symbols: Symbols | DataFrame | None,
+        start: DateLike | None = None,
+        end: DateLike | None = None,
         retry_count: int | None = None,
         pause: float | None = None,
         timeout: float | None = None,
         session: requests.Session | None = None,
         freq: str | None = None,
-        headers: dict | None = None,
+        headers: Headers | None = None,
         output_type: str = "pandas",
     ) -> None:
         """
@@ -118,17 +125,16 @@ class _BaseReader:
         self.start = start
         self.end = end
 
-        retry_count = get_setting("retry_count", retry_count)
-        pause = get_setting("pause", pause)
-        timeout = get_setting("timeout", timeout)
-        if not isinstance(retry_count, int) or retry_count < 0:
+        resolved_retry_count = get_setting("retry_count", retry_count)
+        resolved_pause = get_setting("pause", pause)
+        if not isinstance(resolved_retry_count, int) or resolved_retry_count < 0:
             raise ValueError("'retry_count' must be integer larger than 0")
-        self.retry_count = retry_count
-        self.pause = pause
-        self.timeout = timeout
-        self.session = _init_session(session, retry_count, pause, get_headers(headers))
+        self.retry_count = resolved_retry_count
+        self.pause = resolved_pause
+        self.timeout = get_setting("timeout", timeout)
+        self.session = _init_session(session, resolved_retry_count, resolved_pause, get_headers(headers))
         self.freq = freq
-        self.headers = None
+        self.headers: Headers | None = None
 
     def close(self) -> None:
         """Close network session."""
@@ -151,7 +157,7 @@ class _BaseReader:
         """Parameters to use in API calls."""
         return None
 
-    def read(self):
+    def read(self) -> Frame:
         """Read data from connector.
 
         Returns
@@ -162,24 +168,24 @@ class _BaseReader:
         """
         return self._present(self._read_core())
 
-    def _present(self, payload):
+    def _present(self, payload: Payload) -> Frame:
         """Dispatch the payload to the presenter matching ``output_type``."""
         if self.output_type == PANDAS:
             return self._present_pandas(payload)
         return self._present_tidy(payload)
 
-    def _read_core(self):
+    def _read_core(self) -> Payload:
         """Fetch and parse the payload consumed by both presenters."""
         try:
             return self._read_one_data(self.url, self.params)
         finally:
             self.close()
 
-    def _present_pandas(self, payload):
+    def _present_pandas(self, payload: Payload) -> Payload:
         """Decorate the payload into the pandas output shape. Identity for simple readers."""
         return payload
 
-    def _present_tidy(self, payload):
+    def _present_tidy(self, payload: Payload) -> Payload:
         """Convert the payload to the requested backend, with indexes detached into columns.
 
         Handles plain single-frame payloads only; readers whose payloads are dicts or carry
@@ -190,7 +196,7 @@ class _BaseReader:
         tidy, _ = detach_index(payload)
         return from_pandas(tidy, self.output_type)
 
-    def _read_one_data(self, url: str, params: dict | None) -> DataFrame:
+    def _read_one_data(self, url: str, params: dict | None) -> Payload:
         """Read one data from specified URL.
 
         Parameters
@@ -202,8 +208,8 @@ class _BaseReader:
 
         Returns
         -------
-        df : DataFrame
-            Parsed data.
+        payload : DataFrame or reader-specific
+            Parsed data, in whatever shape this reader's :meth:`_read_lines` produces.
         """
         if self._format == "string":
             out = self._read_url_as_StringIO(url, params=params)
@@ -300,7 +306,7 @@ class _BaseReader:
             url = url + "?" + urlencode(params)
         msg = f"Unable to read URL: {url}"
         if response.encoding:
-            msg += f"\nResponse Text:\n{response.text.encode(response.encoding)}"
+            msg += f"\nResponse Text:\n{response.text}"
 
         raise RemoteDataError(msg)
 
@@ -316,17 +322,20 @@ class _BaseReader:
             The raw output from a failed HTTP request.
         """
 
-    def _read_lines(self, out: StringIO) -> DataFrame:
-        """Parse CSV content from a StringIO into a DataFrame.
+    def _read_lines(self, out: Payload) -> Payload:
+        """Parse a fetched response body into this reader's payload shape.
+
+        The base implementation parses CSV text. Readers whose ``_format`` is ``'json'`` receive the
+        decoded JSON here instead, and override with the shape their presenters expect.
 
         Parameters
         ----------
-        out : StringIO
-            CSV content.
+        out : StringIO or reader-specific
+            Response body: a StringIO of CSV text for the base implementation.
 
         Returns
         -------
-        rs : DataFrame
+        rs : DataFrame or reader-specific
             Parsed tabular data.
         """
         rs = read_csv(out, index_col=0, parse_dates=True, na_values=("-", "null"))[::-1]
@@ -350,9 +359,9 @@ class _DailyBaseReader(_BaseReader):
 
     def __init__(
         self,
-        symbols: str | list[str] | DataFrame | None = None,
-        start: str | int | datetime.date | datetime.datetime | Timestamp | None = None,
-        end: str | int | datetime.date | datetime.datetime | Timestamp | None = None,
+        symbols: Symbols | DataFrame | None = None,
+        start: DateLike | None = None,
+        end: DateLike | None = None,
         retry_count: int | None = None,
         pause: float | None = None,
         session: requests.Session | None = None,
@@ -403,35 +412,36 @@ class _DailyBaseReader(_BaseReader):
         """Return parameters for an API call. Must be overridden in subclass."""
         raise NotImplementedError
 
-    def _read_core(self) -> DataFrame:
+    def _read_core(self) -> DataFrame | dict[str, DataFrame]:
         """Read data for one or more symbols.
 
         Returns
         -------
-        df : DataFrame
-            Price or volume data for the requested symbols.
+        df : DataFrame or dict of DataFrame
+            Price or volume data: one frame for a single symbol, otherwise one frame per symbol
+            keyed by symbol.
         """
         # If a single symbol, (e.g., 'GOOG')
         if isinstance(self.symbols, str | int):
-            df = self._read_one_data(self.url, params=self._get_params(self.symbols))
+            return self._read_one_data(self.url, params=self._get_params(self.symbols))
+        if self.symbols is None:
+            raise ValueError(f"{type(self).__name__} requires at least one symbol")
         # Or multiple symbols, (e.g., ['GOOG', 'AAPL', 'MSFT'])
-        elif isinstance(self.symbols, DataFrame):
-            df = self._dl_mult_symbols(self.symbols.index)
-        else:
-            df = self._dl_mult_symbols(self.symbols)
-        return df
+        if isinstance(self.symbols, DataFrame):
+            return self._dl_mult_symbols(self.symbols.index)
+        return self._dl_mult_symbols(self.symbols)
 
-    def _present_pandas(self, payload):
+    def _present_pandas(self, payload: Payload) -> Payload:
         """Materialize the wide Attributes-by-Symbols panel for multi-symbol payloads."""
         if isinstance(payload, dict):
             return self._to_panel(payload)
         return payload
 
-    def _present_tidy(self, payload):
+    def _present_tidy(self, payload: Payload) -> Payload:
         """Convert to the requested backend; multi-symbol payloads become one row per (date, symbol)."""
         if not isinstance(payload, dict):
             return super()._present_tidy(payload)
-        long = concat(payload, names=["Symbol"])
+        long: DataFrame = concat(payload, names=["Symbol"])
         if long.index.names[1] is None:
             long.index = long.index.set_names("Date", level=1)
         long = long.reset_index()
@@ -440,24 +450,22 @@ class _DailyBaseReader(_BaseReader):
         ordered = [date_column, "Symbol", *(c for c in long.columns if c not in (date_column, "Symbol"))]
         return from_pandas(long[ordered], self.output_type)
 
-    def _to_panel(self, stocks: dict) -> DataFrame:
+    def _to_panel(self, stocks: dict[str, DataFrame]) -> DataFrame:
         """Pivot per-symbol frames into the wide panel with (Attributes, Symbols) columns."""
-        try:
-            result = concat(stocks, sort=True).unstack(level=0)
-            result.columns.names = ["Attributes", "Symbols"]
-            return result
-        except AttributeError as exc:
-            # cannot construct a panel with just 1D nans indicating no data
-            msg = "No data fetched using {0!r}"
-            raise RemoteDataError(msg.format(self.__class__.__name__)) from exc
+        panel = concat(stocks, sort=True).unstack(level=0)
+        if not isinstance(panel, DataFrame):
+            # Frames of nothing but 1-D NaNs unstack to a Series, meaning no data came back.
+            raise RemoteDataError(f"No data fetched using {self.__class__.__name__!r}")
+        panel.columns.names = ["Attributes", "Symbols"]
+        return panel
 
-    def _dl_mult_symbols(self, symbols: list[str]) -> dict:
+    def _dl_mult_symbols(self, symbols: Iterable[str]) -> dict[str, DataFrame]:
         """Download data for multiple symbols.
 
         Parameters
         ----------
-        symbols : list of str
-            List of ticker symbols.
+        symbols : iterable of str
+            Ticker symbols to fetch.
 
         Returns
         -------
@@ -472,9 +480,9 @@ class _DailyBaseReader(_BaseReader):
         results = _fetch_symbols_concurrently(
             symbols, lambda sym: self._read_one_data(self.url, self._get_params(sym)), self.max_workers
         )
-        stocks = {}
-        failed = []
-        passed = []
+        stocks: dict[str, DataFrame] = {}
+        failed: list[str] = []
+        passed: list[str] = []
         for sym, outcome in results:
             if isinstance(outcome, Exception):
                 msg = "Failed to read symbol: {0!r}, replacing with NaN."
