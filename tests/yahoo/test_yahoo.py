@@ -5,9 +5,9 @@ import pytest
 import requests
 
 from kuznets import data as web
-from kuznets._utils import RemoteDataError, SymbolWarning
 from kuznets.data import YahooDailyReader
-from kuznets.yahoo._auth import _CRUMB_URL
+from kuznets.utils import RemoteDataError, SymbolWarning
+from kuznets.yahoo.auth import _CRUMB_URL
 from kuznets.yahoo.fundamentals import BALANCE_SHEET_SERIES, YahooFundamentalsReader
 from kuznets.yahoo.fx import YahooFXReader
 from tests._backends import BACKENDS, as_narwhals, skip_unless_installed

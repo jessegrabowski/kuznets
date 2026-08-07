@@ -7,7 +7,6 @@ import datetime
 from pandas import Timestamp
 import requests
 
-from kuznets._output import PANDAS, detach_index, from_pandas, validate_output_type
 from kuznets.av.forex import AVForexReader
 from kuznets.av.time_series import AVTimeSeriesReader
 from kuznets.bankofcanada import BankOfCanadaReader
@@ -19,6 +18,7 @@ from kuznets.moex import MoexReader
 from kuznets.nasdaq_trader import get_nasdaq_symbols
 from kuznets.naver import NaverDailyReader
 from kuznets.oecd import OECDReader
+from kuznets.output import PANDAS, detach_index, from_pandas, validate_output_type
 from kuznets.quandl import QuandlReader
 from kuznets.stooq import StooqDailyReader
 from kuznets.tiingo import (

@@ -4,8 +4,8 @@ import warnings
 
 from pandas import DataFrame, Series, concat, to_datetime
 
-from kuznets._utils import RemoteDataError, SymbolWarning
 from kuznets.base import _fetch_symbols_concurrently
+from kuznets.utils import RemoteDataError, SymbolWarning
 from kuznets.yahoo.daily import YahooDailyReader
 
 

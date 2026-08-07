@@ -3,8 +3,8 @@ import time
 
 from pandas import DataFrame, read_csv
 
-from kuznets._utils import RemoteDataError
 from kuznets.compat import StringIO
+from kuznets.utils import RemoteDataError
 
 _NASDAQ_TICKER_LOC = "/SymbolDirectory/nasdaqtraded.txt"
 _NASDAQ_FTP_SERVER = "ftp.nasdaqtrader.com"

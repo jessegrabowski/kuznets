@@ -2,9 +2,9 @@ import datetime as dt
 
 import pandas as pd
 
-from kuznets._output import make_frame
 from kuznets.base import _BaseReader
 from kuznets.config import get_api_key
+from kuznets.output import make_frame
 
 
 def get_tiingo_symbols() -> pd.DataFrame:

@@ -1,7 +1,7 @@
 import pandas as pd
 
-from kuznets._utils import RemoteDataError
 from kuznets.av import AlphaVantage
+from kuznets.utils import RemoteDataError
 
 
 class AVForexReader(AlphaVantage):

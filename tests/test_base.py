@@ -7,7 +7,7 @@ import pytest
 import requests
 
 from kuznets import base as base
-from kuznets._utils import (
+from kuznets.utils import (
     DEFAULT_USER_AGENT,
     RETRYABLE_STATUS_CODES,
     RemoteDataError,

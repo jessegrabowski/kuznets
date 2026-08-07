@@ -1,9 +1,9 @@
 from pandas import DataFrame
 
-from kuznets._output import make_frame
-from kuznets._utils import RemoteDataError
 from kuznets.base import _BaseReader
-from kuznets.yahoo._auth import fetch_crumb
+from kuznets.output import make_frame
+from kuznets.utils import RemoteDataError
+from kuznets.yahoo.auth import fetch_crumb
 from kuznets.yahoo.headers import DEFAULT_HEADERS
 
 _DEFAULT_PARAMS = {

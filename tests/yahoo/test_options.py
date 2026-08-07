@@ -4,7 +4,7 @@ from pandas import testing as tm
 import pytest
 
 from kuznets import data as web
-from kuznets.yahoo._auth import _CRUMB_URL
+from kuznets.yahoo.auth import _CRUMB_URL
 from tests._mock import from_fixtures, live_or_record, make_response, patch_session_get, tolerate_outage
 
 # The crumb/cookie handshake the options reader performs before each request.

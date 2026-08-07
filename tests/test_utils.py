@@ -3,7 +3,7 @@ import datetime as dt
 import pandas as pd
 import pytest
 
-from kuznets._utils import _sanitize_dates
+from kuznets.utils import _sanitize_dates
 
 
 class TestUtils:

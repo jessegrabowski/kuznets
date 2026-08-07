@@ -1,8 +1,8 @@
 import pandas as pd
 
-from kuznets._utils import RemoteDataError
 from kuznets.base import _BaseReader
 from kuznets.config import get_api_key
+from kuznets.utils import RemoteDataError
 
 AV_BASE_URL = "https://www.alphavantage.co/query"
 

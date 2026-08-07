@@ -6,7 +6,7 @@ import pandas as pd
 import pytest
 
 from kuznets import data as web
-from kuznets._utils import RemoteDataError
+from kuznets.utils import RemoteDataError
 from tests._backends import BACKENDS, as_narwhals, skip_unless_installed
 from tests._mock import make_response, patch_session_get
 

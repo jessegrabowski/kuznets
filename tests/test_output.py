@@ -5,7 +5,7 @@ import pandas as pd
 import pandas.testing as tm
 import pytest
 
-from kuznets._output import (
+from kuznets.output import (
     attach_index,
     concat_frames,
     detach_index,

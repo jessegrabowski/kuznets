@@ -6,8 +6,8 @@ import re
 import narwhals.stable.v2 as nw
 import pandas as pd
 
-from kuznets._output import PANDAS, make_frame, observation_schema
 from kuznets.compat import get_filepath_or_buffer
+from kuznets.output import PANDAS, make_frame, observation_schema
 
 # Dimension identifiers that mark the time axis across SDMX-JSON and JSON-stat responses.
 TIME_IDS = {"time", "TIME_PERIOD"}

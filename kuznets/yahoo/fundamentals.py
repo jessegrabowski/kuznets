@@ -3,9 +3,9 @@ import warnings
 
 from pandas import DataFrame, concat, to_datetime
 
-from kuznets._output import from_pandas
-from kuznets._utils import RemoteDataError, SymbolWarning
 from kuznets.base import _DEFAULT_MAX_WORKERS, _BaseReader, _fetch_symbols_concurrently
+from kuznets.output import from_pandas
+from kuznets.utils import RemoteDataError, SymbolWarning
 from kuznets.yahoo.headers import DEFAULT_HEADERS
 
 # Line items per statement, in presentation order. Yahoo silently omits items a company does not

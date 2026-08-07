@@ -5,9 +5,9 @@ from zipfile import ZipFile
 
 from pandas import DataFrame, PeriodIndex, read_csv, to_datetime
 
-from kuznets._output import detach_index, from_pandas
 from kuznets.base import _BaseReader
 from kuznets.compat import PYTHON_LT_3_10, StringIO
+from kuznets.output import detach_index, from_pandas
 
 _URL = "http://mba.tuck.dartmouth.edu/pages/faculty/ken.french/"
 _URL_PREFIX = "ftp/"

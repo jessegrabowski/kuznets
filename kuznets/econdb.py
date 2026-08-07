@@ -1,8 +1,8 @@
 import pandas as pd
 
-from kuznets._output import filter_date_range, make_frame
 from kuznets.base import _BaseReader
 from kuznets.io.util import _parse_period_code
+from kuznets.output import filter_date_range, make_frame
 
 
 class EcondbReader(_BaseReader):
