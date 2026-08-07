@@ -148,6 +148,10 @@ class TestParsePeriodCode:
             ("2013-s2", datetime(2013, 7, 1)),
             ("2020-W01", datetime(2019, 12, 30)),
             ("2020-W53", datetime(2020, 12, 28)),
+            # The World Bank's month form, which pandas does not recognize.
+            ("2009M01", datetime(2009, 1, 1)),
+            ("2009M7", datetime(2009, 7, 1)),
+            ("2009m12", datetime(2009, 12, 1)),
             # Tolerated variants pandas parses to the correct period.
             ("20090101", datetime(2009, 1, 1)),
             ("2009/03", datetime(2009, 3, 1)),
@@ -182,6 +186,8 @@ class TestParsePeriodCode:
             "2020-W00",
             "2020-W54",
             "2020-W99",
+            "2009M13",
+            "2009M00",
             # Decimal years would misparse as year-month; they must stay strings.
             "2009.5",
         ],
