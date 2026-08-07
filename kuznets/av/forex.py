@@ -3,6 +3,8 @@ import pandas as pd
 from kuznets.av import AlphaVantage
 from kuznets.utils import RemoteDataError
 
+_PAIR_FORMAT_ERROR = "Please input a currency pair formatted 'FROM/TO' or a list of currency symbols"
+
 
 class AVForexReader(AlphaVantage):
     """Get Alpha Vantage Foreign Exchange (FX) exchange rate data."""
@@ -49,17 +51,15 @@ class AVForexReader(AlphaVantage):
         self.from_curr = {}
         self.to_curr = {}
         self.optional_params = {}
-        if isinstance(symbols, str):
-            self.symbols = [symbols]
-        else:
-            self.symbols = symbols
+        if symbols is None:
+            raise ValueError(_PAIR_FORMAT_ERROR)
+        self.symbols = [symbols] if isinstance(symbols, str) else list(symbols)
         try:
             for pair in self.symbols:
                 self.from_curr[pair] = pair.split("/")[0]
                 self.to_curr[pair] = pair.split("/")[1]
-        except Exception as e:
-            print(e)
-            raise ValueError("Please input a currency pair formatted 'FROM/TO' or a list of currency symbols") from e
+        except (AttributeError, IndexError, TypeError) as exc:
+            raise ValueError(_PAIR_FORMAT_ERROR) from exc
 
     def _present_tidy(self, payload):
         """One row per currency pair, with the rate fields as columns."""

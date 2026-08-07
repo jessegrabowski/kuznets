@@ -4,6 +4,7 @@ import pandas as pd
 import pytest
 
 from kuznets import data as web
+from kuznets.av.forex import AVForexReader
 from tests._backends import BACKENDS, as_narwhals, skip_unless_installed
 from tests._mock import make_response, patch_session_get
 
@@ -64,6 +65,13 @@ _RATE_PAYLOAD = {
 class TestAlphaVantageForexOffline:
     def _patch(self, monkeypatch):
         patch_session_get(monkeypatch, {"alphavantage.co": make_response(json=_RATE_PAYLOAD)})
+
+    @pytest.mark.parametrize("symbols", [None, "BAD FORMAT", ["USD/JPY", "BAD FORMAT"]])
+    def test_unusable_pairs_raise(self, symbols):
+        # The keyed tests above cover this only when an API key is configured, which left the
+        # offline path unexercised.
+        with pytest.raises(ValueError, match="currency pair"):
+            AVForexReader(symbols=symbols, api_key="fake")
 
     def test_pandas_fields_by_pair(self, monkeypatch):
         self._patch(monkeypatch)
