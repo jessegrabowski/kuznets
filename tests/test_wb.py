@@ -1,3 +1,4 @@
+import datetime as dt
 import json
 import warnings
 
@@ -15,7 +16,7 @@ from kuznets.wb import (
     get_indicators,
     search,
 )
-from tests._backends import BACKENDS, as_narwhals, skip_unless_installed
+from tests._backends import BACKENDS, as_narwhals, column_values, skip_unless_installed
 from tests._mock import (
     from_fixtures,
     live_or_record,
@@ -59,11 +60,11 @@ class TestWorldBankOffline:
         expected = pd.DataFrame(
             {
                 "NY.GDP.PCAP.CD": {
-                    ("Japan", "2000"): 39800.0,
-                    ("Japan", "2001"): 34900.0,
-                    ("Japan", "2002"): 33300.0,
-                    ("Japan", "2003"): 35800.0,
-                    ("Japan", "2004"): 38700.0,
+                    ("Japan", pd.Timestamp("2000-01-01")): 39800.0,
+                    ("Japan", pd.Timestamp("2001-01-01")): 34900.0,
+                    ("Japan", pd.Timestamp("2002-01-01")): 33300.0,
+                    ("Japan", pd.Timestamp("2003-01-01")): 35800.0,
+                    ("Japan", pd.Timestamp("2004-01-01")): 38700.0,
                 }
             }
         ).sort_index()
@@ -122,6 +123,28 @@ class TestWorldBankOffline:
         )
 
         assert reader.params["date"] == expected
+
+    @pytest.mark.parametrize("output_type", BACKENDS)
+    def test_year_is_a_timestamp_on_every_backend(self, monkeypatch, datapath, output_type):
+        skip_unless_installed(output_type)
+        patch_session_get(monkeypatch, {"NY.GDP.PCAP.CD": datapath("data", "wb", "country_jp_gdp.json")})
+        tidy = as_narwhals(
+            download(country="JP", indicator="NY.GDP.PCAP.CD", start=2000, end=2004, output_type=output_type)
+        )
+
+        assert tidy.collect_schema()["year"] == nw.Datetime
+        assert min(column_values(tidy, "year")) == dt.datetime(2000, 1, 1)
+
+    def test_unparseable_period_codes_stay_strings(self, monkeypatch, datapath):
+        # The World Bank has served non-calendar codes before; they must not become NaT.
+        payload = json.loads(datapath("data", "wb", "country_jp_gdp.json").read_text())
+        for record in payload[1]:
+            record["date"] = "not-a-period"
+        patch_session_get(monkeypatch, {"NY.GDP.PCAP.CD": make_response(json=payload)})
+
+        result = download(country="JP", indicator="NY.GDP.PCAP.CD", start=2000, end=2004)
+
+        assert list(result.index.get_level_values("year")) == ["not-a-period"] * len(result)
 
     def test_bad_indicator_raises(self, monkeypatch, datapath):
         patch_session_get(

@@ -78,6 +78,9 @@ frames instead -- dates and identifiers are plain columns, and there is one row 
   plus a float64 ``value``. Period codes -- annual, monthly, daily, quarterly, semester, and ISO
   week -- parse to period-start timestamps identically on every backend; codes the parser does not
   recognize leave the time column as strings.
+* The World Bank returns one row per ``(country, year)`` plus a column per indicator. ``year`` holds
+  the period-start timestamp of whatever ``freq`` asked for, and the pandas ``(country, year)``
+  index carries the same timestamps.
 * Fama-French keeps its dict container: each table is a native frame with a datetime ``Date``
   column (period-start timestamps for the monthly and annual tables), and the ``'DESCR'`` entry
   stays a string.

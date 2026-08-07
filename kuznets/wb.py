@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 
 from kuznets.base import _BaseReader
+from kuznets.io.util import parse_period_code
 from kuznets.typing import BackendName, DateLike, Frame, OutputType
 
 # ISO 3166-1 alpha-2 and alpha-3 codes, plus the codes the World Bank API serves that have no ISO
@@ -837,6 +838,7 @@ class WorldBankReader(_BaseReader):
             if len(data) > 0:
                 out = reduce(lambda x, y: x.merge(y, how="outer"), data)
                 out = out.drop("iso_code", axis=1)
+                out["year"] = _period_starts(out["year"])
                 out = out.set_index(["country", "year"])
                 out = out.apply(pd.to_numeric, errors="coerce")
 
@@ -1125,3 +1127,24 @@ def search(
     """
 
     return WorldBankReader(**kwargs).search(string=string, field=field, case=case)
+
+
+def _period_starts(codes: pd.Series) -> pd.Series:
+    """Convert World Bank period codes to period-start timestamps.
+
+    Parameters
+    ----------
+    codes : Series
+        Raw ``date`` values, e.g. ``'2009'``, ``'2009M07'`` or ``'2009Q3'``.
+
+    Returns
+    -------
+    Series
+        Timestamps, or *codes* unchanged when any entry is not a recognized period code.
+    """
+    # A country="all" pull repeats the same handful of codes once per country.
+    starts = {code: parse_period_code(code) for code in codes.unique()}
+    if any(stamp is None for stamp in starts.values()):
+        return codes
+    # Microsecond resolution matches the narwhals default the other readers emit.
+    return codes.map(starts).astype("datetime64[us]")
