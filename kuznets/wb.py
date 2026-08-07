@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 
 from kuznets.base import _BaseReader
-from kuznets.typing import BackendName, Frame, OutputType
+from kuznets.typing import BackendName, DateLike, Frame, OutputType
 
 # ISO 3166-1 alpha-2 and alpha-3 codes, plus the codes the World Bank API serves that have no ISO
 # equivalent: its regional and income aggregates, Kosovo, and the Channel Islands. 'all', 'ALL' and
@@ -716,9 +716,11 @@ class WorldBankReader(_BaseReader):
             individual countries (e.g. ``'US'``, ``'CA'`` or ``'USA'``, ``'CAN'``). The codes can be
             mixed.
         start : str, int, date, datetime, or Timestamp, optional
-            First year of the data series. Month and day are ignored.
+            Start of the data series. Month and day are used when ``freq`` is 'M' or 'Q', and
+            ignored otherwise.
         end : str, int, date, datetime, or Timestamp, optional
-            Last year of the data series (inclusive). Month and day are ignored.
+            End of the data series, inclusive. Month and day are used when ``freq`` is 'M' or 'Q',
+            and ignored otherwise.
         freq : str, optional
             Frequency or periodicity of the data (``'M'`` for monthly, ``'Q'`` for quarterly,
             ``'A'`` for annual). ``None`` defaults to annual.
@@ -984,8 +986,8 @@ class WorldBankReader(_BaseReader):
 def download(
     country: str | list[str] | None = None,
     indicator: str | list[str] | None = None,
-    start: int = 2003,
-    end: int = 2005,
+    start: DateLike | None = None,
+    end: DateLike | None = None,
     freq: str | None = None,
     errors: str = "warn",
     output_type: Literal["pandas"] = "pandas",
@@ -995,8 +997,8 @@ def download(
 def download(
     country: str | list[str] | None = None,
     indicator: str | list[str] | None = None,
-    start: int = 2003,
-    end: int = 2005,
+    start: DateLike | None = None,
+    end: DateLike | None = None,
     freq: str | None = None,
     errors: str = "warn",
     output_type: BackendName = ...,
@@ -1005,8 +1007,8 @@ def download(
 def download(
     country: str | list[str] | None = None,
     indicator: str | list[str] | None = None,
-    start: int = 2003,
-    end: int = 2005,
+    start: DateLike | None = None,
+    end: DateLike | None = None,
     freq: str | None = None,
     errors: str = "warn",
     output_type: OutputType = "pandas",
@@ -1022,10 +1024,12 @@ def download(
         individual countries (e.g. ``'US'``, ``'CA'``).
     indicator : str or list of str, optional
         Indicator code(s) taken from the ``id`` field in ``WDIsearch()``.
-    start : int, default 2003
-        First year of the data series.
-    end : int, default 2005
-        Last year of the data series (inclusive).
+    start : str, int, date, datetime, or Timestamp, optional
+        Start of the data series. Month and day are used when ``freq`` is 'M' or 'Q', and ignored
+        otherwise. Defaults to five years before today.
+    end : str, int, date, datetime, or Timestamp, optional
+        End of the data series, inclusive. Month and day are used when ``freq`` is 'M' or 'Q', and
+        ignored otherwise. Defaults to today.
     freq : str, optional
         Frequency of the data (``'M'`` for monthly, ``'Q'`` for quarterly, ``'A'`` for annual).
         ``None`` defaults to annual.
