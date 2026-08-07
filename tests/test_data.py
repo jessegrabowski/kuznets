@@ -14,6 +14,14 @@ class TestDataReader:
         with pytest.raises(NotImplementedError):
             DataReader("NA", "NA")
 
+    @pytest.mark.parametrize("data_source", ["econdb", "av-daily", "av-intraday"])
+    def test_single_symbol_source_rejects_a_list(self, data_source, monkeypatch):
+        # These sources read one symbol per request; a list used to reach the reader and fail
+        # somewhere less obvious. Sources that do accept lists, such as av-forex, are unaffected.
+        patch_session_get(monkeypatch, {})
+        with pytest.raises(ValueError, match="one symbol at a time"):
+            DataReader(["AAPL", "MSFT"], data_source, api_key="fake")
+
     def test_invalid_output_type_raises_before_any_request(self, monkeypatch):
         patch_session_get(monkeypatch, {})
         with pytest.raises(ValueError, match="not supported"):

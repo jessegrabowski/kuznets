@@ -1,11 +1,13 @@
 from functools import reduce
 import time
+from typing import Literal, overload
 import warnings
 
 import numpy as np
 import pandas as pd
 
 from kuznets.base import _BaseReader
+from kuznets.typing import BackendName, Frame, OutputType
 
 # This list of country codes was pulled from wikipedia during October 2014.
 # While some exceptions do exist, it is the best proxy for countries supported
@@ -523,6 +525,8 @@ country_codes = [
 class WorldBankReader(_BaseReader):
     """Download data series from the World Bank's World Development Indicators."""
 
+    symbols: list[str]
+
     _format = "json"
 
     def __init__(
@@ -730,12 +734,12 @@ class WorldBankReader(_BaseReader):
         data = resp.json()[1]
 
         data = pd.DataFrame(data)
-        data.adminregion = [x["value"] for x in data.adminregion]
-        data.incomeLevel = [x["value"] for x in data.incomeLevel]
-        data.lendingType = [x["value"] for x in data.lendingType]
-        data.region = [x["value"] for x in data.region]
-        data.latitude = [float(x) if x != "" else np.nan for x in data.latitude]
-        data.longitude = [float(x) if x != "" else np.nan for x in data.longitude]
+        data["adminregion"] = [x["value"] for x in data["adminregion"]]
+        data["incomeLevel"] = [x["value"] for x in data["incomeLevel"]]
+        data["lendingType"] = [x["value"] for x in data["lendingType"]]
+        data["region"] = [x["value"] for x in data["region"]]
+        data["latitude"] = [float(x) if x != "" else np.nan for x in data["latitude"]]
+        data["longitude"] = [float(x) if x != "" else np.nan for x in data["longitude"]]
         data = data.rename(columns={"id": "iso3c", "iso2Code": "iso2c"})
         return data
 
@@ -757,12 +761,12 @@ class WorldBankReader(_BaseReader):
 
         data = pd.DataFrame(data)
         # Clean fields
-        data.source = [x["value"] for x in data.source]
+        data["source"] = [x["value"] for x in data["source"]]
 
         def encode_ascii(x):
             return x.encode("ascii", "ignore")
 
-        data.sourceOrganization = data.sourceOrganization.apply(encode_ascii)
+        data["sourceOrganization"] = data["sourceOrganization"].apply(encode_ascii)
         # Clean topic field
 
         def get_value(x):
@@ -774,8 +778,8 @@ class WorldBankReader(_BaseReader):
         def get_list_of_values(x):
             return [get_value(y) for y in x]
 
-        data.topics = data.topics.apply(get_list_of_values)
-        data.topics = data.topics.apply(lambda x: " ; ".join(x))
+        data["topics"] = data["topics"].apply(get_list_of_values)
+        data["topics"] = data["topics"].apply(lambda x: " ; ".join(x))
 
         # Clean output
         data = data.sort_values(by="id")
@@ -816,6 +820,7 @@ class WorldBankReader(_BaseReader):
         return out
 
 
+@overload
 def download(
     country: str | list[str] | None = None,
     indicator: str | list[str] | None = None,
@@ -823,8 +828,30 @@ def download(
     end: int = 2005,
     freq: str | None = None,
     errors: str = "warn",
+    output_type: Literal["pandas"] = "pandas",
     **kwargs,
-) -> pd.DataFrame:
+) -> pd.DataFrame: ...
+@overload
+def download(
+    country: str | list[str] | None = None,
+    indicator: str | list[str] | None = None,
+    start: int = 2003,
+    end: int = 2005,
+    freq: str | None = None,
+    errors: str = "warn",
+    output_type: BackendName = ...,
+    **kwargs,
+) -> Frame: ...
+def download(
+    country: str | list[str] | None = None,
+    indicator: str | list[str] | None = None,
+    start: int = 2003,
+    end: int = 2005,
+    freq: str | None = None,
+    errors: str = "warn",
+    output_type: OutputType = "pandas",
+    **kwargs,
+) -> Frame:
     """
     Download data series from the World Bank's World Development Indicators.
 
@@ -844,13 +871,17 @@ def download(
         ``None`` defaults to annual.
     errors : str, default "warn"
         One of ``{'ignore', 'warn', 'raise'}``. Controls validation of country codes.
+    output_type : str, optional
+        Backend of the returned data: 'pandas', 'polars', 'pyarrow' (alias 'arrow'), or 'dask'.
+        Backends other than pandas must be installed separately. Default 'pandas'.
     **kwargs
         Additional keywords passed to ``WorldBankReader``.
 
     Returns
     -------
-    df : DataFrame
-        DataFrame with columns country, year, and indicator value.
+    df : DataFrame or native frame
+        Columns country, year, and indicator value, as a pandas DataFrame by default or as a native
+        frame of the backend selected with ``output_type``.
     """
     return WorldBankReader(
         symbols=indicator,
@@ -859,6 +890,7 @@ def download(
         end=end,
         freq=freq,
         errors=errors,
+        output_type=output_type,
         **kwargs,
     ).read()
 
@@ -894,7 +926,7 @@ def get_indicators(**kwargs) -> pd.DataFrame:
     return WorldBankReader(**kwargs).get_indicators()
 
 
-_cached_series = None
+_cached_series: pd.DataFrame | None = None
 
 
 def search(
