@@ -81,16 +81,17 @@ def _pivot_observations(records, dim_names, label_maps, time_pos):
 
 _SEMESTER_CODE = re.compile(r"^(\d{4})-?S([12])$", re.IGNORECASE)
 _WEEK_CODE = re.compile(r"^(\d{4})-?W(\d{2})$", re.IGNORECASE)
+_MONTH_CODE = re.compile(r"^(\d{4})M(\d{1,2})$", re.IGNORECASE)
 
 
-def _parse_period_code(code) -> datetime | None:
+def parse_period_code(code) -> datetime | None:
     """Parse an SDMX/JSON-stat period code to its period-start timestamp, or None if unrecognized.
 
     Standard codes -- annual ('2009'), monthly ('2009-01'), daily ('2009-01-15'), quarterly
-    ('2009-Q1' or '2009Q1') -- parse through ``pandas.Period``. Semesters ('2013-S2' -> July 1st)
-    and ISO weeks ('2020-W05' -> that week's Monday) have no pandas frequency and parse here. Codes
-    are case-insensitive and must open with a four-digit year; anything unrecognized returns None
-    so the column stays string-typed.
+    ('2009-Q1' or '2009Q1') -- parse through ``pandas.Period``. Semesters ('2013-S2' -> July 1st),
+    ISO weeks ('2020-W05' -> that week's Monday) and the World Bank's month form ('2009M01') have no
+    pandas frequency and parse here. Codes are case-insensitive and must open with a four-digit
+    year; anything unrecognized returns None so the column stays string-typed.
     """
     text = str(code).strip()
     if len(text) < 4 or not text[:4].isdigit() or "." in text:
@@ -99,6 +100,11 @@ def _parse_period_code(code) -> datetime | None:
         return None
     if match := _SEMESTER_CODE.match(text):
         return datetime(int(match[1]), 6 * int(match[2]) - 5, 1)
+    if match := _MONTH_CODE.match(text):
+        try:
+            return datetime(int(match[1]), int(match[2]), 1)
+        except ValueError:
+            return None
     if match := _WEEK_CODE.match(text):
         try:
             return datetime.strptime(f"{match[1]}-W{match[2]}-1", "%G-W%V-%u")
@@ -148,7 +154,7 @@ def _present_observations(records, dim_names, label_maps, time_pos, output_type)
 
     The pandas path pivots to the time-indexed wide frame, with its legacy time parsing. Every
     other backend gets one row per observation with display-labeled dimension columns and a float64
-    ``value`` column; period codes parse in Python via :func:`_parse_period_code` before any
+    ``value`` column; period codes parse in Python via :func:`parse_period_code` before any
     backend sees them, so the time column is datetime-typed identically everywhere -- including
     quarterly, semester, and ISO-week codes -- and stays string-typed only when a code defeats the
     parser.
@@ -157,7 +163,7 @@ def _present_observations(records, dim_names, label_maps, time_pos, output_type)
         return _pivot_observations(records, dim_names, label_maps, time_pos)
     tidy_records = _observations_to_records(records, dim_names, label_maps, time_pos)
     time_name = dim_names[time_pos]
-    parsed_times = [_parse_period_code(row[time_name]) for row in tidy_records]
+    parsed_times = [parse_period_code(row[time_name]) for row in tidy_records]
     schema = observation_schema(dim_names)
     if all(parsed is not None for parsed in parsed_times):
         for row, parsed in zip(tidy_records, parsed_times, strict=True):
