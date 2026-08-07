@@ -68,26 +68,31 @@ def _get_one_action(data: DataFrame) -> DataFrame:
 class YahooDivReader(YahooActionReader):
     """Get historical dividend data from Yahoo Finance."""
 
-    def _read_core(self) -> DataFrame:
+    def _read_core(self) -> DataFrame | dict[str, DataFrame]:
         """Fetch dividend data only.
 
         Returns
         -------
         df : DataFrame
         """
-        data = super()._read_core()
-        return data[data["action"] == "DIVIDEND"]
+        return _keep_action(super()._read_core(), "DIVIDEND")
 
 
 class YahooSplitReader(YahooActionReader):
     """Get historical stock split data from Yahoo Finance."""
 
-    def _read_core(self) -> DataFrame:
+    def _read_core(self) -> DataFrame | dict[str, DataFrame]:
         """Fetch split data only.
 
         Returns
         -------
         df : DataFrame
         """
-        data = super()._read_core()
-        return data[data["action"] == "SPLIT"]
+        return _keep_action(super()._read_core(), "SPLIT")
+
+
+def _keep_action(data: DataFrame | dict[str, DataFrame], action: str) -> DataFrame | dict[str, DataFrame]:
+    """Keep only the rows of *action*, per symbol when the payload covers several."""
+    if isinstance(data, dict):
+        return {symbol: frame[frame["action"] == action] for symbol, frame in data.items()}
+    return data[data["action"] == action]
