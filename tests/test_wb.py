@@ -16,7 +16,14 @@ from kuznets.wb import (
     search,
 )
 from tests._backends import BACKENDS, as_narwhals, skip_unless_installed
-from tests._mock import from_fixtures, live_or_record, patch_session_get, service_up, tolerate_outage
+from tests._mock import (
+    from_fixtures,
+    live_or_record,
+    make_response,
+    patch_session_get,
+    service_up,
+    tolerate_outage,
+)
 
 pytestmark = pytest.mark.stable
 
@@ -86,6 +93,22 @@ class TestWorldBankOffline:
     def test_unknown_country_still_warns(self):
         with pytest.warns(UserWarning, match="Non-standard ISO country codes: ZZ"):
             WorldBankReader(symbols="SP.POP.TOTL", countries=["USA", "ZZ"], errors="warn")
+
+    def test_download_without_dates_requests_the_reader_window(self, monkeypatch, datapath):
+        # Omitting start/end used to request a hardcoded 2003:2005 regardless of when it ran,
+        # while passing None explicitly got the reader's rolling window.
+        requested = {}
+
+        def capture(url, params):
+            requested.update(params)
+            return make_response(content=datapath("data", "wb", "country_jp_gdp.json").read_bytes())
+
+        patch_session_get(monkeypatch, from_fixtures({"NY.GDP.PCAP.CD": capture}))
+        download(country="JP", indicator="NY.GDP.PCAP.CD")
+        expected = WorldBankReader(symbols="NY.GDP.PCAP.CD", countries="JP").params["date"]
+
+        assert requested["date"] == expected
+        assert requested["date"] != "2003:2005"
 
     @pytest.mark.parametrize(
         ("freq", "expected"),
