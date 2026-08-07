@@ -532,8 +532,8 @@ class WorldBankReader(_BaseReader):
         start=None,
         end=None,
         freq: str | None = None,
-        retry_count: int = 3,
-        pause: float = 0.1,
+        retry_count: int | None = None,
+        pause: float | None = None,
         session=None,
         errors: str = "warn",
         output_type: str = "pandas",
@@ -557,10 +557,10 @@ class WorldBankReader(_BaseReader):
         freq : str, optional
             Frequency or periodicity of the data (``'M'`` for monthly, ``'Q'`` for quarterly,
             ``'A'`` for annual). ``None`` defaults to annual.
-        retry_count : int, default 3
-            Number of times to retry query request.
-        pause : float, default 0.1
-            Time, in seconds, of the pause between retries.
+        retry_count : int, optional
+            Number of times to retry query request. Falls back to the configured default.
+        pause : float, optional
+            Time, in seconds, of the pause between retries. Falls back to the configured default.
         session : Session, optional
             ``requests.sessions.Session`` instance to be used.
         errors : str, default "warn"

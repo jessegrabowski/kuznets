@@ -23,10 +23,10 @@ class MoexReader(_DailyBaseReader):
             Starting date. Defaults to 20 years before current date.
         end : str, int, date, datetime, or Timestamp, optional
             Ending date.
-        retry_count : int, default 3
-            Number of times to retry query request.
-        pause : float, default 0.1
-            Time, in seconds, to pause between consecutive queries of chunks.
+        retry_count : int, optional
+            Number of times to retry query request. Falls back to the configured default.
+        pause : float, optional
+            Time, in seconds, to pause between consecutive queries of chunks. Falls back to the configured default.
         chunksize : int, default 25
             Number of symbols to download consecutively before initiating pause.
         session : Session, optional

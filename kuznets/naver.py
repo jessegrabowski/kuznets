@@ -16,8 +16,8 @@ class NaverDailyReader(_DailyBaseReader):
         symbols: str | None = None,
         start=None,
         end=None,
-        retry_count: int = 3,
-        pause: float = 0.1,
+        retry_count: int | None = None,
+        pause: float | None = None,
         session=None,
         adjust_price: bool = False,
         ret_index: bool = False,
@@ -39,10 +39,10 @@ class NaverDailyReader(_DailyBaseReader):
             Starting date.
         end : str, int, date, datetime, or Timestamp, optional
             Ending date.
-        retry_count : int, default 3
-            Number of times to retry query request.
-        pause : float, default 0.1
-            Time, in seconds, to pause between retries.
+        retry_count : int, optional
+            Number of times to retry query request. Falls back to the configured default.
+        pause : float, optional
+            Time, in seconds, to pause between retries. Falls back to the configured default.
         session : Session, optional
             ``requests.sessions.Session`` instance to be used.
         adjust_price : bool, default False

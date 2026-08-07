@@ -21,8 +21,8 @@ class YahooQuotesReader(_BaseReader):
         symbols: str | list[str] | None = None,
         start=None,
         end=None,
-        retry_count: int = 3,
-        pause: float = 0.1,
+        retry_count: int | None = None,
+        pause: float | None = None,
         session=None,
         output_type: str = "pandas",
     ) -> None:

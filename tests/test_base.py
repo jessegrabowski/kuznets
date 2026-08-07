@@ -7,13 +7,19 @@ import pandas as pd
 import pytest
 import requests
 
-from kuznets import base as base
+from kuznets import base as base, config
+from kuznets.av.forex import AVForexReader
+from kuznets.av.time_series import AVTimeSeriesReader
+from kuznets.econdb import EcondbReader
+from kuznets.tsp import TSPReader
 from kuznets.utils import (
     DEFAULT_USER_AGENT,
     RETRYABLE_STATUS_CODES,
     RemoteDataError,
     _init_session,
 )
+from kuznets.wb import WorldBankReader
+from kuznets.yahoo.quotes import YahooQuotesReader
 from tests._mock import from_fixtures, make_response, patch_session_get
 
 pytestmark = pytest.mark.stable
@@ -135,6 +141,28 @@ class TestRetryStrategy:
 
     def test_reader_configures_session_from_retry_args(self):
         retry = _retry_strategy(base._BaseReader([], retry_count=7, pause=0.5).session)
+        assert retry.total == 7
+        assert retry.backoff_factor == 0.5
+
+    @pytest.mark.parametrize(
+        "make_reader",
+        [
+            lambda: EcondbReader(symbols="ticker=RGDPUS"),
+            lambda: AVForexReader(symbols="USD/JPY", api_key="fake"),
+            lambda: AVTimeSeriesReader(symbols="AAPL", api_key="fake"),
+            lambda: TSPReader(),
+            lambda: WorldBankReader(symbols="NY.GDP.PCAP.KD"),
+            lambda: YahooQuotesReader(symbols="AAPL"),
+        ],
+        ids=["econdb", "av-forex", "av-time-series", "tsp", "world-bank", "yahoo-quotes"],
+    )
+    def test_readers_fall_back_to_configured_retry_count(self, make_reader):
+        # These readers each defaulted retry_count/pause to literals, which silently shadowed
+        # options and the config file.
+        config.options.retry_count = 7
+        config.options.pause = 0.5
+        retry = _retry_strategy(make_reader().session)
+
         assert retry.total == 7
         assert retry.backoff_factor == 0.5
 

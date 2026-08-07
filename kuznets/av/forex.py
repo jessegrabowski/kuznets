@@ -10,8 +10,8 @@ class AVForexReader(AlphaVantage):
     def __init__(
         self,
         symbols: str | list[str] | None = None,
-        retry_count: int = 3,
-        pause: float = 0.1,
+        retry_count: int | None = None,
+        pause: float | None = None,
         session=None,
         api_key: str | None = None,
         output_type: str = "pandas",
@@ -23,10 +23,10 @@ class AVForexReader(AlphaVantage):
         ----------
         symbols : str or list of str, optional
             Single currency pair (formatted ``'FROM/TO'``) or list of the same.
-        retry_count : int, default 3
-            Number of times to retry query request.
-        pause : float, default 0.1
-            Time, in seconds, to pause between consecutive queries.
+        retry_count : int, optional
+            Number of times to retry query request. Falls back to the configured default.
+        pause : float, optional
+            Time, in seconds, to pause between consecutive queries. Falls back to the configured default.
         session : Session, optional
             ``requests.sessions.Session`` instance to be used.
         api_key : str, optional

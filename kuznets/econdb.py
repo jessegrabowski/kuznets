@@ -20,8 +20,8 @@ class EcondbReader(_BaseReader):
         symbols: str,
         start=None,
         end=None,
-        retry_count: int = 3,
-        pause: float = 0.1,
+        retry_count: int | None = None,
+        pause: float | None = None,
         session=None,
         freq: str | None = None,
         output_type: str = "pandas",
@@ -46,10 +46,10 @@ class EcondbReader(_BaseReader):
             Starting date.
         end : str, int, date, datetime, or Timestamp, optional
             Ending date.
-        retry_count : int, default 3
-            Number of times to retry query request.
-        pause : float, default 0.1
-            Time, in seconds, to pause between consecutive queries of chunks.
+        retry_count : int, optional
+            Number of times to retry query request. Falls back to the configured default.
+        pause : float, optional
+            Time, in seconds, to pause between consecutive queries of chunks. Falls back to the configured default.
         session : Session, optional
             ``requests.sessions.Session`` instance to be used.
         freq : str, optional

@@ -32,8 +32,8 @@ class TSPReader(_BaseReader):
         symbols=all_symbols,
         start=None,
         end=None,
-        retry_count: int = 3,
-        pause: float = 0.1,
+        retry_count: int | None = None,
+        pause: float | None = None,
         session=None,
         output_type: str = "pandas",
     ) -> None:
@@ -48,10 +48,10 @@ class TSPReader(_BaseReader):
             Starting date. Defaults to 5 years before current date.
         end : str, int, date, datetime, or Timestamp, optional
             Ending date.
-        retry_count : int, default 3
-            Number of times to retry query request.
-        pause : float, default 0.1
-            Time, in seconds, to pause between consecutive queries.
+        retry_count : int, optional
+            Number of times to retry query request. Falls back to the configured default.
+        pause : float, optional
+            Time, in seconds, to pause between consecutive queries. Falls back to the configured default.
         session : Session, optional
             ``requests.sessions.Session`` instance to be used.
         output_type : str, optional
