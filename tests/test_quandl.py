@@ -179,19 +179,36 @@ class TestQuandl:
         assert df.High.at[pd.to_datetime(self.day2)] == 91.9
 
 
+# Quandl requires an API key and can't be recorded, so a hand-written sample of the dataset CSV
+# format pins the tidy schema only.
+CSV_BODY = b"Date,Open,Adj. Close\n2020-01-03,10.5,10.6\n2020-01-02,10.0,10.1\n"
+
+
 @pytest.mark.stable
 class TestQuandlBackends:
-    # Quandl requires an API key and can't be recorded, so a hand-written sample of the dataset
-    # CSV format pins the tidy schema only.
-    csv_body = b"Date,Open,Adj. Close\n2020-01-03,10.5,10.6\n2020-01-02,10.0,10.1\n"
-
     @pytest.mark.parametrize("output_type", BACKENDS)
     def test_single_symbol_tidy_schema(self, monkeypatch, output_type):
         skip_unless_installed(output_type)
-        patch_session_get(monkeypatch, {"quandl.com": self.csv_body})
+        patch_session_get(monkeypatch, {"quandl.com": CSV_BODY})
         reader = QuandlReader("WIKI/AAPL", api_key="fake-key", output_type=output_type)
         tidy = as_narwhals(reader.read())
 
         assert tidy.columns == ["Date", "Open", "AdjClose"]
         assert tidy.schema["Date"] == nw.Datetime
         assert tidy["Open"].to_list() == [10.0, 10.5]
+
+
+@pytest.mark.stable
+class TestQuandlThroughDataReader:
+    # ``DataReader`` forwards ``max_workers`` to every daily reader, so QuandlReader has to accept
+    # it. The keyed tests above are all network-gated, which left this path unexercised.
+    def test_data_reader_dispatch(self, monkeypatch):
+        patch_session_get(monkeypatch, {"quandl.com": CSV_BODY})
+        df = web.DataReader("WIKI/AAPL", "quandl", api_key="fake-key")
+
+        assert list(df.columns) == ["Open", "AdjClose"]
+        assert isinstance(df.index, pd.DatetimeIndex)
+        assert df["Open"].tolist() == [10.0, 10.5]
+
+    def test_max_workers_is_accepted(self):
+        assert QuandlReader("WIKI/AAPL", api_key="fake-key", max_workers=3).max_workers == 3
