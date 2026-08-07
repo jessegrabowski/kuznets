@@ -6,10 +6,10 @@ import pytest
 
 from kuznets.io.util import (
     _observations_to_records,
-    _parse_period_code,
     _pivot_observations,
     _present_observations,
     _to_datetime_index,
+    parse_period_code,
 )
 from tests._backends import BACKENDS, as_narwhals, skip_unless_installed
 
@@ -161,7 +161,7 @@ class TestParsePeriodCode:
         ],
     )
     def test_period_start_convention(self, code, expected):
-        assert _parse_period_code(code) == expected
+        assert parse_period_code(code) == expected
 
     @pytest.mark.parametrize(
         "code",
@@ -187,4 +187,4 @@ class TestParsePeriodCode:
         ],
     )
     def test_unrecognized_codes_return_none(self, code):
-        assert _parse_period_code(code) is None
+        assert parse_period_code(code) is None

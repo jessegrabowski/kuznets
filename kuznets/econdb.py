@@ -1,7 +1,7 @@
 import pandas as pd
 
 from kuznets.base import _BaseReader
-from kuznets.io.util import _parse_period_code
+from kuznets.io.util import parse_period_code
 from kuznets.output import filter_date_range, make_frame
 
 
@@ -145,7 +145,7 @@ class EcondbReader(_BaseReader):
             for date_code, value in zip(entry["data"]["dates"], entry["data"]["values"], strict=True):
                 records.append({**dimensions, "TIME_PERIOD": date_code, "value": value})
         # All-or-nothing datetime parsing keeps the column's dtype homogeneous per response.
-        parsed = [_parse_period_code(record["TIME_PERIOD"]) for record in records]
+        parsed = [parse_period_code(record["TIME_PERIOD"]) for record in records]
         if records and all(timestamp is not None for timestamp in parsed):
             for record, timestamp in zip(records, parsed, strict=True):
                 record["TIME_PERIOD"] = timestamp
