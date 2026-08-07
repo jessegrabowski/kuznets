@@ -79,6 +79,7 @@ class NaverDailyReader(_DailyBaseReader):
             max_workers=max_workers,
         )
 
+        self._get_actions = get_actions
         self.headers = {
             "Sec-Fetch-Mode": "no-cors",
             "Referer": f"https://finance.naver.com/item/fchart.nhn?code={symbols}",
