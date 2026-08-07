@@ -173,6 +173,10 @@ class TestDailyBaseReader:
         with pytest.raises(NotImplementedError):
             b._get_params()
 
+    def test_read_without_symbols_raises(self):
+        with pytest.raises(ValueError, match="requires at least one symbol"):
+            base._DailyBaseReader().read()
+
 
 class _CsvOutputReader(base._BaseReader):
     @property
