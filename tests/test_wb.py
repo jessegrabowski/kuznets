@@ -1,3 +1,6 @@
+import json
+import warnings
+
 import narwhals.stable.v2 as nw
 import numpy as np
 import pandas as pd
@@ -63,6 +66,22 @@ class TestWorldBankOffline:
     def test_invalid_country_raises(self):
         with pytest.raises(ValueError, match=r"Invalid Country Code\(s\): XX"):
             download(country=["USA", "XX"], indicator="NY.GDP.PCAP.CD", start=2003, end=2004, errors="raise")
+
+    def test_every_served_country_code_validates(self, datapath):
+        # countries.json is re-recorded by the weekly refresh, so a code the API starts serving
+        # shows up here as a failure rather than as a warning in someone's pipeline.
+        records = json.loads(datapath("data", "wb", "countries.json").read_text())[1]
+        served = {record["id"] for record in records} | {record["iso2Code"] for record in records if record["iso2Code"]}
+        missing = served - set(wb.country_codes)
+
+        assert not missing, f"the API now serves codes country_codes rejects: {sorted(missing)}"
+
+    @pytest.mark.parametrize("country", ["XKX", "XK", "CHI", "WLD", "ARB"])
+    def test_aggregate_and_non_iso_codes_are_accepted(self, country):
+        # Kosovo, the Channel Islands and the World Bank's own aggregates have no ISO entry.
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            WorldBankReader(symbols="SP.POP.TOTL", countries=country, errors="warn")
 
     def test_unknown_country_still_warns(self):
         with pytest.warns(UserWarning, match="Non-standard ISO country codes: ZZ"):
