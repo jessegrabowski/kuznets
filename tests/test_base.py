@@ -1,5 +1,6 @@
 import datetime as dt
 import importlib.util
+import io
 import threading
 
 import pandas as pd
@@ -56,6 +57,20 @@ class TestBaseReader:
     def test_invalid_url(self):
         with pytest.raises(NotImplementedError):
             _ = base._BaseReader([]).url
+
+    @pytest.mark.parametrize(
+        ("header", "expected"),
+        [("Date", "Date"), ("", None), ("Dat\xe9", "Dat")],
+        ids=["named", "unnamed", "non-ascii"],
+    )
+    def test_read_lines_index_name(self, header, expected):
+        # A blank first-column header leaves the index unnamed, which must not be treated as a
+        # string to strip; non-ascii characters in a named index are dropped.
+        csv = io.StringIO(f"{header},Open\n2020-01-02,10\n2020-01-03,11\n")
+        rs = base._BaseReader([])._read_lines(csv)
+
+        assert list(rs.columns) == ["Open"]
+        assert rs.index.name == expected
 
     def test_invalid_format(self):
         b = base._BaseReader([])

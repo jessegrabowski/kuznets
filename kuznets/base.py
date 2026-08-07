@@ -337,12 +337,10 @@ class _BaseReader:
         # return 2 rows for the most recent business day
         if len(rs) > 2 and rs.index[-1] == rs.index[-2]:  # pragma: no cover
             rs = rs[:-1]
-        # Get rid of unicode characters in index name.
-        try:
-            rs.index.name = rs.index.name.decode("unicode_escape").encode("ascii", "ignore")
-        except AttributeError:
-            # Python 3 string has no decode method.
-            rs.index.name = rs.index.name.encode("ascii", "ignore").decode()
+        # Get rid of unicode characters in index name. An unnamed index has nothing to strip.
+        index_name = rs.index.name
+        if isinstance(index_name, str):
+            rs.index.name = index_name.encode("ascii", "ignore").decode()
 
         return rs
 
