@@ -521,6 +521,8 @@ country_codes = [
     "All",
 ]
 
+_COUNTRY_CODES = frozenset(country_codes)
+
 
 class WorldBankReader(_BaseReader):
     """Download data series from the World Bank's World Development Indicators."""
@@ -594,9 +596,8 @@ class WorldBankReader(_BaseReader):
         elif isinstance(countries, str):
             countries = [countries]
 
-        bad_countries = np.setdiff1d(countries, country_codes)
-        # Validate the input
-        if len(bad_countries) > 0:
+        bad_countries = sorted({str(country) for country in countries} - _COUNTRY_CODES)
+        if bad_countries:
             tmp = ", ".join(bad_countries)
             if errors == "raise":
                 raise ValueError(f"Invalid Country Code(s): {tmp}")

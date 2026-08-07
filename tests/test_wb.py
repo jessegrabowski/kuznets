@@ -64,6 +64,10 @@ class TestWorldBankOffline:
         with pytest.raises(ValueError, match=r"Invalid Country Code\(s\): XX"):
             download(country=["USA", "XX"], indicator="NY.GDP.PCAP.CD", start=2003, end=2004, errors="raise")
 
+    def test_unknown_country_still_warns(self):
+        with pytest.warns(UserWarning, match="Non-standard ISO country codes: ZZ"):
+            WorldBankReader(symbols="SP.POP.TOTL", countries=["USA", "ZZ"], errors="warn")
+
     def test_bad_indicator_raises(self, monkeypatch, datapath):
         patch_session_get(
             monkeypatch,
