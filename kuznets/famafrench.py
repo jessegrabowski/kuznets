@@ -1,4 +1,5 @@
 import datetime as dt
+from html.parser import HTMLParser
 import re
 import tempfile
 from typing import Any
@@ -39,6 +40,18 @@ def _parse_date_famafrench(x: str) -> dt.datetime:
     except Exception:
         pass
     return to_datetime(x)
+
+
+class _AnchorHrefs(HTMLParser):
+    """Collect the ``href`` of every anchor in a document."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.hrefs: list[str] = []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag == "a":
+            self.hrefs += [value for name, value in attrs if name == "href" and value]
 
 
 class FamaFrenchReader(_BaseReader):
@@ -173,19 +186,9 @@ class FamaFrenchReader(_BaseReader):
         list of str
             A list of valid inputs for get_data_famafrench.
         """
-        try:
-            from lxml.html import document_fromstring
-        except ImportError as exc:
-            raise ImportError("Please install lxml if you want to use the get_datasets_famafrench function") from exc
-
         response = self.session.get(_URL + "data_library.html")
-        root = document_fromstring(response.content)
-
-        hrefs = (e.attrib["href"] for e in root.findall(".//a") if "href" in e.attrib)
-        datasets = [
-            href
-            for href in hrefs
-            if isinstance(href, str) and href.startswith(_URL_PREFIX) and href.endswith(_URL_SUFFIX)
-        ]
+        links = _AnchorHrefs()
+        links.feed(response.text)
+        datasets = [href for href in links.hrefs if href.startswith(_URL_PREFIX) and href.endswith(_URL_SUFFIX)]
 
         return [x[len(_URL_PREFIX) : -len(_URL_SUFFIX)] for x in datasets]

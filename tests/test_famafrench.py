@@ -4,7 +4,7 @@ from pandas import testing as tm
 import pytest
 
 from kuznets import data as web
-from kuznets.famafrench import _URL, get_available_datasets
+from kuznets.famafrench import _URL, _AnchorHrefs, get_available_datasets
 from tests._backends import BACKENDS, as_narwhals, skip_unless_installed
 from tests._mock import live_or_record, patch_session_get, service_up, tolerate_outage
 
@@ -15,14 +15,32 @@ class TestFamaFrenchOffline:
     # The real data_library.html is ~250 KB; this is a trimmed sample with the same <a href> shape
     # the scraper relies on. TestFamaFrenchLive checks the live page returns >100 datasets.
     def test_get_available_datasets(self, monkeypatch, datapath):
-        pytest.importorskip("lxml")
         patch_session_get(
             monkeypatch,
             {"data_library.html": datapath("data", "famafrench", "data_library.html")},
         )
         avail = get_available_datasets()
-        assert "F-F_Research_Data_Factors" in avail
-        assert "ME_Breakpoints" in avail
+
+        # The fixture also carries a non-matching <a href="other.html"> that must be filtered out.
+        assert avail == ["F-F_Research_Data_Factors", "ME_Breakpoints", "Prior_2-12_Breakpoints"]
+
+    @pytest.mark.parametrize(
+        ("html", "expected"),
+        [
+            ('<a href="one.zip">x</a>', ["one.zip"]),
+            ('<link href="style.css"><a href="one.zip">x</a>', ["one.zip"]),
+            ('<a name="anchor">x</a>', []),
+            ('<a href="">x</a>', []),
+            ('<A HREF="one.zip">x</A>', ["one.zip"]),
+            ('<a href="one.zip">x<a href="two.zip">y', ["one.zip", "two.zip"]),
+        ],
+        ids=["anchor", "non-anchor-href", "no-href", "empty-href", "uppercase", "unclosed"],
+    )
+    def test_anchor_hrefs_collects_only_anchor_links(self, html, expected):
+        parser = _AnchorHrefs()
+        parser.feed(html)
+
+        assert parser.hrefs == expected
 
     def test_research_factors_index(self, monkeypatch, datapath):
         patch_session_get(
@@ -81,7 +99,6 @@ class TestFamaFrenchLive:
         # Not recorded (the HTML index is large); assert the live page yields many datasets.
         if not service_up(_URL + "data_library.html"):
             pytest.skip("Fama-French library unreachable")
-        pytest.importorskip("lxml")
         with tolerate_outage():
             assert len(get_available_datasets()) > 100
 
