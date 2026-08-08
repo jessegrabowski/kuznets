@@ -1,7 +1,3 @@
-from importlib.metadata import version
-
-__version__ = version("kuznets")
-
 from kuznets import typing
 from kuznets.config import options
 from kuznets.data import (
@@ -44,3 +40,8 @@ __all__ = [
     "get_iex_data_tiingo",
     "get_data_alphavantage",
 ]
+
+try:
+    from kuznets._version import __version__
+except ImportError:
+    __version__ = "0.0.0+unknown"

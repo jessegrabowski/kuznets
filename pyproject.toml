@@ -79,6 +79,9 @@ Repository = "https://github.com/jessegrabowski/kuznets.git"
 [tool.hatch.version]
 source = "vcs"
 
+[tool.hatch.build.hooks.vcs]
+version-file = "kuznets/_version.py"
+
 [tool.hatch.build.targets.wheel]
 packages = ["kuznets"]
 

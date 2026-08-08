@@ -1,5 +1,4 @@
 import datetime as dt
-from importlib.metadata import PackageNotFoundError, version
 from typing import cast
 
 from pandas import Timestamp, to_datetime
@@ -11,8 +10,12 @@ from kuznets.compat import is_number
 from kuznets.typing import DateLike, Headers
 
 try:
-    DEFAULT_USER_AGENT = f"kuznets/{version('kuznets')}"
-except PackageNotFoundError:  # pragma: no cover
+    from kuznets._version import __version__
+
+    DEFAULT_USER_AGENT = f"kuznets/{__version__}"
+except ImportError:
+    # A source checkout the build hook has not run in: identify without claiming a version.
+    __version__ = "0.0.0+unknown"
     DEFAULT_USER_AGENT = "kuznets"
 
 # Transient statuses worth retrying. Other 4xx (e.g. 404) won't recover, so they fall straight

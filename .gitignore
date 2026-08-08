@@ -19,3 +19,4 @@ coverage.xml
 junit/
 cache.sqlite
 docs/source/_version.txt
+kuznets/_version.py
