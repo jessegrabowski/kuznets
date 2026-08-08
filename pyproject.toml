@@ -31,6 +31,7 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
     "Topic :: Scientific/Engineering",
+    "Typing :: Typed",
 ]
 
 [project.optional-dependencies]
@@ -81,6 +82,11 @@ source = "vcs"
 
 [tool.hatch.build.hooks.vcs]
 version-file = "kuznets/_version.py"
+
+[tool.hatch.build.targets.sdist]
+exclude = [
+  '/.github',
+]
 
 [tool.hatch.build.targets.wheel]
 packages = ["kuznets"]
