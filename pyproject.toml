@@ -58,7 +58,6 @@ dev = [
     "pytest>=8",
     "pytest-xdist",
     "pytest-cov",
-    "wrapt",
     "kuznets[backends]",
 ]
 docs = [
@@ -124,7 +123,7 @@ no_implicit_reexport = true
 
 [[tool.mypy.overrides]]
 # Dev- and extra-only dependencies that ship no type information.
-module = ["pytest.*", "wrapt.*", "simplejson.*", "pandas.io.common"]
+module = ["simplejson.*", "pandas.io.common"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
@@ -167,7 +166,6 @@ pytest = ">=8"
 pytest-cov = "*"
 pytest-xdist = "*"
 coverage = "*"
-wrapt = "*"
 polars = "*"
 pyarrow = "*"
 dask = "*"
