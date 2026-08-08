@@ -1,9 +1,41 @@
 import datetime as dt
+import importlib.util
+import sys
+import types
 
 import pandas as pd
 import pytest
 
+import kuznets.utils
 from kuznets.utils import _sanitize_dates
+
+
+class TestVersionFallback:
+    @staticmethod
+    def _utils_loaded_fresh():
+        """Execute ``kuznets/utils.py`` into a throwaway module, leaving the imported one alone."""
+        spec = importlib.util.spec_from_file_location("_kuznets_utils_probe", kuznets.utils.__file__)
+        probe = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(probe)
+        return probe
+
+    def test_missing_version_file_degrades_instead_of_raising(self, monkeypatch):
+        # A source checkout the build hook has not run in has no _version module; importing must
+        # still work, and the agent must not claim a version it cannot resolve.
+        monkeypatch.setitem(sys.modules, "kuznets._version", None)
+        probe = self._utils_loaded_fresh()
+
+        assert probe.__version__ == "0.0.0+unknown"
+        assert probe.DEFAULT_USER_AGENT == "kuznets"
+
+    def test_resolved_version_reaches_the_user_agent(self, monkeypatch):
+        stub = types.ModuleType("kuznets._version")
+        stub.__version__ = "9.9.9"
+        monkeypatch.setitem(sys.modules, "kuznets._version", stub)
+        probe = self._utils_loaded_fresh()
+
+        assert probe.__version__ == "9.9.9"
+        assert probe.DEFAULT_USER_AGENT == "kuznets/9.9.9"
 
 
 class TestUtils:

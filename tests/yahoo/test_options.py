@@ -51,10 +51,6 @@ def _offline(monkeypatch, datapath):
 
 
 class TestYahooOptionsOffline:
-    @classmethod
-    def setup_class(cls):
-        pytest.importorskip("lxml")
-
     def test_get_options_data(self, monkeypatch, datapath):
         _offline(monkeypatch, datapath)
         opt = web.Options("AAPL")
@@ -96,10 +92,6 @@ class TestYahooOptionsOffline:
 
 @pytest.mark.network
 class TestYahooOptionsLive:
-    @classmethod
-    def setup_class(cls):
-        pytest.importorskip("lxml")
-
     def test_options_data_shape(self, monkeypatch, datapath):
         live_or_record(
             monkeypatch,
