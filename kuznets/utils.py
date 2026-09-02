@@ -77,6 +77,29 @@ def _sanitize_dates(
     return start_stamp, end_stamp
 
 
+def _year_bounds(start: Timestamp, end: Timestamp) -> tuple[Timestamp, Timestamp]:
+    """Widen a date range to the whole calendar years it touches.
+
+    Readers whose service filters by year alone bound their local filtering with this, so that a
+    range opening or closing mid-year keeps the periods the service already sent.
+
+    Parameters
+    ----------
+    start : Timestamp
+        Start of the requested range.
+    end : Timestamp
+        End of the requested range.
+
+    Returns
+    -------
+    start : Timestamp
+        January 1st of the start year.
+    end : Timestamp
+        December 31st of the end year.
+    """
+    return Timestamp(start.year, 1, 1), Timestamp(end.year, 12, 31)
+
+
 def _init_session(
     session: requests.Session | None,
     retry_count: int = 3,

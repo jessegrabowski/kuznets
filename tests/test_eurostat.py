@@ -29,6 +29,20 @@ class TestEurostatOffline:
         assert avg.loc["2009"].iloc[0] == pytest.approx(1936.27, abs=0.01)
         assert avg.loc["2010"].iloc[0] == pytest.approx(1936.27, abs=0.01)
 
+    def test_a_partial_year_keeps_the_periods_the_service_sent(self, monkeypatch, datapath):
+        # sinceTimePeriod/untilTimePeriod filter by year, so a mid-year range must not drop the
+        # annual observations the service stamped at January 1st.
+        patch_session_get(monkeypatch, {"eurostat": datapath("data", "eurostat", "ert_h_eur_a.json")})
+
+        df = web.DataReader(
+            "ert_h_eur_a",
+            "eurostat",
+            start=pd.Timestamp("2009-06-01"),
+            end=pd.Timestamp("2010-06-01"),
+        )
+
+        assert list(df.index.year) == [2009, 2010]
+
 
 @pytest.mark.network
 class TestEurostatLive:
