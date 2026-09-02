@@ -7,7 +7,7 @@ import pytest
 from kuznets.imf import IMTSReader
 from kuznets.utils import RemoteDataError
 from tests._backends import BACKENDS, as_narwhals, skip_unless_installed
-from tests._mock import make_response, patch_session_get
+from tests._mock import live_or_record, make_response, patch_session_get, tolerate_outage
 
 pytestmark = pytest.mark.stable
 
@@ -123,6 +123,22 @@ class TestIMTSGuards:
 
         with pytest.raises(RemoteDataError):
             IMTSReader("LAO").read()
+
+
+@pytest.mark.network
+class TestIMTSLive:
+    def test_exports_by_partner_shape(self, monkeypatch, datapath):
+        live_or_record(monkeypatch, {"api.imf.org": datapath(*LAOS_2019)}, IMTSReader._URL)
+
+        with tolerate_outage():
+            df = IMTSReader("LAO", start="2019", end="2019").read()
+
+            # Shape, not values: the IMF revises historical trade figures, and a revision is not
+            # the drift this test exists to catch.
+            assert isinstance(df.index, pd.DatetimeIndex)
+            assert df.columns.names == ["country", "indicator", "counterpart", "frequency"]
+            assert "THA" in df.columns.get_level_values("counterpart")
+            assert len(df.columns) > 50
 
 
 class TestIMTSBackends:
