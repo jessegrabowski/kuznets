@@ -1,11 +1,12 @@
 import re
 
+import narwhals.stable.v2 as nw
 import pandas as pd
 import pytest
 
 from kuznets.imf import IMTSReader
 from kuznets.utils import RemoteDataError
-from tests._backends import BACKENDS, skip_unless_installed
+from tests._backends import BACKENDS, as_narwhals, skip_unless_installed
 from tests._mock import make_response, patch_session_get
 
 pytestmark = pytest.mark.stable
@@ -122,3 +123,28 @@ class TestIMTSGuards:
 
         with pytest.raises(RemoteDataError):
             IMTSReader("LAO").read()
+
+
+class TestIMTSBackends:
+    @pytest.mark.parametrize("output_type", BACKENDS)
+    def test_long_schema_and_value_parity(self, monkeypatch, datapath, output_type):
+        skip_unless_installed(output_type)
+
+        wide = read_laos(monkeypatch, datapath)
+        tidy = as_narwhals(read_laos(monkeypatch, datapath, output_type=output_type))
+
+        assert tidy.columns == ["country", "indicator", "counterpart", "frequency", "period", "value"]
+        assert tidy.schema["period"] == nw.Datetime
+        assert len(tidy) == int(wide.notna().sum().sum())
+        assert sum(tidy["value"].to_list()) == pytest.approx(float(wide.sum().sum()))
+        assert set(tidy["counterpart"].to_list()) == set(wide.columns.get_level_values("counterpart"))
+
+    @pytest.mark.parametrize("output_type", BACKENDS)
+    def test_a_partial_year_keeps_the_periods_the_service_sent(self, monkeypatch, datapath, output_type):
+        skip_unless_installed(output_type)
+
+        tidy = as_narwhals(
+            read_laos(monkeypatch, datapath, start="2019-06-01", end="2019-12-31", output_type=output_type)
+        )
+
+        assert len(tidy) == 105
