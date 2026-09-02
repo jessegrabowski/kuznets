@@ -1,4 +1,5 @@
 import collections
+from collections.abc import Iterable
 from io import BytesIO
 import time
 from xml.etree import ElementTree as ET
@@ -230,3 +231,39 @@ def _read_zipped_sdmx(path_or_buf):
     files = f.namelist()
     assert len(files) == 1
     return f.open(files[0])
+
+
+def build_sdmx_key(selections: Iterable[str | Iterable[str] | None]) -> str:
+    """Build an SDMX data key from one selection per dimension, in the dataflow's dimension order.
+
+    Values selected on a single dimension join with ``+``; dimensions join with ``.``. A dimension
+    selected as ``None`` (or an empty sequence) renders as an empty slot, which the service reads as
+    a wildcard.
+
+    Parameters
+    ----------
+    selections : iterable
+        One entry per dimension, in the order the data structure declares them. Each entry is a
+        code, an iterable of codes, or ``None`` to leave that dimension unrestricted.
+
+    Returns
+    -------
+    key : str
+        The key segment of a data request URL, e.g. ``'LAO.XG_FOB_USD..A'``.
+
+    Examples
+    --------
+    >>> build_sdmx_key(["LAO", "XG_FOB_USD", None, "A"])
+    'LAO.XG_FOB_USD..A'
+    >>> build_sdmx_key([["LAO", "THA"], "XG_FOB_USD", None, "A"])
+    'LAO+THA.XG_FOB_USD..A'
+    """
+    parts = []
+    for selection in selections:
+        if selection is None:
+            parts.append("")
+        elif isinstance(selection, str):
+            parts.append(selection)
+        else:
+            parts.append("+".join(selection))
+    return ".".join(parts)
