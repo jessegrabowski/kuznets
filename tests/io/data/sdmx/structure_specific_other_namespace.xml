@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<StructureSpecificData xmlns="urn:example:some-other-agency:v3" xmlns:flow="urn:example:flow">
+  <DataSet>
+    <flow:Series REF_AREA="NOR" MEASURE="EXP" FREQ="Q">
+      <flow:Obs TIME_PERIOD="2019-Q1" OBS_VALUE="12.5"/>
+    </flow:Series>
+  </DataSet>
+</StructureSpecificData>

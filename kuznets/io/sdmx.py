@@ -1,14 +1,19 @@
 import collections
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping, Sequence
 from io import BytesIO
 import time
 from xml.etree import ElementTree as ET
 import zipfile
 
+import narwhals.stable.v2 as nw
 import pandas as pd
 
 from kuznets.compat import HTTPError
-from kuznets.io.util import _read_content
+from kuznets.io.util import _present_observations, _read_content
+from kuznets.output import PANDAS, make_frame, observation_schema, validate_output_type
+
+_TIME_PERIOD = "TIME_PERIOD"
+_OBS_VALUE = "OBS_VALUE"
 
 _STRUCTURE = "{http://www.sdmx.org/resources/sdmxml/schemas/v2_1/structure}"
 _MESSAGE = "{http://www.sdmx.org/resources/sdmxml/schemas/v2_1/message}"
@@ -267,3 +272,106 @@ def build_sdmx_key(selections: Iterable[str | Iterable[str] | None]) -> str:
         else:
             parts.append("+".join(selection))
     return ".".join(parts)
+
+
+def read_structure_specific(path_or_buf, dimensions=None, output_type: str = "pandas"):
+    """Convert an SDMX 2.1 ``StructureSpecificData`` message to a dataframe of the requested backend.
+
+    This message type carries dimension and attribute values as XML attributes of ``<Series>`` and
+    ``<Obs>`` rather than as the child elements :func:`read_sdmx` expects, and its target namespace
+    is dataflow-specific, so elements match on their local names. Observations carrying no value,
+    and documents holding only ``<Group>`` metadata, contribute no rows.
+
+    Parameters
+    ----------
+    path_or_buf : str or file-like
+        A valid SDMX-XML ``StructureSpecificData`` string, path, or file-like object.
+    dimensions : mapping or sequence of str, optional
+        Which XML attributes to treat as dimensions, in the order they should appear. A mapping also
+        renames them, its values becoming the column names; include ``'TIME_PERIOD'`` to name and
+        position the time dimension. A sequence keeps the SDMX identifiers as the names. Naming the
+        dimensions matters because a series carries attributes such as ``UNIT_MEASURE`` and
+        ``SCALE`` alongside them, and only the data structure definition tells them apart. Default
+        None, which takes every attribute the document carries.
+    output_type : str, optional
+        Backend of the returned data: 'pandas', 'polars', 'pyarrow' (alias 'arrow'), or 'dask'.
+        Default 'pandas'.
+
+    Returns
+    -------
+    df : DataFrame or native frame
+        For pandas, time-indexed wide data with the remaining dimensions forming the columns; for
+        any other backend, one row per observation with a dimension column apiece and a float64
+        ``value`` column.
+    """
+    output_type = validate_output_type(output_type)
+    root = ET.fromstring(_read_content(path_or_buf))
+    records = _structure_specific_records(root)
+
+    codes, names = _resolve_dimensions(dimensions, records)
+    time_pos = codes.index(_TIME_PERIOD)
+
+    observations = [
+        (tuple(record.get(code, "") for code in codes), record[_OBS_VALUE])
+        for record in records
+        if record.get(_OBS_VALUE)
+    ]
+    if not observations:
+        return _empty_observations(names, time_pos, output_type)
+
+    label_maps: list[dict[str, str]] = [{} for _ in names]
+    return _present_observations(observations, names, label_maps, time_pos, output_type)
+
+
+def _structure_specific_records(root) -> list[dict[str, str]]:
+    """Walk a parsed ``StructureSpecificData`` tree into one attribute dict per observation.
+
+    Each record merges its series' attributes with the observation's own, so it carries the full
+    dimension key; an observation restating a series-level attribute wins.
+    """
+    records = []
+    for series in root.iter():
+        if _local_name(series.tag) != "Series":
+            continue
+        for observation in series:
+            if _local_name(observation.tag) == "Obs":
+                records.append({**series.attrib, **observation.attrib})
+    return records
+
+
+def _resolve_dimensions(dimensions, records) -> tuple[list[str], list[str]]:
+    """Resolve the ``dimensions`` argument into SDMX identifiers and their output column names.
+
+    The time dimension is appended when the caller leaves it out, so it always has a position.
+    """
+    if dimensions is None:
+        codes = list(dict.fromkeys(key for record in records for key in record if key != _OBS_VALUE))
+        names = list(codes)
+    elif isinstance(dimensions, Mapping):
+        codes = list(dimensions)
+        names = [dimensions[code] for code in codes]
+    elif isinstance(dimensions, Sequence) and not isinstance(dimensions, str):
+        codes = list(dimensions)
+        names = list(codes)
+    else:
+        raise TypeError(f"'dimensions' must be a mapping or a sequence of str, got {type(dimensions).__name__}")
+
+    if _TIME_PERIOD not in codes:
+        codes.append(_TIME_PERIOD)
+        names.append(_TIME_PERIOD)
+    return codes, names
+
+
+def _empty_observations(names: list[str], time_pos: int, output_type: str):
+    """Build the empty frame for a document that yielded no observations."""
+    time_name = names[time_pos]
+    if output_type == PANDAS:
+        return pd.DataFrame(index=pd.DatetimeIndex([], name=time_name))
+    schema = observation_schema(names)
+    schema[time_name] = nw.Datetime()
+    return make_frame([], output_type, schema=schema)
+
+
+def _local_name(tag: str) -> str:
+    """Strip the namespace from a qualified element tag."""
+    return tag.rpartition("}")[2]

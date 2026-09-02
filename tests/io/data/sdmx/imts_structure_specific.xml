@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<message:StructureSpecificData
+    xmlns:message="http://www.sdmx.org/resources/sdmxml/schemas/v2_1/message"
+    xmlns:common="http://www.sdmx.org/resources/sdmxml/schemas/v2_1/common"
+    xmlns:ss="http://www.sdmx.org/resources/sdmxml/schemas/v2_1/data/structurespecific"
+    xmlns:ns1="urn:sdmx:org.sdmx.infomodel.datastructure.DataStructure=IMF.STA:DSD_IMTS(1.0.0):ObsLevelDim:TIME_PERIOD">
+  <message:Header>
+    <message:ID>IDNOTPROVIDED</message:ID>
+    <message:Test>false</message:Test>
+    <message:Prepared>2026-01-05T00:00:00</message:Prepared>
+    <message:Sender id="IMF.STA"/>
+    <message:Structure structureID="DSD_IMTS" namespace="urn:sdmx:org.sdmx.infomodel.datastructure.DataStructure=IMF.STA:DSD_IMTS(1.0.0):ObsLevelDim:TIME_PERIOD" dimensionAtObservation="TIME_PERIOD"/>
+    <common:Name xml:lang="en">International Trade in Goods (by partner country)</common:Name>
+  </message:Header>
+  <message:DataSet ss:structureRef="DSD_IMTS" ss:dataScope="DataStructure" xsi:type="ns1:DataSetType" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <ns1:Group xsi:type="ns1:Group" COUNTRY="LAO" INDICATOR="XG_FOB_USD"/>
+    <ns1:Series COUNTRY="LAO" INDICATOR="XG_FOB_USD" COUNTERPART_COUNTRY="THA" FREQUENCY="A" UNIT_MEASURE="USD" SCALE="6">
+      <ns1:Obs TIME_PERIOD="2018" OBS_VALUE="1810.7"/>
+      <ns1:Obs TIME_PERIOD="2019" OBS_VALUE="2354.6"/>
+    </ns1:Series>
+    <ns1:Series COUNTRY="LAO" INDICATOR="XG_FOB_USD" COUNTERPART_COUNTRY="G001" FREQUENCY="A" UNIT_MEASURE="USD" SCALE="6">
+      <ns1:Obs TIME_PERIOD="2018" OBS_VALUE="4517.3"/>
+      <ns1:Obs TIME_PERIOD="2019" OBS_VALUE="5687.1"/>
+    </ns1:Series>
+  </message:DataSet>
+</message:StructureSpecificData>
