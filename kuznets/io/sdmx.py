@@ -1,6 +1,7 @@
 import collections
 from io import BytesIO
 import time
+from xml.etree import ElementTree as ET
 import zipfile
 
 import pandas as pd
@@ -44,9 +45,6 @@ def read_sdmx(path_or_buf, dtype="float64", dsd=None):
     """
 
     xdata = _read_content(path_or_buf)
-
-    from xml.etree import ElementTree as ET
-
     root = ET.fromstring(xdata)
 
     try:
@@ -193,9 +191,6 @@ def _read_sdmx_dsd(path_or_buf):
     """
 
     xdata = _read_content(path_or_buf)
-
-    from xml.etree import ElementTree as ET
-
     root = ET.fromstring(xdata)
 
     structure = _get_child(root, _MESSAGE + "Structures")
