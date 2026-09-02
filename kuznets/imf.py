@@ -3,9 +3,9 @@ import requests
 
 from kuznets.base import _BaseReader
 from kuznets.io import build_sdmx_key, read_structure_specific
-from kuznets.output import PANDAS, filter_date_range
+from kuznets.output import PANDAS, filter_date_range, is_empty
 from kuznets.typing import DateLike, Headers, Symbols
-from kuznets.utils import _year_bounds
+from kuznets.utils import RemoteDataError, _year_bounds
 
 # The dataflow's dimensions, in key order, mapped to the names this reader presents them under.
 IMTS_DIMENSIONS = {
@@ -156,8 +156,19 @@ class IMTSReader(_BaseReader):
         return filter_date_range(self._frame(payload, self.output_type), "period", start, end)
 
     def _frame(self, payload: str, output_type: str):
-        """Read the payload into a frame."""
-        return read_structure_specific(payload, _COLUMNS, output_type)
+        """Read the payload into a frame, refusing to hand back an empty one.
+
+        The IMF answers a malformed key with a well-formed document carrying no observations, so an
+        empty result is far more often a bad key than a country with no recorded trade.
+        """
+        frame = read_structure_specific(payload, _COLUMNS, output_type)
+        if is_empty(frame):
+            raise RemoteDataError(
+                f"IMTS returned no observations for key {self.key!r} over {self.start.year}-{self.end.year}. "
+                "Check the country codes are ISO 3166-1 alpha-3 and the indicator is spelled correctly, "
+                "or widen the date range."
+            )
+        return frame
 
 
 def _country_codes(value: Symbols | None, argument: str) -> list[str] | None:

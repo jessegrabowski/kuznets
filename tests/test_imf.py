@@ -1,8 +1,11 @@
+import re
+
 import pandas as pd
 import pytest
 
 from kuznets.imf import IMTSReader
 from kuznets.utils import RemoteDataError
+from tests._backends import BACKENDS, skip_unless_installed
 from tests._mock import make_response, patch_session_get
 
 pytestmark = pytest.mark.stable
@@ -103,6 +106,16 @@ class TestIMTSGuards:
 
     def test_country_codes_are_upper_cased(self):
         assert IMTSReader("lao", counterpart="tha").key == "LAO.XG_FOB_USD.THA.A"
+
+    @pytest.mark.parametrize("output_type", ["pandas", *BACKENDS])
+    def test_empty_observation_set_raises(self, monkeypatch, datapath, output_type):
+        # What a wildcarded indicator returns: a well-formed document of <Group> metadata and no
+        # observations, under HTTP 200.
+        skip_unless_installed(output_type)
+        patch_session_get(monkeypatch, {"api.imf.org": datapath("io", "data", "sdmx", "imts_group_only.xml")})
+
+        with pytest.raises(RemoteDataError, match=re.escape("LAO.XG_FOB_USD..A")):
+            IMTSReader("LAO", output_type=output_type).read()
 
     def test_remote_error_on_bad_status(self, monkeypatch):
         patch_session_get(monkeypatch, make_response(b"", status_code=404))
