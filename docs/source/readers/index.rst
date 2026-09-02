@@ -7,6 +7,7 @@ Data Readers
    alphavantage
    fred
    famafrench
+   imf-imts
    bank-of-canada
    econdb
    eurostat
