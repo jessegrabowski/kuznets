@@ -1,4 +1,7 @@
+from typing import Any, Literal, overload
+
 import numpy as np
+import pandas as pd
 
 from kuznets.io.util import (
     TIME_IDS,
@@ -6,9 +9,14 @@ from kuznets.io.util import (
     _present_observations,
 )
 from kuznets.output import validate_output_type
+from kuznets.typing import BackendName, Frame, OutputType
 
 
-def read_jstat(path_or_buf, output_type: str = "pandas"):
+@overload
+def read_jstat(path_or_buf: Any, output_type: Literal["pandas"] = "pandas") -> pd.DataFrame: ...
+@overload
+def read_jstat(path_or_buf: Any, output_type: BackendName = ...) -> Frame: ...
+def read_jstat(path_or_buf: Any, output_type: OutputType = "pandas") -> Frame:
     """Convert a JSON-stat 2.0 dataset to a dataframe of the requested backend.
 
     Parameters
