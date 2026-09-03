@@ -397,6 +397,14 @@ class StructureRef(NamedTuple):
     version: str
 
 
+class DataStructure(NamedTuple):
+    """A data structure definition, reduced to what building and validating a data key needs."""
+
+    dimensions: list[str]
+    time_dimension: str
+    codelists: dict[str, StructureRef]
+
+
 def read_dataflow_structure_ref(path_or_buf: PathOrBuffer) -> StructureRef:
     """Read the data structure definition a dataflow record points at.
 
@@ -425,6 +433,66 @@ def read_dataflow_structure_ref(path_or_buf: PathOrBuffer) -> StructureRef:
     raise ValueError("Document declares no dataflow referencing a data structure definition")
 
 
+def read_data_structure(path_or_buf: PathOrBuffer) -> DataStructure:
+    """Read a data structure definition into its ordered dimensions and their codelists.
+
+    The dimension order is the whole point: an SDMX data key is positional, and a key built in the
+    wrong order is answered by some services with an empty document rather than an error. Order
+    comes from each dimension's ``position`` attribute rather than document order, and the base of
+    that attribute is not assumed -- the IMF numbers from zero and the ILO from one.
+
+    Services differ in where they record a dimension's codelist. The ILO puts the reference on the
+    dimension itself; the IMF leaves the dimension bare and records it on the concept the dimension
+    identifies with, which is only resolvable when the concept schemes are present in the same
+    document, as they are under ``references=children``. Both are handled, and a dimension whose
+    codelist cannot be resolved is simply absent from ``codelists`` rather than raising, so a caller
+    can validate what it can and skip the rest.
+
+    Parameters
+    ----------
+    path_or_buf : str or file-like
+        A valid SDMX-XML structure message carrying a data structure definition.
+
+    Returns
+    -------
+    structure : DataStructure
+        ``dimensions``, the dimension identifiers in key order; ``time_dimension``, the identifier
+        of the time dimension; and ``codelists``, mapping each dimension whose codelist could be
+        resolved to a :class:`StructureRef` for it.
+    """
+    root = ET.fromstring(_read_content(path_or_buf))
+    structure = next(_iter_local(root, "DataStructure"), None)
+    if structure is None:
+        raise ValueError("Document carries no data structure definition")
+
+    dimension_list = next(_iter_local(structure, "DimensionList"), None)
+    if dimension_list is None:
+        raise ValueError(f"Data structure {structure.get('id')!r} declares no dimension list")
+
+    # Only declarations carry both an id and a position; the bare <Dimension> elements elsewhere in
+    # the document are references from group and attribute relationships.
+    declared: list[tuple[int, str, ET.Element]] = []
+    time_dimension = _TIME_PERIOD
+    for element in dimension_list:
+        name = _local_name(element.tag)
+        if name == "TimeDimension":
+            time_dimension = element.get("id") or _TIME_PERIOD
+        elif name == "Dimension":
+            identifier = element.get("id")
+            if identifier is not None:
+                declared.append((int(element.get("position") or "0"), identifier, element))
+    declared.sort(key=lambda declaration: declaration[0])
+
+    concepts = _concept_codelists(root)
+    codelists: dict[str, StructureRef] = {}
+    for _, identifier, element in declared:
+        ref = _dimension_codelist(element, concepts)
+        if ref is not None:
+            codelists[identifier] = ref
+
+    return DataStructure([identifier for _, identifier, _ in declared], time_dimension, codelists)
+
+
 def _iter_local(element: ET.Element, name: str) -> Iterator[ET.Element]:
     """Iterate the descendants of ``element`` whose local name matches, ignoring namespace."""
     return (descendant for descendant in element.iter() if _local_name(descendant.tag) == name)
@@ -439,3 +507,49 @@ def _reference(element: ET.Element, cls: str) -> StructureRef | None:
         if agency is not None and identifier is not None and version is not None:
             return StructureRef(agency=agency, id=identifier, version=version)
     return None
+
+
+def _concept_codelists(root: ET.Element) -> dict[str, StructureRef]:
+    """Map every concept in the document to the codelist it enumerates, where it names one.
+
+    Concepts are keyed both by scheme and identifier together and by identifier alone, because a
+    dimension names its concept's parent scheme but concept identifiers are usually unique anyway.
+    Scheme identifiers repeat across agencies, so the first definition of a key wins.
+    """
+    codelists: dict[str, StructureRef] = {}
+    for scheme in _iter_local(root, "ConceptScheme"):
+        scheme_id = scheme.get("id")
+        for concept in _iter_local(scheme, "Concept"):
+            concept_id = concept.get("id")
+            if concept_id is None:
+                continue
+            ref = _reference(concept, "Codelist")
+            if ref is None:
+                continue
+            codelists.setdefault(_concept_key(scheme_id, concept_id), ref)
+            codelists.setdefault(concept_id, ref)
+    return codelists
+
+
+def _concept_key(scheme: str | None, concept: str) -> str:
+    """Key a concept by its scheme and identifier together."""
+    return f"{scheme}:{concept}"
+
+
+def _dimension_codelist(dimension: ET.Element, concepts: dict[str, StructureRef]) -> StructureRef | None:
+    """Resolve the codelist enumerating a dimension, from the dimension or from its concept."""
+    for representation in _iter_local(dimension, "LocalRepresentation"):
+        ref = _reference(representation, "Codelist")
+        if ref is not None:
+            return ref
+
+    identity = next(_iter_local(dimension, "ConceptIdentity"), None)
+    if identity is None:
+        return None
+    concept = next(_iter_local(identity, "Ref"), None)
+    if concept is None:
+        return None
+    concept_id = concept.get("id")
+    if concept_id is None:
+        return None
+    return concepts.get(_concept_key(concept.get("maintainableParentID"), concept_id)) or concepts.get(concept_id)
