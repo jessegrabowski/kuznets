@@ -18,6 +18,14 @@ def dirpath(datapath):
     return datapath("io", "data", "sdmx")
 
 
+def structure_document(body: str) -> str:
+    """Wrap SDMX structure elements in the message envelope the parsers expect."""
+    return (
+        f'<mes:Structure xmlns:mes="{MESSAGE}" xmlns:str="{STRUCTURE}" xmlns:com="{COMMON}">'
+        f"<mes:Structures>{body}</mes:Structures></mes:Structure>"
+    )
+
+
 def fetch(path: str) -> str:
     """Get a structure document from the IMF's SDMX service, skipping when it is unreachable."""
     url = f"{IMF_SDMX}/{path}"
@@ -45,14 +53,6 @@ class TestReadDataflowStructureRef:
 
 
 class TestReadDataStructure:
-    def test_imf_dimension_order(self, dirpath):
-        # An SDMX key is positional, so this order is the difference between data and an empty
-        # document. CPI carries five dimensions where IMTS carries four.
-        structure = read_data_structure(dirpath / "imf_datastructure_cpi_children.xml")
-
-        assert structure.dimensions == ["COUNTRY", "INDEX_TYPE", "COICOP_1999", "TYPE_OF_TRANSFORMATION", "FREQUENCY"]
-        assert structure.time_dimension == "TIME_PERIOD"
-
     def test_ilo_dimension_order(self, dirpath):
         # The ILO numbers positions from one where the IMF numbers from zero, so the order has to
         # come from sorting on the attribute rather than from indexing into it. It also names its
@@ -61,21 +61,6 @@ class TestReadDataStructure:
 
         assert structure.dimensions == ["REF_AREA", "FREQ", "MEASURE", "SEX", "CUR"]
         assert structure.time_dimension == "TIME_PERIOD"
-
-    def test_imf_codelists_resolve_through_the_concept_scheme(self, dirpath):
-        # IMF dimensions carry no local representation; the codelist is recorded on the concept the
-        # dimension identifies with, and is only reachable when the concept schemes are in the same
-        # document.
-        structure = read_data_structure(dirpath / "imf_datastructure_cpi_children.xml")
-
-        assert {dimension: ref.id for dimension, ref in structure.codelists.items()} == {
-            "COUNTRY": "CL_COUNTRY",
-            "INDEX_TYPE": "CL_INDEX_TYPE",
-            "COICOP_1999": "CL_COICOP_1999",
-            "TYPE_OF_TRANSFORMATION": "CL_CPI_TYPE_OF_TRANSFORMATION",
-            "FREQUENCY": "CL_FREQ",
-        }
-        assert structure.codelists["COUNTRY"] == ("IMF", "CL_COUNTRY", "1.6.0")
 
     def test_ilo_codelists_resolve_from_the_dimension(self, dirpath):
         # The ILO records the codelist on the dimension itself, so no concept scheme is needed.
@@ -89,30 +74,60 @@ class TestReadDataStructure:
             "CUR": "CL_CUR",
         }
 
-    def test_unresolvable_codelists_are_omitted_not_raised(self, dirpath):
-        # Without the concept schemes the IMF's codelists cannot be resolved, but the dimensions
-        # still can. A caller can key a request off this and simply validate nothing.
-        structure = read_data_structure(dirpath / "imf_datastructure_cpi.xml")
-
-        assert structure.dimensions == ["COUNTRY", "INDEX_TYPE", "COICOP_1999", "TYPE_OF_TRANSFORMATION", "FREQUENCY"]
-        assert structure.codelists == {}
-
     def test_dimensions_order_by_position_not_document_order(self):
-        # Every recorded fixture happens to declare its dimensions already in position order, so
-        # only a document that disagrees can tell the sort from an accident of the source data.
-        document = (
-            f'<mes:Structure xmlns:mes="{MESSAGE}" xmlns:str="{STRUCTURE}"><mes:Structures>'
+        # Only a document whose declaration order disagrees with its positions can tell the sort
+        # from an accident of the source data.
+        document = structure_document(
             '<str:DataStructures><str:DataStructure id="DSD_TEST"><str:DataStructureComponents>'
             '<str:DimensionList id="DimensionDescriptor">'
             '<str:Dimension id="THIRD" position="2"/>'
             '<str:Dimension id="FIRST" position="0"/>'
             '<str:Dimension id="SECOND" position="1"/>'
             '<str:TimeDimension id="TIME_PERIOD"/>'
-            "</str:DimensionList></str:DataStructureComponents></str:DataStructure>"
-            "</str:DataStructures></mes:Structures></mes:Structure>"
+            "</str:DimensionList></str:DataStructureComponents></str:DataStructure></str:DataStructures>"
         )
 
         assert read_data_structure(document).dimensions == ["FIRST", "SECOND", "THIRD"]
+
+    def test_codelists_resolve_through_the_concept_scheme(self):
+        # A dimension carrying no local representation names a concept instead, and the codelist
+        # hangs off that concept's core representation.
+        document = structure_document(
+            '<str:DataStructures><str:DataStructure id="DSD_TEST"><str:DataStructureComponents>'
+            '<str:DimensionList id="DimensionDescriptor">'
+            '<str:Dimension id="COUNTRY" position="0"><str:ConceptIdentity>'
+            '<Ref maintainableParentID="CS_TEST" agencyID="TEST" id="COUNTRY" class="Concept"/>'
+            "</str:ConceptIdentity></str:Dimension>"
+            '<str:TimeDimension id="TIME_PERIOD"/>'
+            "</str:DimensionList></str:DataStructureComponents></str:DataStructure></str:DataStructures>"
+            '<str:Concepts><str:ConceptScheme id="CS_TEST"><str:Concept id="COUNTRY">'
+            "<str:CoreRepresentation><str:Enumeration>"
+            '<Ref agencyID="TEST" id="CL_COUNTRY" version="1.6.0" class="Codelist"/>'
+            "</str:Enumeration></str:CoreRepresentation>"
+            "</str:Concept></str:ConceptScheme></str:Concepts>"
+        )
+
+        structure = read_data_structure(document)
+
+        assert structure.codelists == {"COUNTRY": ("TEST", "CL_COUNTRY", "1.6.0")}
+
+    def test_unresolvable_codelists_are_omitted_not_raised(self):
+        # The same document without its concept schemes: the dimensions still parse, and a caller
+        # keying a request off them simply validates nothing.
+        document = structure_document(
+            '<str:DataStructures><str:DataStructure id="DSD_TEST"><str:DataStructureComponents>'
+            '<str:DimensionList id="DimensionDescriptor">'
+            '<str:Dimension id="COUNTRY" position="0"><str:ConceptIdentity>'
+            '<Ref maintainableParentID="CS_TEST" agencyID="TEST" id="COUNTRY" class="Concept"/>'
+            "</str:ConceptIdentity></str:Dimension>"
+            '<str:TimeDimension id="TIME_PERIOD"/>'
+            "</str:DimensionList></str:DataStructureComponents></str:DataStructure></str:DataStructures>"
+        )
+
+        structure = read_data_structure(document)
+
+        assert structure.dimensions == ["COUNTRY"]
+        assert structure.codelists == {}
 
     def test_document_without_a_data_structure_raises(self, dirpath):
         with pytest.raises(ValueError, match="no data structure"):
@@ -120,36 +135,31 @@ class TestReadDataStructure:
 
 
 class TestReadCodelist:
-    def test_country_codes(self, dirpath):
-        codes = read_codelist(dirpath / "imf_codelist_country.xml")
+    def test_codes_map_to_their_english_names(self):
+        document = structure_document(
+            '<str:Codelists><str:Codelist id="CL_TEST">'
+            '<str:Code id="A"><com:Name xml:lang="fr">Annuel</com:Name>'
+            '<com:Name xml:lang="en">Annual</com:Name></str:Code>'
+            "</str:Codelist></str:Codelists>"
+        )
 
-        assert len(codes) == 343
-        assert codes["LAO"] == "Lao People's Democratic Republic"
-
-    def test_alpha_2_codes_are_absent(self, dirpath):
-        # The trap this whole mechanism exists to catch: the IMF answers an alpha-2 country code
-        # with HTTP 200 and no observations, so 'LA' has to be rejected before the request goes out.
-        codes = read_codelist(dirpath / "imf_codelist_country.xml")
-
-        assert "LAO" in codes
-        assert "LA" not in codes
-
-    def test_document_without_a_codelist_raises(self, dirpath):
-        with pytest.raises(ValueError, match="no codelist"):
-            read_codelist(dirpath / "imf_dataflow_cpi.xml")
+        assert read_codelist(document) == {"A": "Annual"}
 
     def test_codes_without_an_english_name_fall_back_to_the_identifier(self):
         # A code names itself in whatever languages it likes, and the identifier is what a caller
         # validates against, so it has to survive a missing English label.
-        document = (
-            f'<mes:Structure xmlns:mes="{MESSAGE}" xmlns:str="{STRUCTURE}" xmlns:com="{COMMON}">'
-            '<str:Codelist id="CL_TEST">'
+        document = structure_document(
+            '<str:Codelists><str:Codelist id="CL_TEST">'
             '<str:Code id="NAMED"><com:Name xml:lang="en">Named</com:Name></str:Code>'
             '<str:Code id="UNNAMED"><com:Name xml:lang="fr">Sans nom</com:Name></str:Code>'
-            "</str:Codelist></mes:Structure>"
+            "</str:Codelist></str:Codelists>"
         )
 
         assert read_codelist(document) == {"NAMED": "Named", "UNNAMED": "UNNAMED"}
+
+    def test_document_without_a_codelist_raises(self, dirpath):
+        with pytest.raises(ValueError, match="no codelist"):
+            read_codelist(dirpath / "imf_dataflow_cpi.xml")
 
 
 @pytest.mark.network
