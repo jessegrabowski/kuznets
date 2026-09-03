@@ -1,14 +1,16 @@
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
 import datetime
 import importlib.util
-from typing import Literal
+from typing import Any, Literal, cast
 
 import narwhals.stable.v2 as nw
 from narwhals.stable.v2 import Implementation
 from narwhals.stable.v2.typing import IntoFrame
 import pandas as pd
 
-PANDAS = "pandas"
+from kuznets.typing import OutputType
+
+PANDAS: Literal["pandas"] = "pandas"
 
 # Canonical backend name -> (module probed for availability, pip extra that installs it). pandas is
 # absent here because it is a hard dependency and needs no availability check.
@@ -29,7 +31,7 @@ _EAGER_BACKENDS: dict[str, _EagerBackend] = {
 }
 
 
-def validate_output_type(output_type: str) -> str:
+def validate_output_type(output_type: str) -> OutputType:
     """Canonicalize an ``output_type`` value and verify its backend is importable.
 
     Call before issuing any network request so an invalid value or missing backend fails fast.
@@ -50,12 +52,13 @@ def validate_output_type(output_type: str) -> str:
     lowered = output_type.lower()
     canonical = _ALIASES.get(lowered, lowered)
     if canonical == PANDAS:
-        return canonical
+        return PANDAS
     if canonical not in _OPTIONAL_BACKENDS:
         valid = ", ".join(repr(name) for name in sorted([PANDAS, *_OPTIONAL_BACKENDS, *_ALIASES]))
         raise ValueError(f"output_type={output_type!r} is not supported; choose one of {valid}")
     _require_backend(canonical)
-    return canonical
+    # Membership in _OPTIONAL_BACKENDS is what makes this one of the backend literals.
+    return cast(OutputType, canonical)
 
 
 def _require_backend(canonical: str) -> None:
@@ -123,7 +126,7 @@ def attach_index(df: pd.DataFrame, index_cols: list[str]) -> pd.DataFrame:
     return df.set_index(index_cols[0] if len(index_cols) == 1 else index_cols)
 
 
-def from_pandas(df: pd.DataFrame, output_type: str):
+def from_pandas(df: pd.DataFrame, output_type: str) -> IntoFrame:
     """Convert a tidy pandas frame to the requested backend.
 
     The tidy contract is enforced, not repaired: an index that carries data (MultiIndex, named
@@ -176,7 +179,11 @@ def from_pandas(df: pd.DataFrame, output_type: str):
         raise ImportError(f"output_type={output_type!r} conversion failed: {exc}") from exc
 
 
-def make_frame(records: list[dict] | dict[str, list], output_type: str, schema: dict | None = None):
+def make_frame(
+    records: list[dict[str, Any]] | dict[str, list[Any]],
+    output_type: str,
+    schema: dict[str, Any] | None = None,
+) -> IntoFrame:
     """Build a native frame of the requested backend directly from parsed records.
 
     Keys missing from a record become nulls; column order follows first appearance across the
@@ -213,7 +220,7 @@ def make_frame(records: list[dict] | dict[str, list], output_type: str, schema: 
     return nw.from_dict(columns, schema=schema, backend=_EAGER_BACKENDS[output_type]).to_native()
 
 
-def observation_schema(dimension_names) -> dict:
+def observation_schema(dimension_names: Iterable[str]) -> dict[str, Any]:
     """Narwhals schema for long-form observation records: string dimensions plus a float64 value.
 
     Parameters
@@ -234,7 +241,7 @@ def filter_date_range(
     column: str | None = None,
     start: str | datetime.date | datetime.datetime | pd.Timestamp | None = None,
     end: str | datetime.date | datetime.datetime | pd.Timestamp | None = None,
-):
+) -> IntoFrame:
     """Keep rows whose ``column`` value lies in the inclusive range [start, end].
 
     Inclusivity on both endpoints matches pandas ``truncate`` and label slicing. A column that is
@@ -305,7 +312,7 @@ def is_empty(frame: IntoFrame) -> bool:
     return nw.from_native(frame).lazy().select(nw.len().alias("rows")).collect()["rows"][0] == 0
 
 
-def to_datetime_col(frame: IntoFrame, column: str):
+def to_datetime_col(frame: IntoFrame, column: str) -> IntoFrame:
     """Cast a string ``column`` to datetime, keeping the strings when they are not calendar dates.
 
     The datetime format is inferred by the backend. Values that defeat inference leave the frame
@@ -334,7 +341,7 @@ def to_datetime_col(frame: IntoFrame, column: str):
         return frame
 
 
-def concat_frames(frames: Sequence[IntoFrame]):
+def concat_frames(frames: Sequence[IntoFrame]) -> IntoFrame:
     """Concatenate native frames of the same backend vertically.
 
     Parameters
