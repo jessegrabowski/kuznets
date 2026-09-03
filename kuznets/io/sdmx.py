@@ -1,7 +1,7 @@
 from collections.abc import Iterable, Iterator, Mapping, Sequence
 from io import BytesIO
 import time
-from typing import IO, NamedTuple
+from typing import IO, Literal, NamedTuple, overload
 from xml.etree import ElementTree as ET
 import zipfile
 
@@ -11,7 +11,7 @@ import pandas as pd
 from kuznets.compat import HTTPError
 from kuznets.io.util import _present_observations, _read_content
 from kuznets.output import PANDAS, make_frame, observation_schema, validate_output_type
-from kuznets.typing import Frame, PathOrBuffer
+from kuznets.typing import BackendName, Frame, OutputType, PathOrBuffer
 
 _TIME_PERIOD = "TIME_PERIOD"
 _OBS_VALUE = "OBS_VALUE"
@@ -280,10 +280,22 @@ def build_sdmx_key(selections: Iterable[str | Iterable[str] | None]) -> str:
     return ".".join(parts)
 
 
+@overload
 def read_structure_specific(
     path_or_buf: PathOrBuffer,
     dimensions: Mapping[str, str] | Sequence[str] | None = None,
-    output_type: str = "pandas",
+    output_type: Literal["pandas"] = "pandas",
+) -> pd.DataFrame: ...
+@overload
+def read_structure_specific(
+    path_or_buf: PathOrBuffer,
+    dimensions: Mapping[str, str] | Sequence[str] | None = None,
+    output_type: BackendName = ...,
+) -> Frame: ...
+def read_structure_specific(
+    path_or_buf: PathOrBuffer,
+    dimensions: Mapping[str, str] | Sequence[str] | None = None,
+    output_type: OutputType = "pandas",
 ) -> Frame:
     """Convert an SDMX 2.1 ``StructureSpecificData`` message to a dataframe of the requested backend.
 
