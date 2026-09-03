@@ -2,6 +2,7 @@ from pandas import DataFrame
 import requests
 
 from kuznets.base import _BaseReader
+from kuznets.typing import Headers
 
 
 class TSPReader(_BaseReader):
@@ -37,6 +38,7 @@ class TSPReader(_BaseReader):
         retry_count: int | None = None,
         pause: float | None = None,
         session=None,
+        headers: Headers | None = None,
         output_type: str = "pandas",
     ) -> None:
         """
@@ -56,6 +58,10 @@ class TSPReader(_BaseReader):
             Time, in seconds, to pause between consecutive queries. Falls back to the configured default.
         session : Session, optional
             ``requests.sessions.Session`` instance to be used.
+        headers : dict, optional
+            Headers applied to every request, merged over ``options.headers`` and the config file.
+            Pass a ``User-Agent`` here to identify as something other than ``kuznets``
+            when a host blocks the default agent.
         output_type : str, optional
             Backend of the returned data: 'pandas', 'polars', 'pyarrow' (alias 'arrow'), or 'dask'.
             Backends other than pandas must be installed separately. Default 'pandas'.
@@ -67,6 +73,7 @@ class TSPReader(_BaseReader):
             retry_count=retry_count,
             pause=pause,
             session=session,
+            headers=headers,
             output_type=output_type,
         )
         self._format = "string"

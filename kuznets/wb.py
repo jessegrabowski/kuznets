@@ -8,7 +8,7 @@ import pandas as pd
 
 from kuznets.base import _BaseReader
 from kuznets.io.util import parse_period_code
-from kuznets.typing import BackendName, DateLike, Frame, OutputType
+from kuznets.typing import BackendName, DateLike, Frame, Headers, OutputType
 
 # ISO 3166-1 alpha-2 and alpha-3 codes, plus the codes the World Bank API serves that have no ISO
 # equivalent: its regional and income aggregates, Kosovo, and the Channel Islands. 'all', 'ALL' and
@@ -702,6 +702,7 @@ class WorldBankReader(_BaseReader):
         pause: float | None = None,
         session=None,
         errors: str = "warn",
+        headers: Headers | None = None,
         output_type: str = "pandas",
     ) -> None:
         """
@@ -734,6 +735,10 @@ class WorldBankReader(_BaseReader):
         errors : str, default "warn"
             One of ``{'ignore', 'warn', 'raise'}``. Controls validation of country codes against a
             hardcoded list. ``'raise'`` will raise a ``ValueError`` on a bad country code.
+        headers : dict, optional
+            Headers applied to every request, merged over ``options.headers`` and the config file.
+            Pass a ``User-Agent`` here to identify as something other than ``kuznets``
+            when a host blocks the default agent.
         output_type : str, optional
             Backend of the returned data: 'pandas', 'polars', 'pyarrow' (alias 'arrow'), or 'dask'.
             Backends other than pandas must be installed separately. Default 'pandas'.
@@ -750,6 +755,7 @@ class WorldBankReader(_BaseReader):
             retry_count=retry_count,
             pause=pause,
             session=session,
+            headers=headers,
             output_type=output_type,
         )
 

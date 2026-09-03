@@ -3,6 +3,7 @@ import pandas as pd
 from kuznets.base import _BaseReader
 from kuznets.io.util import parse_period_code
 from kuznets.output import filter_date_range, make_frame
+from kuznets.typing import Headers
 
 
 class EcondbReader(_BaseReader):
@@ -26,6 +27,7 @@ class EcondbReader(_BaseReader):
         pause: float | None = None,
         session=None,
         freq: str | None = None,
+        headers: Headers | None = None,
         output_type: str = "pandas",
     ) -> None:
         """
@@ -56,6 +58,10 @@ class EcondbReader(_BaseReader):
             ``requests.sessions.Session`` instance to be used.
         freq : str, optional
             Not used.
+        headers : dict, optional
+            Headers applied to every request, merged over ``options.headers`` and the config file.
+            Pass a ``User-Agent`` here to identify as something other than ``kuznets``
+            when a host blocks the default agent.
         output_type : str, optional
             Backend of the returned data: 'pandas', 'polars', 'pyarrow' (alias 'arrow'), or 'dask'.
             Backends other than pandas must be installed separately. Default 'pandas'.
@@ -68,6 +74,7 @@ class EcondbReader(_BaseReader):
             pause=pause,
             session=session,
             freq=freq,
+            headers=headers,
             output_type=output_type,
         )
         params = dict(s.split("=") for s in self.symbols.split("&"))

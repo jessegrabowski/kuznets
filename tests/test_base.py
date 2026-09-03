@@ -177,6 +177,11 @@ class TestDailyBaseReader:
         with pytest.raises(ValueError, match="requires at least one symbol"):
             base._DailyBaseReader().read()
 
+    def test_daily_base_reader_headers_applied_to_session(self):
+        ua = "Mozilla/5.0 (custom)"
+        b = base._DailyBaseReader([], headers={"User-Agent": ua})
+        assert b.session.headers["User-Agent"] == ua
+
 
 class _CsvOutputReader(base._BaseReader):
     @property

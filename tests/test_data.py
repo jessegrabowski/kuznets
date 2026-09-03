@@ -2,6 +2,7 @@ import importlib.util
 
 import pandas as pd
 import pytest
+import requests
 
 from kuznets.data import DataReader
 from tests._mock import make_response, patch_session_get
@@ -67,3 +68,44 @@ class TestDataReader:
         sequential = DataReader(["SPY", "AAPL"], "stooq", max_workers=1)
         parallel = DataReader(["SPY", "AAPL"], "stooq", max_workers=2)
         pd.testing.assert_frame_equal(parallel, sequential)
+
+    @pytest.mark.parametrize(
+        ("symbol", "source", "extra_kwargs"),
+        [
+            ("ert_h_eur_a", "eurostat", {}),
+            ("F-F_Research_Data_Factors", "famafrench", {}),
+            ("GDP", "fred", {}),
+            ("v41690973", "bankofcanada", {}),
+            ("SPY", "stooq", {}),
+            ("ticker=RGDPUS", "econdb", {}),
+            ("AAPL", "yahoo", {}),
+            ("AAPL", "yahoo-actions", {}),
+            ("AAPL", "yahoo-dividends", {}),
+            ("AAPL", "yahoo-fundamentals", {}),
+            ("SBER", "moex", {}),
+            ("WIKI/AAPL", "quandl", {"api_key": "fake"}),
+            ("AAPL", "tiingo", {"api_key": "fake"}),
+            ("USD/EUR", "av-forex", {"api_key": "fake"}),
+            ("AAPL", "av-daily", {"api_key": "fake"}),
+            ("005930", "naver", {}),
+        ],
+    )
+    def test_headers_reach_session_through_dispatch(self, symbol, source, extra_kwargs, monkeypatch):
+        patch_session_get(monkeypatch, lambda url, **kwargs: make_response(b""))
+        session = requests.Session()
+        probe = {"User-Agent": "probe-agent"}
+        try:
+            DataReader(symbol, source, headers=probe, session=session, **extra_kwargs)
+        except Exception:
+            pass
+        assert session.headers["User-Agent"] == "probe-agent"
+
+    def test_eurostat_headers_reach_session_without_explicit_session(self, monkeypatch):
+        fake_response = make_response(json={"dimension": {}, "value": {}})
+        patch_session_get(monkeypatch, lambda url, **kwargs: fake_response)
+        probe = {"User-Agent": "probe-agent"}
+
+        from kuznets.eurostat import EurostatReader
+
+        reader = EurostatReader("ert_h_eur_a", headers=probe)
+        assert reader.session.headers["User-Agent"] == "probe-agent"

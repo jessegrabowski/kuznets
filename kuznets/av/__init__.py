@@ -2,6 +2,7 @@ import pandas as pd
 
 from kuznets.base import _BaseReader
 from kuznets.config import get_api_key
+from kuznets.typing import Headers
 from kuznets.utils import RemoteDataError
 
 AV_BASE_URL = "https://www.alphavantage.co/query"
@@ -21,6 +22,7 @@ class AlphaVantage(_BaseReader):
         pause: float | None = None,
         session=None,
         api_key: str | None = None,
+        headers: Headers | None = None,
         output_type: str = "pandas",
     ) -> None:
         """
@@ -44,6 +46,10 @@ class AlphaVantage(_BaseReader):
             Alpha Vantage API key. Resolved through :func:`kuznets.config.get_api_key`
             (argument, ``options.api_keys['alphavantage']``, ``ALPHAVANTAGE_API_KEY``, then the
             config file). The API key is *required*.
+        headers : dict, optional
+            Headers applied to every request, merged over ``options.headers`` and the config file.
+            Pass a ``User-Agent`` here to identify as something other than ``kuznets``
+            when a host blocks the default agent.
         output_type : str, optional
             Backend of the returned data: 'pandas', 'polars', 'pyarrow' (alias 'arrow'), or 'dask'.
             Backends other than pandas must be installed separately. Default 'pandas'.
@@ -59,6 +65,7 @@ class AlphaVantage(_BaseReader):
             retry_count=retry_count,
             pause=pause,
             session=session,
+            headers=headers,
             output_type=output_type,
         )
         self.api_key = get_api_key("alphavantage", api_key)

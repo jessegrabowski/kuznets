@@ -3,6 +3,7 @@ import datetime as dt
 import pandas as pd
 
 from kuznets.av import AlphaVantage
+from kuznets.typing import Headers
 
 
 class AVTimeSeriesReader(AlphaVantage):
@@ -32,6 +33,7 @@ class AVTimeSeriesReader(AlphaVantage):
         session=None,
         chunksize: int = 25,
         api_key: str | None = None,
+        headers: Headers | None = None,
         output_type: str = "pandas",
     ) -> None:
         """
@@ -58,6 +60,10 @@ class AVTimeSeriesReader(AlphaVantage):
         api_key : str, optional
             Alpha Vantage API key. If not provided the environmental variable
             ``ALPHAVANTAGE_API_KEY`` is read. The API key is *required*.
+        headers : dict, optional
+            Headers applied to every request, merged over ``options.headers`` and the config file.
+            Pass a ``User-Agent`` here to identify as something other than ``kuznets``
+            when a host blocks the default agent.
         output_type : str, optional
             Backend of the returned data: 'pandas', 'polars', 'pyarrow' (alias 'arrow'), or 'dask'.
             Backends other than pandas must be installed separately. Default 'pandas'.
@@ -71,6 +77,7 @@ class AVTimeSeriesReader(AlphaVantage):
             pause=pause,
             session=session,
             api_key=api_key,
+            headers=headers,
             output_type=output_type,
         )
 

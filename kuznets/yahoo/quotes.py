@@ -1,10 +1,12 @@
 from pandas import DataFrame
 
 from kuznets.base import _BaseReader
+from kuznets.config import get_headers
 from kuznets.output import make_frame
+from kuznets.typing import Headers
 from kuznets.utils import RemoteDataError
 from kuznets.yahoo.auth import fetch_crumb
-from kuznets.yahoo.headers import DEFAULT_HEADERS
+from kuznets.yahoo.headers import DEFAULT_HEADERS, session_headers
 
 _DEFAULT_PARAMS = {
     "lang": "en-US",
@@ -26,6 +28,7 @@ class YahooQuotesReader(_BaseReader):
         retry_count: int | None = None,
         pause: float | None = None,
         session=None,
+        headers: Headers | None = None,
         output_type: str = "pandas",
     ) -> None:
         super().__init__(
@@ -35,9 +38,14 @@ class YahooQuotesReader(_BaseReader):
             retry_count=retry_count,
             pause=pause,
             session=session,
+            headers=headers,
             output_type=output_type,
         )
-        self.headers = session.headers if session is not None else DEFAULT_HEADERS
+        merged_headers = dict(DEFAULT_HEADERS)
+        resolved = get_headers(headers)
+        if resolved:
+            merged_headers.update(resolved)
+        self.headers = session_headers(self.session) if session is not None else merged_headers
 
     @property
     def url(self) -> str:

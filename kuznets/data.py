@@ -1007,6 +1007,7 @@ def DataReader(
             retry_count=retry_count,
             pause=pause,
             session=session,
+            headers=headers,
             output_type=backend,
             max_workers=max_workers,
         ).read()
@@ -1019,6 +1020,7 @@ def DataReader(
             retry_count=retry_count,
             pause=pause,
             session=session,
+            headers=headers,
             output_type=backend,
         ).read()
 
@@ -1031,6 +1033,7 @@ def DataReader(
             retry_count=retry_count,
             pause=pause,
             session=session,
+            headers=headers,
             output_type=backend,
             max_workers=max_workers,
         ).read()
@@ -1056,6 +1059,7 @@ def DataReader(
             retry_count=retry_count,
             pause=pause,
             session=session,
+            headers=headers,
             output_type=backend,
         ).read()
 
@@ -1067,6 +1071,7 @@ def DataReader(
             retry_count=retry_count,
             pause=pause,
             session=session,
+            headers=headers,
             output_type=backend,
         ).read()
     elif data_source == "eurostat":
@@ -1077,6 +1082,7 @@ def DataReader(
             retry_count=retry_count,
             pause=pause,
             session=session,
+            headers=headers,
             output_type=backend,
         ).read()
     elif data_source == "nasdaq":
@@ -1097,6 +1103,7 @@ def DataReader(
             pause=pause,
             session=session,
             api_key=api_key,
+            headers=headers,
             output_type=backend,
             max_workers=max_workers,
         ).read()
@@ -1108,6 +1115,7 @@ def DataReader(
             retry_count=retry_count,
             pause=pause,
             session=session,
+            headers=headers,
             output_type=backend,
             max_workers=max_workers,
         ).read()
@@ -1120,6 +1128,7 @@ def DataReader(
             pause=pause,
             session=session,
             api_key=api_key,
+            headers=headers,
             output_type=backend,
         ).read()
 
@@ -1131,6 +1140,7 @@ def DataReader(
             retry_count=retry_count,
             pause=pause,
             session=session,
+            headers=headers,
             output_type=backend,
             max_workers=max_workers,
         ).read()
@@ -1146,6 +1156,7 @@ def DataReader(
             pause=pause,
             session=session,
             interval="d",
+            headers=headers,
             output_type=backend,
             max_workers=max_workers,
         ).read()
@@ -1158,6 +1169,7 @@ def DataReader(
             retry_count=retry_count,
             pause=pause,
             session=session,
+            headers=headers,
             output_type=backend,
             max_workers=max_workers,
         ).read()
@@ -1169,6 +1181,7 @@ def DataReader(
             pause=pause,
             session=session,
             api_key=api_key,
+            headers=headers,
             output_type=backend,
         ).read()
 
@@ -1182,6 +1195,7 @@ def DataReader(
             pause=pause,
             session=session,
             api_key=api_key,
+            headers=headers,
             output_type=backend,
         ).read()
 
@@ -1195,6 +1209,7 @@ def DataReader(
             pause=pause,
             session=session,
             api_key=api_key,
+            headers=headers,
             output_type=backend,
         ).read()
 
@@ -1208,6 +1223,7 @@ def DataReader(
             pause=pause,
             session=session,
             api_key=api_key,
+            headers=headers,
             output_type=backend,
         ).read()
 
@@ -1221,6 +1237,7 @@ def DataReader(
             pause=pause,
             session=session,
             api_key=api_key,
+            headers=headers,
             output_type=backend,
         ).read()
 
@@ -1234,6 +1251,7 @@ def DataReader(
             pause=pause,
             session=session,
             api_key=api_key,
+            headers=headers,
             output_type=backend,
         ).read()
 
@@ -1247,6 +1265,7 @@ def DataReader(
             pause=pause,
             session=session,
             api_key=api_key,
+            headers=headers,
             output_type=backend,
         ).read()
 
@@ -1260,6 +1279,7 @@ def DataReader(
             pause=pause,
             session=session,
             api_key=api_key,
+            headers=headers,
             output_type=backend,
         ).read()
 
@@ -1273,6 +1293,7 @@ def DataReader(
             pause=pause,
             session=session,
             api_key=api_key,
+            headers=headers,
             output_type=backend,
         ).read()
 
@@ -1284,6 +1305,7 @@ def DataReader(
             retry_count=retry_count,
             pause=pause,
             session=session,
+            headers=headers,
             output_type=backend,
         ).read()
 
@@ -1295,6 +1317,7 @@ def DataReader(
             retry_count=retry_count,
             pause=pause,
             session=session,
+            headers=headers,
             output_type=backend,
             max_workers=max_workers,
         ).read()

@@ -6,7 +6,7 @@ import pandas as pd
 from kuznets.base import _BaseReader
 from kuznets.config import get_api_key
 from kuznets.output import make_frame
-from kuznets.typing import Payload
+from kuznets.typing import Headers, Payload
 
 
 def get_tiingo_symbols() -> pd.DataFrame:
@@ -71,6 +71,7 @@ class TiingoIEXHistoricalReader(_BaseReader):
         session=None,
         freq: str | None = None,
         api_key: str | None = None,
+        headers: Headers | None = None,
         output_type: str = "pandas",
     ) -> None:
         """
@@ -99,11 +100,26 @@ class TiingoIEXHistoricalReader(_BaseReader):
             Tiingo API key. Resolved through :func:`kuznets.config.get_api_key` (argument,
             ``options.api_keys['tiingo']``, ``TIINGO_API_KEY``, then the config file). The API key
             is *required*.
+        headers : dict, optional
+            Headers applied to every request, merged over ``options.headers`` and the config file.
+            Pass a ``User-Agent`` here to identify as something other than ``kuznets``
+            when a host blocks the default agent.
         output_type : str, optional
             Backend of the returned data: 'pandas', 'polars', 'pyarrow' (alias 'arrow'), or 'dask'.
             Backends other than pandas must be installed separately. Default 'pandas'.
         """
-        super().__init__(symbols, start, end, retry_count, pause, timeout, session, freq, output_type=output_type)
+        super().__init__(
+            symbols,
+            start,
+            end,
+            retry_count,
+            pause,
+            timeout,
+            session,
+            freq,
+            headers=headers,
+            output_type=output_type,
+        )
 
         if isinstance(self.symbols, str):
             self.symbols = [self.symbols]
@@ -198,6 +214,7 @@ class TiingoDailyReader(_BaseReader):
         session=None,
         freq: str | None = None,
         api_key: str | None = None,
+        headers: Headers | None = None,
         output_type: str = "pandas",
     ) -> None:
         """
@@ -225,11 +242,26 @@ class TiingoDailyReader(_BaseReader):
             Tiingo API key. Resolved through :func:`kuznets.config.get_api_key` (argument,
             ``options.api_keys['tiingo']``, ``TIINGO_API_KEY``, then the config file). The API key
             is *required*.
+        headers : dict, optional
+            Headers applied to every request, merged over ``options.headers`` and the config file.
+            Pass a ``User-Agent`` here to identify as something other than ``kuznets``
+            when a host blocks the default agent.
         output_type : str, optional
             Backend of the returned data: 'pandas', 'polars', 'pyarrow' (alias 'arrow'), or 'dask'.
             Backends other than pandas must be installed separately. Default 'pandas'.
         """
-        super().__init__(symbols, start, end, retry_count, pause, timeout, session, freq, output_type=output_type)
+        super().__init__(
+            symbols,
+            start,
+            end,
+            retry_count,
+            pause,
+            timeout,
+            session,
+            freq,
+            headers=headers,
+            output_type=output_type,
+        )
         if isinstance(self.symbols, str):
             self.symbols = [self.symbols]
         self._symbol = ""
@@ -320,6 +352,7 @@ class TiingoMetaDataReader(TiingoDailyReader):
         session=None,
         freq: str | None = None,
         api_key: str | None = None,
+        headers: Headers | None = None,
         output_type: str = "pandas",
     ) -> None:
         """
@@ -347,12 +380,26 @@ class TiingoMetaDataReader(TiingoDailyReader):
             Tiingo API key. Resolved through :func:`kuznets.config.get_api_key` (argument,
             ``options.api_keys['tiingo']``, ``TIINGO_API_KEY``, then the config file). The API key
             is *required*.
+        headers : dict, optional
+            Headers applied to every request, merged over ``options.headers`` and the config file.
+            Pass a ``User-Agent`` here to identify as something other than ``kuznets``
+            when a host blocks the default agent.
         output_type : str, optional
             Backend of the returned data: 'pandas', 'polars', 'pyarrow' (alias 'arrow'), or 'dask'.
             Backends other than pandas must be installed separately. Default 'pandas'.
         """
         super().__init__(
-            symbols, start, end, retry_count, pause, timeout, session, freq, api_key, output_type=output_type
+            symbols,
+            start,
+            end,
+            retry_count,
+            pause,
+            timeout,
+            session,
+            freq,
+            api_key,
+            headers=headers,
+            output_type=output_type,
         )
         self._concat_axis: Literal[0, 1] = 1
 

@@ -5,7 +5,7 @@ import pandas as pd
 import requests
 
 from kuznets.base import _DailyBaseReader
-from kuznets.typing import DateLike, Symbols
+from kuznets.typing import DateLike, Headers, Symbols
 
 
 class MoexReader(_DailyBaseReader):
@@ -22,6 +22,7 @@ class MoexReader(_DailyBaseReader):
         pause: float | None = None,
         session: requests.Session | None = None,
         chunksize: int = 25,
+        headers: Headers | None = None,
         output_type: str = "pandas",
         max_workers: int | None = None,
     ) -> None:
@@ -46,6 +47,10 @@ class MoexReader(_DailyBaseReader):
             ``requests.sessions.Session`` instance to be used.
         chunksize : int, default 25
             Number of symbols to download consecutively before initiating pause.
+        headers : dict, optional
+            Headers applied to every request, merged over ``options.headers`` and the config file.
+            Pass a ``User-Agent`` here to identify as something other than ``kuznets``
+            when a host blocks the default agent.
         output_type : str, optional
             Backend of the returned data: 'pandas', 'polars', 'pyarrow' (alias 'arrow'), or 'dask'.
             Backends other than pandas must be installed separately. Default 'pandas'.
@@ -66,6 +71,7 @@ class MoexReader(_DailyBaseReader):
             pause=pause,
             session=session,
             chunksize=chunksize,
+            headers=headers,
             output_type=output_type,
             max_workers=max_workers,
         )
