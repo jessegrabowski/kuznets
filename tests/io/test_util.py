@@ -8,12 +8,22 @@ from kuznets.io.util import (
     _observations_to_records,
     _pivot_observations,
     _present_observations,
+    _read_content,
     _to_datetime_index,
     parse_period_code,
 )
 from tests._backends import BACKENDS, as_narwhals, skip_unless_installed
 
 pytestmark = pytest.mark.stable
+
+
+def test_read_content_decodes_as_utf8(datapath):
+    # The services send UTF-8 whatever the reading platform defaults to. Windows defaults to cp1252,
+    # which mangles accented text where it does not reject the bytes outright, so this only fails
+    # off Linux -- the CI matrix is what exercises it.
+    text = _read_content(datapath("io", "data", "sdmx", "ilo_datastructure_earnings.xml"))
+
+    assert "seg\u00fan sexo" in text
 
 
 def test_pivot_keeps_columns_with_duplicate_labels():
