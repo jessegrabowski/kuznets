@@ -1,12 +1,21 @@
+from typing import Literal, overload
+
+import pandas as pd
+
 from kuznets.io.util import (
     TIME_IDS,
     _load_json,
     _present_observations,
 )
 from kuznets.output import validate_output_type
+from kuznets.typing import BackendName, Frame, JSONSource, OutputType
 
 
-def read_jsdmx(path_or_buf, output_type: str = "pandas"):
+@overload
+def read_jsdmx(path_or_buf: JSONSource, output_type: Literal["pandas"] = "pandas") -> pd.DataFrame: ...
+@overload
+def read_jsdmx(path_or_buf: JSONSource, output_type: BackendName = ...) -> Frame: ...
+def read_jsdmx(path_or_buf: JSONSource, output_type: OutputType = "pandas") -> Frame:
     """Convert an SDMX-JSON 2.0 data message to a dataframe of the requested backend.
 
     Expects the message to have been requested with ``dimensionAtObservation=AllDimensions``.

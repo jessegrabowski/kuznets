@@ -57,11 +57,6 @@ def datapath(request):
     -------
     path : Path
         Path including ``tests/``.
-
-    Raises
-    ------
-    ValueError
-        If the path doesn't exist and the --strict-data-files option is set.
     """
     base_path = Path(__file__).parent
 

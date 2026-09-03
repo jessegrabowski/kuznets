@@ -1,7 +1,7 @@
-import collections
 from collections.abc import Iterable, Mapping, Sequence
 from io import BytesIO
 import time
+from typing import IO, NamedTuple
 from xml.etree import ElementTree as ET
 import zipfile
 
@@ -11,6 +11,7 @@ import pandas as pd
 from kuznets.compat import HTTPError
 from kuznets.io.util import _present_observations, _read_content
 from kuznets.output import PANDAS, make_frame, observation_schema, validate_output_type
+from kuznets.typing import Frame, PathOrBuffer
 
 _TIME_PERIOD = "TIME_PERIOD"
 _OBS_VALUE = "OBS_VALUE"
@@ -32,22 +33,31 @@ _CODE = _STRUCTURE + "Code"
 _TIMEDIMENSION = _STRUCTURE + "TimeDimension"
 
 
-def read_sdmx(path_or_buf, dtype="float64", dsd=None):
-    """
-    Convert a SDMX-XML string to pandas object
+class SDMXCode(NamedTuple):
+    """A parsed data structure definition: code labels per codelist, and the time dimensions."""
+
+    codes: dict[str | None, dict[str | None, str | None]]
+    time_dimensions: list[str | None]
+
+
+def read_sdmx(path_or_buf: PathOrBuffer, dtype: str = "float64", dsd: SDMXCode | None = None) -> pd.DataFrame:
+    """Convert an SDMX-XML generic data message to a wide pandas frame.
 
     Parameters
     ----------
-    path_or_buf : a valid SDMX-XML string or file-like
-        https://webgate.ec.europa.eu/fpfis/mwikis/sdmx/index.php/Main_Page
-    dtype : str
-        dtype to coerce values
-    dsd : dict
-        parsed DSD dict corresponding to the SDMX-XML data
+    path_or_buf : str, Path, or file-like
+        A valid SDMX-XML string, path, or open file.
+    dtype : str, optional
+        dtype the observation values coerce to. Default 'float64'.
+    dsd : SDMXCode, optional
+        Parsed data structure definition, used to label the series keys and to identify which
+        dimensions carry times. Default None, which leaves the codes unlabeled.
 
     Returns
     -------
-    results : Series, DataFrame, or dictionaly of Series or DataFrame.
+    df : DataFrame
+        Observations indexed by the dimension at observation, with the series keys forming the
+        columns.
     """
 
     xdata = _read_content(path_or_buf)
@@ -58,7 +68,7 @@ def read_sdmx(path_or_buf, dtype="float64", dsd=None):
     except ValueError as exc:
         # get zipped path
         result = list(root.iter(_COMMON + "Text"))[1].text
-        if not result.startswith("http"):
+        if result is None or not result.startswith("http"):
             raise ValueError(result) from exc
 
         for _ in range(60):
@@ -95,14 +105,17 @@ def read_sdmx(path_or_buf, dtype="float64", dsd=None):
     return df
 
 
-def _construct_series(values, name, dsd=None):
+def _construct_series(
+    values: list[list[tuple[str | None, str | None]]], name: str | None, dsd: SDMXCode | None = None
+) -> list[pd.Series]:
     # ts defines attributes to be handled as times
-    times = dsd.ts if dsd is not None else []
+    times = dsd.time_dimensions if dsd is not None else []
 
     if len(values) < 1:
         raise ValueError("Data contains no 'Series'")
     results = []
     for value in values:
+        idx: pd.Index
         if name in times:
             tvalue = [v[0] for v in value]
             try:
@@ -117,14 +130,14 @@ def _construct_series(values, name, dsd=None):
     return results
 
 
-def _construct_index(keys, dsd=None):
+def _construct_index(keys: list[list[tuple[str | None, str | None]]], dsd: SDMXCode | None = None) -> pd.MultiIndex:
     # code defines a mapping to key's internal code to its representation
     codes = dsd.codes if dsd is not None else {}
 
     if len(keys) < 1:
         raise ValueError("Data contains no 'Series'")
     names = [t[0] for t in keys[0]]
-    values = {}
+    values: dict[str | None, list[str | None]] = {}
     # initialize
     for key in keys:
         for name, value in key:
@@ -143,7 +156,7 @@ def _construct_index(keys, dsd=None):
     return midx
 
 
-def _parse_observations(observations):
+def _parse_observations(observations: Iterable[ET.Element]) -> list[tuple[str | None, str | None]]:
     results = []
     for observation in observations:
         obsdimension = _get_child(observation, _OBSDIMENSION)
@@ -153,7 +166,7 @@ def _parse_observations(observations):
     return results
 
 
-def _parse_series_key(series):
+def _parse_series_key(series: ET.Element) -> list[tuple[str | None, str | None]]:
     serieskey = _get_child(series, _SERIES_KEY)
     key_values = serieskey.iter(_VALUE)
     keys = [(key.get("id"), key.get("value")) for key in key_values]
@@ -161,7 +174,7 @@ def _parse_series_key(series):
     return keys
 
 
-def _get_child(element, key):
+def _get_child(element: ET.Element, key: str) -> ET.Element:
     elements = list(element.iter(key))
     if len(elements) == 1:
         return elements[0]
@@ -174,68 +187,61 @@ def _get_child(element, key):
 _NAME_EN = f".//{_COMMON}Name[@{_XML}lang='en']"
 
 
-def _get_english_name(element):
-    name = element.find(_NAME_EN).text
-    return name
+def _get_english_name(element: ET.Element) -> str | None:
+    """Return the element's English name, or None where it declares none."""
+    name = element.find(_NAME_EN)
+    return name.text if name is not None else None
 
 
-SDMXCode = collections.namedtuple("SDMXCode", ["codes", "ts"])
-
-
-def _read_sdmx_dsd(path_or_buf):
-    """
-    Convert a SDMX-XML DSD string to mapping dictionary
+def _read_sdmx_dsd(path_or_buf: PathOrBuffer) -> SDMXCode:
+    """Parse an SDMX-XML data structure definition into its code labels and time dimensions.
 
     Parameters
     ----------
-    filepath_or_buffer : a valid SDMX-XML DSD string or file-like
-        https://webgate.ec.europa.eu/fpfis/mwikis/sdmx/index.php/Main_Page
+    path_or_buf : str, Path, or file-like
+        A valid SDMX-XML structure message.
 
     Returns
     -------
-    results : namedtuple (SDMXCode)
+    dsd : SDMXCode
+        Display names per codelist, and the identifiers of the dimensions carrying times.
     """
-
     xdata = _read_content(path_or_buf)
     root = ET.fromstring(xdata)
 
     structure = _get_child(root, _MESSAGE + "Structures")
     codes = _get_child(structure, _STRUCTURE + "Codelists")
-    # concepts = _get_child(structure, _STRUCTURE + 'Concepts')
     datastructures = _get_child(structure, _STRUCTURE + "DataStructures")
 
     code_results = {}
     for codelist in codes:
-        # codelist_id = codelist.get('id')
         codelist_name = _get_english_name(codelist)
         mapper = {}
         for code in codelist.iter(_CODE):
             code_id = code.get("id")
             name = _get_english_name(code)
             mapper[code_id] = name
-        # codeobj = SDMXCode(id=codelist_id, name=codelist_name, mapper=mapper)
-        # code_results[codelist_id] = codeobj
         code_results[codelist_name] = mapper
 
-    times = list(datastructures.iter(_TIMEDIMENSION))
-    times = [t.get("id") for t in times]
+    times = [dimension.get("id") for dimension in datastructures.iter(_TIMEDIMENSION)]
 
-    result = SDMXCode(codes=code_results, ts=times)
+    result = SDMXCode(codes=code_results, time_dimensions=times)
     return result
 
 
-def _read_zipped_sdmx(path_or_buf):
-    """Unzipp data contains SDMX-XML"""
+def _read_zipped_sdmx(path_or_buf: PathOrBuffer) -> IO[bytes]:
+    """Unzip a downloaded SDMX-XML archive and open its single member."""
     data = _read_content(path_or_buf)
 
     if not isinstance(data, bytes):
         data = data.encode("ascii")
     zp = BytesIO()
     zp.write(data)
-    f = zipfile.ZipFile(zp)
-    files = f.namelist()
-    assert len(files) == 1
-    return f.open(files[0])
+    archive = zipfile.ZipFile(zp)
+    members = archive.namelist()
+    if len(members) != 1:
+        raise ValueError(f"Expected one SDMX-XML document in the archive, found {len(members)}: {members}")
+    return archive.open(members[0])
 
 
 def build_sdmx_key(selections: Iterable[str | Iterable[str] | None]) -> str:
@@ -274,7 +280,11 @@ def build_sdmx_key(selections: Iterable[str | Iterable[str] | None]) -> str:
     return ".".join(parts)
 
 
-def read_structure_specific(path_or_buf, dimensions=None, output_type: str = "pandas"):
+def read_structure_specific(
+    path_or_buf: PathOrBuffer,
+    dimensions: Mapping[str, str] | Sequence[str] | None = None,
+    output_type: str = "pandas",
+) -> Frame:
     """Convert an SDMX 2.1 ``StructureSpecificData`` message to a dataframe of the requested backend.
 
     This message type carries dimension and attribute values as XML attributes of ``<Series>`` and
@@ -323,7 +333,7 @@ def read_structure_specific(path_or_buf, dimensions=None, output_type: str = "pa
     return _present_observations(observations, names, label_maps, time_pos, output_type)
 
 
-def _structure_specific_records(root) -> list[dict[str, str]]:
+def _structure_specific_records(root: ET.Element) -> list[dict[str, str]]:
     """Walk a parsed ``StructureSpecificData`` tree into one attribute dict per observation.
 
     Each record merges its series' attributes with the observation's own, so it carries the full
@@ -339,7 +349,9 @@ def _structure_specific_records(root) -> list[dict[str, str]]:
     return records
 
 
-def _resolve_dimensions(dimensions, records) -> tuple[list[str], list[str]]:
+def _resolve_dimensions(
+    dimensions: Mapping[str, str] | Sequence[str] | None, records: list[dict[str, str]]
+) -> tuple[list[str], list[str]]:
     """Resolve the ``dimensions`` argument into SDMX identifiers and their output column names.
 
     The time dimension is appended when the caller leaves it out, so it always has a position.
@@ -362,7 +374,7 @@ def _resolve_dimensions(dimensions, records) -> tuple[list[str], list[str]]:
     return codes, names
 
 
-def _empty_observations(names: list[str], time_pos: int, output_type: str):
+def _empty_observations(names: list[str], time_pos: int, output_type: str) -> Frame:
     """Build the empty frame for a document that yielded no observations."""
     time_name = names[time_pos]
     if output_type == PANDAS:

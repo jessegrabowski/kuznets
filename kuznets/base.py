@@ -285,11 +285,6 @@ class _BaseReader:
         -------
         response : Response
             Server response.
-
-        Raises
-        ------
-        RemoteDataError
-            If the request fails after all retries.
         """
         headers = headers or self.headers
         # The session's Retry adapter handles retry counting, backoff, and Retry-After; a non-ok
@@ -471,11 +466,6 @@ class _DailyBaseReader(_BaseReader):
         -------
         stocks : dict
             One frame per symbol, in fetch order; failed symbols hold all-NaN frames.
-
-        Raises
-        ------
-        RemoteDataError
-            If no data is fetched for any symbol.
         """
         results = _fetch_symbols_concurrently(
             symbols, lambda sym: self._read_one_data(self.url, self._get_params(sym)), self.max_workers

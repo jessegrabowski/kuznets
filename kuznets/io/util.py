@@ -1,19 +1,28 @@
 from collections import OrderedDict
+from collections.abc import Sequence
 from datetime import datetime
 from pathlib import Path
 import re
+from typing import Any
 
 import narwhals.stable.v2 as nw
 import pandas as pd
 
 from kuznets.compat import get_filepath_or_buffer
 from kuznets.output import PANDAS, make_frame, observation_schema
+from kuznets.typing import Frame, JSONSource
 
 # Dimension identifiers that mark the time axis across SDMX-JSON and JSON-stat responses.
 TIME_IDS = {"time", "TIME_PERIOD"}
 
+# One parsed observation: a dimension code per entry in the reader's dimension list, and its value.
+type Observation = tuple[tuple[str, ...], str | float | int]
 
-def _load_json(path_or_buf):
+# One mapping of code to display name per dimension, positionally aligned with the dimension names.
+type LabelMaps = list[dict[str, str]]
+
+
+def _load_json(path_or_buf: JSONSource) -> Any:
     """Read JSON content from a path, string, or file-like and parse it into a dict."""
     jdata = _read_content(path_or_buf)
     if isinstance(jdata, dict):
@@ -25,7 +34,7 @@ def _load_json(path_or_buf):
     return json.loads(jdata, object_pairs_hook=OrderedDict)
 
 
-def _to_datetime_index(idx, name):
+def _to_datetime_index(idx: Sequence[Any] | pd.Index, name: str) -> pd.Index:
     """Coerce period codes to a ``DatetimeIndex``, falling back to a string ``Index`` on failure."""
     try:
         return pd.DatetimeIndex(pd.to_datetime(idx), name=name)
@@ -34,7 +43,9 @@ def _to_datetime_index(idx, name):
         return pd.Index(idx, name=name)
 
 
-def _pivot_observations(records, dim_names, label_maps, time_pos):
+def _pivot_observations(
+    records: Sequence[Observation], dim_names: list[str], label_maps: LabelMaps, time_pos: int
+) -> pd.DataFrame:
     """Pivot long-form SDMX observations into a wide DataFrame indexed by time.
 
     Parameters
@@ -84,7 +95,7 @@ _WEEK_CODE = re.compile(r"^(\d{4})-?W(\d{2})$", re.IGNORECASE)
 _MONTH_CODE = re.compile(r"^(\d{4})M(\d{1,2})$", re.IGNORECASE)
 
 
-def parse_period_code(code) -> datetime | None:
+def parse_period_code(code: object) -> datetime | None:
     """Parse an SDMX/JSON-stat period code to its period-start timestamp, or None if unrecognized.
 
     Standard codes -- annual ('2009'), monthly ('2009-01'), daily ('2009-01-15'), quarterly
@@ -116,7 +127,9 @@ def parse_period_code(code) -> datetime | None:
         return None
 
 
-def _observations_to_records(records, dim_names, label_maps, time_pos):
+def _observations_to_records(
+    records: Sequence[Observation], dim_names: list[str], label_maps: LabelMaps, time_pos: int
+) -> list[dict[str, Any]]:
     """Convert ``(codes, value)`` observations into display-labeled row records.
 
     Non-time dimension codes map through their label maps, matching the column labels
@@ -139,9 +152,9 @@ def _observations_to_records(records, dim_names, label_maps, time_pos):
     list of dict
         One record per observation: a key per dimension plus ``'value'``.
     """
-    rows = []
+    rows: list[dict[str, Any]] = []
     for codes, value in records:
-        row = {}
+        row: dict[str, Any] = {}
         for position, (name, code) in enumerate(zip(dim_names, codes, strict=True)):
             row[name] = code if position == time_pos else label_maps[position].get(code, code)
         row["value"] = float(value)
@@ -149,15 +162,20 @@ def _observations_to_records(records, dim_names, label_maps, time_pos):
     return rows
 
 
-def _present_observations(records, dim_names, label_maps, time_pos, output_type):
-    """Present parsed observations as today's wide pandas frame or a long native frame.
+def _present_observations(
+    records: Sequence[Observation],
+    dim_names: list[str],
+    label_maps: LabelMaps,
+    time_pos: int,
+    output_type: str,
+) -> Frame:
+    """Present parsed observations as a wide pandas frame or a long native frame.
 
-    The pandas path pivots to the time-indexed wide frame, with its legacy time parsing. Every
-    other backend gets one row per observation with display-labeled dimension columns and a float64
-    ``value`` column; period codes parse in Python via :func:`parse_period_code` before any
-    backend sees them, so the time column is datetime-typed identically everywhere -- including
-    quarterly, semester, and ISO-week codes -- and stays string-typed only when a code defeats the
-    parser.
+    The pandas path pivots to a time-indexed wide frame. Every other backend gets one row per
+    observation with display-labeled dimension columns and a float64 ``value`` column; period codes
+    parse in Python via :func:`parse_period_code` before any backend sees them, so the time column is
+    datetime-typed identically everywhere -- including quarterly, semester, and ISO-week codes -- and
+    stays string-typed only when a code defeats the parser.
     """
     if output_type == PANDAS:
         return _pivot_observations(records, dim_names, label_maps, time_pos)
@@ -172,12 +190,13 @@ def _present_observations(records, dim_names, label_maps, time_pos, output_type)
     return make_frame(tidy_records, output_type, schema=schema)
 
 
-def _read_content(path_or_buf):
+def _read_content(path_or_buf: Any) -> Any:
     """
     Copied part of internal logic from pandas.io.read_json.
     """
 
     filepath_or_buffer = get_filepath_or_buffer(path_or_buf)[0]
+    data: Any
 
     if isinstance(filepath_or_buffer, str | Path):
         try:

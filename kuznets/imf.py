@@ -88,12 +88,6 @@ class IMTSReader(_BaseReader):
         output_type : str, optional
             Backend of the returned data: 'pandas', 'polars', 'pyarrow' (alias 'arrow'), or 'dask'.
             Backends other than pandas must be installed separately. Default 'pandas'.
-
-        Raises
-        ------
-        ValueError
-            If no reporting country or no indicator is given, or if a country code is too short to be
-            an alpha-3 code.
         """
         if not symbols:
             raise ValueError("IMTSReader requires at least one reporting country")

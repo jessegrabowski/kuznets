@@ -57,7 +57,10 @@ def test_pivot_time_only_cube():
 
 def test_to_datetime_index_parses_calendar_codes():
     idx = _to_datetime_index(["2009-01-01", "2010-01-01"], "Time")
+
     assert isinstance(idx, pd.DatetimeIndex)
+    assert list(idx) == [pd.Timestamp("2009-01-01"), pd.Timestamp("2010-01-01")]
+    assert idx.name == "Time"
 
 
 @pytest.mark.filterwarnings("ignore:Could not infer format:UserWarning")
