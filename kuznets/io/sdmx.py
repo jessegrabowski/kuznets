@@ -409,13 +409,11 @@ def read_dataflow_structure_ref(path_or_buf: PathOrBuffer) -> StructureRef:
     """Read the data structure definition a dataflow record points at.
 
     A dataflow is served without its shape; the record only references the data structure definition
-    that carries it. Resolving that reference is what lets a reader request the right DSD version
-    instead of assuming one, which matters because the version differs per dataflow and moves over
-    time.
+    that carries it.
 
     Parameters
     ----------
-    path_or_buf : str or file-like
+    path_or_buf : str, Path, or file-like
         A valid SDMX-XML structure message describing one or more dataflows.
 
     Returns
@@ -436,29 +434,18 @@ def read_dataflow_structure_ref(path_or_buf: PathOrBuffer) -> StructureRef:
 def read_data_structure(path_or_buf: PathOrBuffer) -> DataStructure:
     """Read a data structure definition into its ordered dimensions and their codelists.
 
-    The dimension order is the whole point: an SDMX data key is positional, and a key built in the
-    wrong order is answered by some services with an empty document rather than an error. Order
-    comes from each dimension's ``position`` attribute rather than document order, and the base of
-    that attribute is not assumed -- the IMF numbers from zero and the ILO from one.
-
-    Services differ in where they record a dimension's codelist. The ILO puts the reference on the
-    dimension itself; the IMF leaves the dimension bare and records it on the concept the dimension
-    identifies with, which is only resolvable when the concept schemes are present in the same
-    document, as they are under ``references=children``. Both are handled, and a dimension whose
-    codelist cannot be resolved is simply absent from ``codelists`` rather than raising, so a caller
-    can validate what it can and skip the rest.
-
     Parameters
     ----------
-    path_or_buf : str or file-like
+    path_or_buf : str, Path, or file-like
         A valid SDMX-XML structure message carrying a data structure definition.
 
     Returns
     -------
     structure : DataStructure
         ``dimensions``, the dimension identifiers in key order; ``time_dimension``, the identifier
-        of the time dimension; and ``codelists``, mapping each dimension whose codelist could be
-        resolved to a :class:`StructureRef` for it.
+        of the time dimension; and ``codelists``, a :class:`StructureRef` per dimension whose
+        codelist could be resolved. A dimension resolving to none is absent from ``codelists``
+        rather than raising, so a caller can validate the dimensions it can and skip the rest.
     """
     root = ET.fromstring(_read_content(path_or_buf))
     structure = next(_iter_local(root, "DataStructure"), None)
@@ -498,7 +485,7 @@ def read_codelist(path_or_buf: PathOrBuffer) -> dict[str, str]:
 
     Parameters
     ----------
-    path_or_buf : str or file-like
+    path_or_buf : str, Path, or file-like
         A valid SDMX-XML structure message carrying a codelist.
 
     Returns
@@ -564,7 +551,11 @@ def _concept_key(scheme: str | None, concept: str) -> str:
 
 
 def _dimension_codelist(dimension: ET.Element, concepts: dict[str, StructureRef]) -> StructureRef | None:
-    """Resolve the codelist enumerating a dimension, from the dimension or from its concept."""
+    """Resolve the codelist enumerating a dimension, from the dimension or from its concept.
+
+    The ILO records the reference on the dimension; the IMF leaves the dimension bare and records it
+    on the concept, reachable only when the concept schemes are in the same document.
+    """
     for representation in _iter_local(dimension, "LocalRepresentation"):
         ref = _reference(representation, "Codelist")
         if ref is not None:
