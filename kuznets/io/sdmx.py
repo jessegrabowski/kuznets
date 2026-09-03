@@ -240,10 +240,11 @@ def _read_zipped_sdmx(path_or_buf: PathOrBuffer) -> IO[bytes]:
         data = data.encode("ascii")
     zp = BytesIO()
     zp.write(data)
-    f = zipfile.ZipFile(zp)
-    files = f.namelist()
-    assert len(files) == 1
-    return f.open(files[0])
+    archive = zipfile.ZipFile(zp)
+    members = archive.namelist()
+    if len(members) != 1:
+        raise ValueError(f"Expected one SDMX-XML document in the archive, found {len(members)}: {members}")
+    return archive.open(members[0])
 
 
 def build_sdmx_key(selections: Iterable[str | Iterable[str] | None]) -> str:

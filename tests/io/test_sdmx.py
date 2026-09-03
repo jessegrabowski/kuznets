@@ -1,11 +1,13 @@
+from io import BytesIO
 from xml.etree import ElementTree as ET
+import zipfile
 
 import numpy as np
 import pandas as pd
 from pandas import testing as tm
 import pytest
 
-from kuznets.io.sdmx import _get_english_name, _read_sdmx_dsd, read_sdmx
+from kuznets.io.sdmx import _get_english_name, _read_sdmx_dsd, _read_zipped_sdmx, read_sdmx
 
 pytestmark = pytest.mark.stable
 
@@ -79,3 +81,27 @@ class TestReadSdmxFooter:
         # surface as the service having sent nothing usable.
         with pytest.raises(ValueError):
             read_sdmx(footer_message("ignored", ""))
+
+
+def zip_archive(**members: str) -> bytes:
+    """Build a zip archive in memory from member name to contents."""
+    buffer = BytesIO()
+    with zipfile.ZipFile(buffer, "w") as archive:
+        for name, contents in members.items():
+            archive.writestr(name, contents)
+    return buffer.getvalue()
+
+
+class TestReadZippedSdmx:
+    def test_opens_the_single_member(self):
+        member = _read_zipped_sdmx(zip_archive(data_xml="<Message/>"))
+
+        assert member.read() == b"<Message/>"
+
+    def test_an_archive_of_several_documents_raises(self):
+        # Which of them holds the results is unknowable, so opening the first would hand back an
+        # arbitrary document rather than the requested data.
+        archive = zip_archive(first_xml="<Message/>", second_xml="<Message/>")
+
+        with pytest.raises(ValueError, match="found 2"):
+            _read_zipped_sdmx(archive)
