@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--NSI Web Service v8.19.6.0-->
+<message:Structure xmlns:message="http://www.sdmx.org/resources/sdmxml/schemas/v2_1/message" xmlns:structure="http://www.sdmx.org/resources/sdmxml/schemas/v2_1/structure" xmlns:common="http://www.sdmx.org/resources/sdmxml/schemas/v2_1/common">
+  <message:Header>
+    <message:ID>IDREF175</message:ID>
+    <message:Test>false</message:Test>
+    <message:Prepared>2026-09-03T03:45:48.0620407+02:00</message:Prepared>
+    <message:Sender id="Unknown" />
+    <message:Receiver id="Unknown" />
+  </message:Header>
+  <message:Structures>
+    <structure:Dataflows>
+      <structure:Dataflow id="DF_EAR_CMTA_SEX_CUR_NB" agencyID="ILO" version="1.0" isExternalReference="false" isFinal="true">
+        <common:Annotations>
+          <common:Annotation>
+            <common:AnnotationTitle>30/08/2026 07:29:06</common:AnnotationTitle>
+            <common:AnnotationType>LAST_UPDATE</common:AnnotationType>
+          </common:Annotation>
+          <common:Annotation>
+            <common:AnnotationTitle>CUR</common:AnnotationTitle>
+            <common:AnnotationType>LAYOUT_COLUMN</common:AnnotationType>
+          </common:Annotation>
+          <common:Annotation>
+            <common:AnnotationTitle>REF_AREA,SEX,TIME_PERIOD</common:AnnotationTitle>
+            <common:AnnotationType>LAYOUT_ROW</common:AnnotationType>
+          </common:Annotation>
+          <common:Annotation>
+            <common:AnnotationTitle>FREQ=A,endPeriod=2026-12-31,CUR=CUR_TYPE_LCU+CUR_TYPE_PPP+CUR_TYPE_USD,SEX=SEX_T,LASTNOBSERVATIONS=1</common:AnnotationTitle>
+            <common:AnnotationType>DEFAULT</common:AnnotationType>
+          </common:Annotation>
+          <common:Annotation>
+            <common:AnnotationTitle>598000</common:AnnotationTitle>
+            <common:AnnotationType>ORDER</common:AnnotationType>
+          </common:Annotation>
+          <common:Annotation>
+            <common:AnnotationTitle>402000</common:AnnotationTitle>
+            <common:AnnotationType>SEARCH_WEIGHT</common:AnnotationType>
+          </common:Annotation>
+        </common:Annotations>
+        <common:Name xml:lang="en">Average monthly earnings of care employees by sex and currency</common:Name>
+        <common:Name xml:lang="es">Ganancias mensuales promedio de los asalariados en actividades de cuidados según sexo y divisa</common:Name>
+        <common:Name xml:lang="fr">Gains mensuels moyens des salariés dans les activités de soins par sexe et devise</common:Name>
+        <common:Description xml:lang="en">&lt;strong&gt;With the aim of promoting international comparability, statistics presented on ILOSTAT are based on standard international definitions wherever feasible and may differ from official national figures. &lt;/strong&gt;The earnings of employees relate to the gross remuneration in cash and in kind paid to employees, as a rule at regular intervals, for time worked or work done together with remuneration for time not worked, such as annual vacation, other type of paid leave or holidays. Earnings exclude employers' contributions in respect of their employees paid to social security and pension schemes and also the benefits received by employees under these schemes. Earnings also exclude severance and termination pay. Data are converted to U.S. dollars as the common currency, using exchange rates or using purchasing power parity (PPP) rates for private consumption expenditures. The latter series allows for international comparisons by taking account of the differences in relative prices between countries. For more information, refer to the &lt;a href="https://ilostat.ilo.org/methods/concepts-and-definitions/description-wages-and-working-time-statistics/"&gt;Wages and Working Time Statistics (COND) database description&lt;/a&gt;.</common:Description>
+        <common:Description xml:lang="es">&lt;strong&gt;Con el objetivo de promover la comparabilidad internacional, las estadísticas presentadas en ILOSTAT se basan en definiciones internacionales estándar siempre que sea posible y pueden diferir de las cifras nacionales oficiales. &lt;/strong&gt;Las ganancias de los asalariados se refieren a la remuneración bruta en efectivo y en especie pagada a los asalariados, en general a intervalos regulares, por el tiempo trabajado o el trabajo realizado, junto con la remuneración por períodos de tiempo no trabajados, tales como vacaciones anuales y otros tipos de vacaciones pagas o días feriados. Las ganancias excluyen las contribuciones que el empleador paga respecto de sus asalariados a los regímenes de seguridad social y de pensiones, así; como las prestaciones recibidas de esos regímenes por los trabajadores. También excluyen las indemnizaciones por despido y por terminación del contrato de trabajo. Los datos se presentan en dólares estadounidenses como moneda común, utilizando la tasa de cambio con el dólar US o las tasas de paridad de poder adquisitivo (PPA) para el gasto de consumo privado. Esta última serie permite de realizar comparaciones internacionales teniendo en cuenta las diferencias de precio relativas entre países. Para obtener más información, consulte la &lt;a href="https://ilostat.ilo.org/es/resources/concepts-and-definitions/description-wages-and-working-time-statistics/"&gt;descripción de la base de datos Estadísticas sobre salarios y tiempo de trabajo (COND)&lt;/a&gt;.</common:Description>
+        <common:Description xml:lang="fr">&lt;strong&gt;Dans le but de promouvoir la comparabilité internationale, les statistiques présentées sur ILOSTAT sont basées sur des définitions internationales standard dans la mesure du possible et peuvent différer des chiffres nationaux officiels. &lt;/strong&gt;Les gains des salariés représentent la rémunération en espèces et en nature versée aux salariés, en règle générale à intervalles réguliers, au titre des heures de travail effectuées ou du travail accompli, ainsi que la rémunération afférente aux heures non effectuées, par exemple pour le congé annuel, d'autres congés payés ou les jours fériés. Les gains ne comprennent pas les contributions que les employeurs versent pour leurs salariés aux régimes de sécurité sociale et de pension, non plus que les prestations reçues par les salariés dans le cadre de ces régimes. Sont également exclues les indemnités de licenciement et de cessation de service. Les données sont toutes exprimées en dollars américains en tant que monnaie commune, en utilisant le taux de change avec le dollar US ou les taux de parité de pouvoir d'achat (PPA) pour les dépenses de consommation privée. Cette dernière série permet de réaliser des comparaisons internationales en tenant compte des différences relatives de prix entre pays. Pour plus d'informations, reportez-vous à la &lt;a href="https://ilostat.ilo.org/fr/resources/concepts-and-definitions/description-wages-and-working-time-statistics/"&gt;description de la base de données Statistiques sur les salaires et le temps de travail (COND)&lt;/a&gt;.</common:Description>
+        <structure:Structure>
+          <Ref id="EAR_CMTA_SEX_CUR_NB" version="1.0" agencyID="ILO" package="datastructure" class="DataStructure" />
+        </structure:Structure>
+      </structure:Dataflow>
+    </structure:Dataflows>
+  </message:Structures>
+</message:Structure>

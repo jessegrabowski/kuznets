@@ -1,0 +1,250 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--NSI Web Service v8.19.6.0-->
+<message:Structure xmlns:message="http://www.sdmx.org/resources/sdmxml/schemas/v2_1/message" xmlns:structure="http://www.sdmx.org/resources/sdmxml/schemas/v2_1/structure" xmlns:common="http://www.sdmx.org/resources/sdmxml/schemas/v2_1/common">
+  <message:Header>
+    <message:ID>IDREF177</message:ID>
+    <message:Test>false</message:Test>
+    <message:Prepared>2026-09-03T03:46:31.5390512+02:00</message:Prepared>
+    <message:Sender id="Unknown" />
+    <message:Receiver id="Unknown" />
+  </message:Header>
+  <message:Structures>
+    <structure:DataStructures>
+      <structure:DataStructure id="EAR_CMTA_SEX_CUR_NB" agencyID="ILO" version="1.0" isExternalReference="false" isFinal="true">
+        <common:Name xml:lang="en">Average monthly earnings of care employees by sex and currency</common:Name>
+        <common:Name xml:lang="es">Ganancias mensuales promedio de los asalariados en actividades de cuidados según sexo y divisa</common:Name>
+        <common:Name xml:lang="fr">Gains mensuels moyens des salariés dans les activités de soins par sexe et devise</common:Name>
+        <common:Description xml:lang="en">&lt;strong&gt;With the aim of promoting international comparability, statistics presented on ILOSTAT are based on standard international definitions wherever feasible and may differ from official national figures. &lt;/strong&gt;The earnings of employees relate to the gross remuneration in cash and in kind paid to employees, as a rule at regular intervals, for time worked or work done together with remuneration for time not worked, such as annual vacation, other type of paid leave or holidays. Earnings exclude employers' contributions in respect of their employees paid to social security and pension schemes and also the benefits received by employees under these schemes. Earnings also exclude severance and termination pay. Data are converted to U.S. dollars as the common currency, using exchange rates or using purchasing power parity (PPP) rates for private consumption expenditures. The latter series allows for international comparisons by taking account of the differences in relative prices between countries. For more information, refer to the &lt;a href="https://ilostat.ilo.org/methods/concepts-and-definitions/description-wages-and-working-time-statistics/"&gt;Wages and Working Time Statistics (COND) database description&lt;/a&gt;.</common:Description>
+        <common:Description xml:lang="es">&lt;strong&gt;Con el objetivo de promover la comparabilidad internacional, las estadísticas presentadas en ILOSTAT se basan en definiciones internacionales estándar siempre que sea posible y pueden diferir de las cifras nacionales oficiales. &lt;/strong&gt;Las ganancias de los asalariados se refieren a la remuneración bruta en efectivo y en especie pagada a los asalariados, en general a intervalos regulares, por el tiempo trabajado o el trabajo realizado, junto con la remuneración por períodos de tiempo no trabajados, tales como vacaciones anuales y otros tipos de vacaciones pagas o días feriados. Las ganancias excluyen las contribuciones que el empleador paga respecto de sus asalariados a los regímenes de seguridad social y de pensiones, así; como las prestaciones recibidas de esos regímenes por los trabajadores. También excluyen las indemnizaciones por despido y por terminación del contrato de trabajo. Los datos se presentan en dólares estadounidenses como moneda común, utilizando la tasa de cambio con el dólar US o las tasas de paridad de poder adquisitivo (PPA) para el gasto de consumo privado. Esta última serie permite de realizar comparaciones internacionales teniendo en cuenta las diferencias de precio relativas entre países. Para obtener más información, consulte la &lt;a href="https://ilostat.ilo.org/es/resources/concepts-and-definitions/description-wages-and-working-time-statistics/"&gt;descripción de la base de datos Estadísticas sobre salarios y tiempo de trabajo (COND)&lt;/a&gt;.</common:Description>
+        <common:Description xml:lang="fr">&lt;strong&gt;Dans le but de promouvoir la comparabilité internationale, les statistiques présentées sur ILOSTAT sont basées sur des définitions internationales standard dans la mesure du possible et peuvent différer des chiffres nationaux officiels. &lt;/strong&gt;Les gains des salariés représentent la rémunération en espèces et en nature versée aux salariés, en règle générale à intervalles réguliers, au titre des heures de travail effectuées ou du travail accompli, ainsi que la rémunération afférente aux heures non effectuées, par exemple pour le congé annuel, d'autres congés payés ou les jours fériés. Les gains ne comprennent pas les contributions que les employeurs versent pour leurs salariés aux régimes de sécurité sociale et de pension, non plus que les prestations reçues par les salariés dans le cadre de ces régimes. Sont également exclues les indemnités de licenciement et de cessation de service. Les données sont toutes exprimées en dollars américains en tant que monnaie commune, en utilisant le taux de change avec le dollar US ou les taux de parité de pouvoir d'achat (PPA) pour les dépenses de consommation privée. Cette dernière série permet de réaliser des comparaisons internationales en tenant compte des différences relatives de prix entre pays. Pour plus d'informations, reportez-vous à la &lt;a href="https://ilostat.ilo.org/fr/resources/concepts-and-definitions/description-wages-and-working-time-statistics/"&gt;description de la base de données Statistiques sur les salaires et le temps de travail (COND)&lt;/a&gt;.</common:Description>
+        <structure:DataStructureComponents>
+          <structure:DimensionList id="DimensionDescriptor">
+            <structure:Dimension id="REF_AREA" position="1">
+              <structure:ConceptIdentity>
+                <Ref id="REF_AREA" maintainableParentID="CS_ILOSTAT" maintainableParentVersion="1.0" agencyID="ILO" package="conceptscheme" class="Concept" />
+              </structure:ConceptIdentity>
+              <structure:LocalRepresentation>
+                <structure:Enumeration>
+                  <Ref id="CL_AREA" version="1.0" agencyID="ILO" package="codelist" class="Codelist" />
+                </structure:Enumeration>
+              </structure:LocalRepresentation>
+            </structure:Dimension>
+            <structure:Dimension id="FREQ" position="2">
+              <structure:ConceptIdentity>
+                <Ref id="FREQ" maintainableParentID="CS_ILOSTAT" maintainableParentVersion="1.0" agencyID="ILO" package="conceptscheme" class="Concept" />
+              </structure:ConceptIdentity>
+              <structure:LocalRepresentation>
+                <structure:Enumeration>
+                  <Ref id="CL_FREQ" version="1.0" agencyID="ILO" package="codelist" class="Codelist" />
+                </structure:Enumeration>
+              </structure:LocalRepresentation>
+            </structure:Dimension>
+            <structure:Dimension id="MEASURE" position="3">
+              <structure:ConceptIdentity>
+                <Ref id="MEASURE" maintainableParentID="CS_ILOSTAT" maintainableParentVersion="1.0" agencyID="ILO" package="conceptscheme" class="Concept" />
+              </structure:ConceptIdentity>
+              <structure:LocalRepresentation>
+                <structure:Enumeration>
+                  <Ref id="CL_MEASURE" version="1.0" agencyID="ILO" package="codelist" class="Codelist" />
+                </structure:Enumeration>
+              </structure:LocalRepresentation>
+            </structure:Dimension>
+            <structure:Dimension id="SEX" position="4">
+              <structure:ConceptIdentity>
+                <Ref id="SEX" maintainableParentID="CS_CLASSIF_TYPE" maintainableParentVersion="1.0" agencyID="ILO" package="conceptscheme" class="Concept" />
+              </structure:ConceptIdentity>
+              <structure:LocalRepresentation>
+                <structure:Enumeration>
+                  <Ref id="CL_SEX" version="1.0" agencyID="ILO" package="codelist" class="Codelist" />
+                </structure:Enumeration>
+              </structure:LocalRepresentation>
+            </structure:Dimension>
+            <structure:Dimension id="CUR" position="5">
+              <structure:ConceptIdentity>
+                <Ref id="CUR" maintainableParentID="CS_CLASSIF_TYPE" maintainableParentVersion="1.0" agencyID="ILO" package="conceptscheme" class="Concept" />
+              </structure:ConceptIdentity>
+              <structure:LocalRepresentation>
+                <structure:Enumeration>
+                  <Ref id="CL_CUR" version="1.0" agencyID="ILO" package="codelist" class="Codelist" />
+                </structure:Enumeration>
+              </structure:LocalRepresentation>
+            </structure:Dimension>
+            <structure:TimeDimension id="TIME_PERIOD" position="6">
+              <structure:ConceptIdentity>
+                <Ref id="TIME_PERIOD" maintainableParentID="CS_ILOSTAT" maintainableParentVersion="1.0" agencyID="ILO" package="conceptscheme" class="Concept" />
+              </structure:ConceptIdentity>
+              <structure:LocalRepresentation>
+                <structure:TextFormat textType="ObservationalTimePeriod" />
+              </structure:LocalRepresentation>
+            </structure:TimeDimension>
+          </structure:DimensionList>
+          <structure:AttributeList id="AttributeDescriptor">
+            <structure:Attribute id="OBS_STATUS" assignmentStatus="Conditional">
+              <structure:ConceptIdentity>
+                <Ref id="OBS_STATUS" maintainableParentID="CS_ILOSTAT" maintainableParentVersion="1.0" agencyID="ILO" package="conceptscheme" class="Concept" />
+              </structure:ConceptIdentity>
+              <structure:LocalRepresentation>
+                <structure:Enumeration>
+                  <Ref id="CL_OBS_STATUS" version="1.0" agencyID="ILO" package="codelist" class="Codelist" />
+                </structure:Enumeration>
+              </structure:LocalRepresentation>
+              <structure:AttributeRelationship>
+                <structure:PrimaryMeasure>
+                  <Ref id="OBS_VALUE" />
+                </structure:PrimaryMeasure>
+              </structure:AttributeRelationship>
+            </structure:Attribute>
+            <structure:Attribute id="UNIT_MEASURE_TYPE" assignmentStatus="Conditional">
+              <structure:ConceptIdentity>
+                <Ref id="UNIT_MEASURE_TYPE" maintainableParentID="CS_ILOSTAT" maintainableParentVersion="1.0" agencyID="ILO" package="conceptscheme" class="Concept" />
+              </structure:ConceptIdentity>
+              <structure:LocalRepresentation>
+                <structure:Enumeration>
+                  <Ref id="CL_UNIT_MEASURE_TYPE" version="1.0" agencyID="ILO" package="codelist" class="Codelist" />
+                </structure:Enumeration>
+              </structure:LocalRepresentation>
+              <structure:AttributeRelationship>
+                <structure:Dimension>
+                  <Ref id="MEASURE" />
+                </structure:Dimension>
+              </structure:AttributeRelationship>
+            </structure:Attribute>
+            <structure:Attribute id="UNIT_MEASURE" assignmentStatus="Conditional">
+              <structure:ConceptIdentity>
+                <Ref id="UNIT_MEASURE" maintainableParentID="CS_ILOSTAT" maintainableParentVersion="1.0" agencyID="ILO" package="conceptscheme" class="Concept" />
+              </structure:ConceptIdentity>
+              <structure:LocalRepresentation>
+                <structure:Enumeration>
+                  <Ref id="CL_UNIT_MEASURE" version="1.0" agencyID="ILO" package="codelist" class="Codelist" />
+                </structure:Enumeration>
+              </structure:LocalRepresentation>
+              <structure:AttributeRelationship>
+                <structure:Dimension>
+                  <Ref id="MEASURE" />
+                </structure:Dimension>
+              </structure:AttributeRelationship>
+            </structure:Attribute>
+            <structure:Attribute id="UNIT_MULT" assignmentStatus="Conditional">
+              <structure:ConceptIdentity>
+                <Ref id="UNIT_MULT" maintainableParentID="CS_ILOSTAT" maintainableParentVersion="1.0" agencyID="ILO" package="conceptscheme" class="Concept" />
+              </structure:ConceptIdentity>
+              <structure:LocalRepresentation>
+                <structure:Enumeration>
+                  <Ref id="CL_UNIT_MULT" version="1.0" agencyID="ILO" package="codelist" class="Codelist" />
+                </structure:Enumeration>
+              </structure:LocalRepresentation>
+              <structure:AttributeRelationship>
+                <structure:Dimension>
+                  <Ref id="MEASURE" />
+                </structure:Dimension>
+              </structure:AttributeRelationship>
+            </structure:Attribute>
+            <structure:Attribute id="SOURCE" assignmentStatus="Conditional">
+              <structure:ConceptIdentity>
+                <Ref id="SOURCE" maintainableParentID="CS_NOTE_TYPE" maintainableParentVersion="1.0" agencyID="ILO" package="conceptscheme" class="Concept" />
+              </structure:ConceptIdentity>
+              <structure:AttributeRelationship>
+                <structure:Dimension>
+                  <Ref id="REF_AREA" />
+                </structure:Dimension>
+                <structure:Dimension>
+                  <Ref id="MEASURE" />
+                </structure:Dimension>
+                <structure:Dimension>
+                  <Ref id="TIME_PERIOD" />
+                </structure:Dimension>
+              </structure:AttributeRelationship>
+            </structure:Attribute>
+            <structure:Attribute id="NOTE_SOURCE" assignmentStatus="Conditional">
+              <structure:ConceptIdentity>
+                <Ref id="NOTE_SOURCE" maintainableParentID="CS_NOTE_TYPE" maintainableParentVersion="1.0" agencyID="ILO" package="conceptscheme" class="Concept" />
+              </structure:ConceptIdentity>
+              <structure:AttributeRelationship>
+                <structure:Dimension>
+                  <Ref id="REF_AREA" />
+                </structure:Dimension>
+                <structure:Dimension>
+                  <Ref id="MEASURE" />
+                </structure:Dimension>
+                <structure:Dimension>
+                  <Ref id="TIME_PERIOD" />
+                </structure:Dimension>
+              </structure:AttributeRelationship>
+            </structure:Attribute>
+            <structure:Attribute id="NOTE_INDICATOR" assignmentStatus="Conditional">
+              <structure:ConceptIdentity>
+                <Ref id="NOTE_INDICATOR" maintainableParentID="CS_NOTE_TYPE" maintainableParentVersion="1.0" agencyID="ILO" package="conceptscheme" class="Concept" />
+              </structure:ConceptIdentity>
+              <structure:AttributeRelationship>
+                <structure:Dimension>
+                  <Ref id="REF_AREA" />
+                </structure:Dimension>
+                <structure:Dimension>
+                  <Ref id="MEASURE" />
+                </structure:Dimension>
+                <structure:Dimension>
+                  <Ref id="TIME_PERIOD" />
+                </structure:Dimension>
+              </structure:AttributeRelationship>
+            </structure:Attribute>
+            <structure:Attribute id="NOTE_CLASSIF" assignmentStatus="Conditional">
+              <structure:ConceptIdentity>
+                <Ref id="NOTE_CLASSIF" maintainableParentID="CS_NOTE_TYPE" maintainableParentVersion="1.0" agencyID="ILO" package="conceptscheme" class="Concept" />
+              </structure:ConceptIdentity>
+              <structure:AttributeRelationship>
+                <structure:PrimaryMeasure>
+                  <Ref id="OBS_VALUE" />
+                </structure:PrimaryMeasure>
+              </structure:AttributeRelationship>
+            </structure:Attribute>
+            <structure:Attribute id="DECIMALS" assignmentStatus="Conditional">
+              <structure:ConceptIdentity>
+                <Ref id="DECIMALS" maintainableParentID="CS_ILOSTAT" maintainableParentVersion="1.0" agencyID="ILO" package="conceptscheme" class="Concept" />
+              </structure:ConceptIdentity>
+              <structure:LocalRepresentation>
+                <structure:Enumeration>
+                  <Ref id="CL_DECIMALS" version="1.0" agencyID="ILO" package="codelist" class="Codelist" />
+                </structure:Enumeration>
+              </structure:LocalRepresentation>
+              <structure:AttributeRelationship>
+                <structure:PrimaryMeasure>
+                  <Ref id="OBS_VALUE" />
+                </structure:PrimaryMeasure>
+              </structure:AttributeRelationship>
+            </structure:Attribute>
+            <structure:Attribute id="UPPER_BOUND" assignmentStatus="Conditional">
+              <structure:ConceptIdentity>
+                <Ref id="UPPER_BOUND" maintainableParentID="CS_ILOSTAT" maintainableParentVersion="1.0" agencyID="ILO" package="conceptscheme" class="Concept" />
+              </structure:ConceptIdentity>
+              <structure:AttributeRelationship>
+                <structure:PrimaryMeasure>
+                  <Ref id="OBS_VALUE" />
+                </structure:PrimaryMeasure>
+              </structure:AttributeRelationship>
+            </structure:Attribute>
+            <structure:Attribute id="LOWER_BOUND" assignmentStatus="Conditional">
+              <structure:ConceptIdentity>
+                <Ref id="LOWER_BOUND" maintainableParentID="CS_ILOSTAT" maintainableParentVersion="1.0" agencyID="ILO" package="conceptscheme" class="Concept" />
+              </structure:ConceptIdentity>
+              <structure:AttributeRelationship>
+                <structure:PrimaryMeasure>
+                  <Ref id="OBS_VALUE" />
+                </structure:PrimaryMeasure>
+              </structure:AttributeRelationship>
+            </structure:Attribute>
+          </structure:AttributeList>
+          <structure:MeasureList id="MeasureDescriptor">
+            <structure:PrimaryMeasure id="OBS_VALUE">
+              <structure:ConceptIdentity>
+                <Ref id="OBS_VALUE" maintainableParentID="CS_ILOSTAT" maintainableParentVersion="1.0" agencyID="ILO" package="conceptscheme" class="Concept" />
+              </structure:ConceptIdentity>
+              <structure:LocalRepresentation>
+                <structure:TextFormat textType="Double" />
+              </structure:LocalRepresentation>
+            </structure:PrimaryMeasure>
+          </structure:MeasureList>
+        </structure:DataStructureComponents>
+      </structure:DataStructure>
+    </structure:DataStructures>
+  </message:Structures>
+</message:Structure>

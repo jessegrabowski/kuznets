@@ -1,4 +1,4 @@
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Iterable, Iterator, Mapping, Sequence
 from io import BytesIO
 import time
 from typing import IO, NamedTuple
@@ -387,3 +387,55 @@ def _empty_observations(names: list[str], time_pos: int, output_type: str) -> Fr
 def _local_name(tag: str) -> str:
     """Strip the namespace from a qualified element tag."""
     return tag.rpartition("}")[2]
+
+
+class StructureRef(NamedTuple):
+    """A reference to a maintainable SDMX artefact, as an agency, identifier and version."""
+
+    agency: str
+    id: str
+    version: str
+
+
+def read_dataflow_structure_ref(path_or_buf: PathOrBuffer) -> StructureRef:
+    """Read the data structure definition a dataflow record points at.
+
+    A dataflow is served without its shape; the record only references the data structure definition
+    that carries it. Resolving that reference is what lets a reader request the right DSD version
+    instead of assuming one, which matters because the version differs per dataflow and moves over
+    time.
+
+    Parameters
+    ----------
+    path_or_buf : str or file-like
+        A valid SDMX-XML structure message describing one or more dataflows.
+
+    Returns
+    -------
+    ref : StructureRef
+        The referenced data structure's ``agency``, ``id`` and ``version``. The version is taken
+        verbatim, since services disagree on its form: the IMF writes ``'5.0.0'`` where the ILO
+        writes ``'1.0'``.
+    """
+    root = ET.fromstring(_read_content(path_or_buf))
+    for dataflow in _iter_local(root, "Dataflow"):
+        ref = _reference(dataflow, "DataStructure")
+        if ref is not None:
+            return ref
+    raise ValueError("Document declares no dataflow referencing a data structure definition")
+
+
+def _iter_local(element: ET.Element, name: str) -> Iterator[ET.Element]:
+    """Iterate the descendants of ``element`` whose local name matches, ignoring namespace."""
+    return (descendant for descendant in element.iter() if _local_name(descendant.tag) == name)
+
+
+def _reference(element: ET.Element, cls: str) -> StructureRef | None:
+    """Find the first ``<Ref>`` under ``element`` referencing an artefact of the given class."""
+    for ref in _iter_local(element, "Ref"):
+        if ref.get("class") != cls:
+            continue
+        agency, identifier, version = ref.get("agencyID"), ref.get("id"), ref.get("version")
+        if agency is not None and identifier is not None and version is not None:
+            return StructureRef(agency=agency, id=identifier, version=version)
+    return None
