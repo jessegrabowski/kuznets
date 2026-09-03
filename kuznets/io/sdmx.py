@@ -1,6 +1,5 @@
 from collections.abc import Iterable, Mapping, Sequence
 from io import BytesIO
-from pathlib import Path
 import time
 from typing import IO, NamedTuple
 from xml.etree import ElementTree as ET
@@ -12,7 +11,7 @@ import pandas as pd
 from kuznets.compat import HTTPError
 from kuznets.io.util import _present_observations, _read_content
 from kuznets.output import PANDAS, make_frame, observation_schema, validate_output_type
-from kuznets.typing import Frame
+from kuznets.typing import Frame, PathOrBuffer
 
 _TIME_PERIOD = "TIME_PERIOD"
 _OBS_VALUE = "OBS_VALUE"
@@ -32,9 +31,6 @@ _OBSDIMENSION = _GENERIC + "ObsDimension"
 _OBSVALUE = _GENERIC + "ObsValue"
 _CODE = _STRUCTURE + "Code"
 _TIMEDIMENSION = _STRUCTURE + "TimeDimension"
-
-
-type PathOrBuffer = str | Path | IO[str] | IO[bytes]
 
 
 class SDMXCode(NamedTuple):

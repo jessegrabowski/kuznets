@@ -1,5 +1,6 @@
 import datetime
-from typing import Any, Literal
+from pathlib import Path
+from typing import IO, Any, Literal
 
 from narwhals.stable.v2.typing import IntoFrame
 from pandas import Timestamp
@@ -9,7 +10,9 @@ __all__ = [
     "DateLike",
     "Frame",
     "Headers",
+    "JSONSource",
     "OutputType",
+    "PathOrBuffer",
     "Payload",
     "Symbols",
 ]
@@ -35,3 +38,10 @@ type Frame = IntoFrame
 # reader-specific -- a StringIO of CSV, decoded JSON, a DataFrame, or a dict of frames per symbol --
 # so each reader narrows it in its own overrides.
 type Payload = Any
+
+# Where a parser reads its document from: a path, a URL or raw string, or an open file.
+type PathOrBuffer = str | Path | IO[str] | IO[bytes]
+
+# The same, plus an already-parsed JSON object. The readers accept one because a reader that has
+# already decoded a JSON response body passes the object straight through rather than re-encoding it.
+type JSONSource = PathOrBuffer | dict[str, Any]

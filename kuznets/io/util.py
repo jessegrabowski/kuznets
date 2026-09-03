@@ -10,7 +10,7 @@ import pandas as pd
 
 from kuznets.compat import get_filepath_or_buffer
 from kuznets.output import PANDAS, make_frame, observation_schema
-from kuznets.typing import Frame
+from kuznets.typing import Frame, JSONSource
 
 # Dimension identifiers that mark the time axis across SDMX-JSON and JSON-stat responses.
 TIME_IDS = {"time", "TIME_PERIOD"}
@@ -22,7 +22,7 @@ type Observation = tuple[tuple[str, ...], str | float | int]
 type LabelMaps = list[dict[str, str]]
 
 
-def _load_json(path_or_buf: Any) -> Any:
+def _load_json(path_or_buf: JSONSource) -> Any:
     """Read JSON content from a path, string, or file-like and parse it into a dict."""
     jdata = _read_content(path_or_buf)
     if isinstance(jdata, dict):
