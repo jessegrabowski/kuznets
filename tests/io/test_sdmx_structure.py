@@ -1,6 +1,8 @@
 import pytest
+import requests
 
 from kuznets.io import read_codelist, read_data_structure, read_dataflow_structure_ref
+from tests._mock import service_up, tolerate_outage
 
 pytestmark = pytest.mark.stable
 
@@ -8,10 +10,20 @@ COMMON = "http://www.sdmx.org/resources/sdmxml/schemas/v2_1/common"
 MESSAGE = "http://www.sdmx.org/resources/sdmxml/schemas/v2_1/message"
 STRUCTURE = "http://www.sdmx.org/resources/sdmxml/schemas/v2_1/structure"
 
+IMF_SDMX = "https://api.imf.org/external/sdmx/2.1"
+
 
 @pytest.fixture
 def dirpath(datapath):
     return datapath("io", "data", "sdmx")
+
+
+def fetch(path: str) -> str:
+    """Get a structure document from the IMF's SDMX service, skipping when it is unreachable."""
+    url = f"{IMF_SDMX}/{path}"
+    if not service_up(url):
+        pytest.skip(f"{url} unreachable")
+    return requests.get(url, timeout=30).text
 
 
 class TestReadDataflowStructureRef:
@@ -138,3 +150,39 @@ class TestReadCodelist:
         )
 
         assert read_codelist(document) == {"NAMED": "Named", "UNNAMED": "UNNAMED"}
+
+
+@pytest.mark.network
+class TestIMFStructureLive:
+    def test_a_dataflow_resolves_to_a_structure_the_parsers_can_read(self):
+        # The two parsers composed the way a reader will use them: resolve the reference from the
+        # dataflow, then fetch that exact version rather than assuming one.
+        with tolerate_outage():
+            ref = read_dataflow_structure_ref(fetch("dataflow/all/CPI"))
+            structure = read_data_structure(
+                fetch(f"datastructure/{ref.agency}/{ref.id}/{ref.version}?references=children")
+            )
+
+            assert ref.id == "DSD_CPI"
+            assert structure.dimensions[0] == "COUNTRY"
+            assert structure.dimensions[-1] == "FREQUENCY"
+            assert structure.codelists["COUNTRY"].id == "CL_COUNTRY"
+
+    def test_a_plain_data_structure_resolves_no_codelists(self):
+        # What makes the concept schemes worth requesting: the IMF records codelists on the concept,
+        # so the data structure alone carries none of them.
+        with tolerate_outage():
+            ref = read_dataflow_structure_ref(fetch("dataflow/all/CPI"))
+            structure = read_data_structure(fetch(f"datastructure/{ref.agency}/{ref.id}/{ref.version}"))
+
+            assert structure.dimensions[0] == "COUNTRY"
+            assert structure.codelists == {}
+
+    def test_alpha_2_country_codes_are_absent_from_the_codelist(self):
+        # The trap the codelists exist to catch: the IMF answers an alpha-2 country code with HTTP
+        # 200 and no observations, so 'LA' has to be rejected before the request goes out.
+        with tolerate_outage():
+            codes = read_codelist(fetch("codelist/IMF/CL_COUNTRY"))
+
+            assert codes["LAO"] == "Lao People's Democratic Republic"
+            assert "LA" not in codes
