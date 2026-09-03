@@ -113,6 +113,22 @@ class TestDiscovery:
 
         assert any(url.endswith("/dataflow/IMF.STA/IMTS") for url in service.requested)
 
+    def test_a_selection_naming_no_declared_dimension_raises(self, monkeypatch, service):
+        # Silently dropping it would widen the key to every dimension, so a caller who asked for one
+        # country would be handed the whole dataflow instead of an error.
+        patch_session_get(monkeypatch, service)
+        reader = FakeServiceReader("IMTS", {"CONTRY": "LAO"}, start="2018", end="2019")
+
+        with pytest.raises(ValueError, match="declares no dimension named CONTRY"):
+            reader.read()
+
+    def test_the_error_lists_the_dimensions_the_dataflow_does_declare(self, monkeypatch, service):
+        patch_session_get(monkeypatch, service)
+        reader = FakeServiceReader("IMTS", {"COUNTERPART": "THA"}, start="2018", end="2019")
+
+        with pytest.raises(ValueError, match="COUNTRY, INDICATOR, COUNTERPART_COUNTRY, FREQUENCY"):
+            reader.read()
+
     def test_an_unresolved_reader_reports_the_service_rather_than_a_half_built_url(self):
         reader = FakeServiceReader("IMTS")
 

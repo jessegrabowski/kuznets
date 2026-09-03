@@ -124,6 +124,12 @@ class _SdmxDataflowReader(_BaseReader):
     def key(self) -> str:
         """Positional key selecting the requested series, in the order the service declares."""
         dimensions = self._require_resolved().structure.dimensions
+        unknown = sorted(set(self.selections) - set(dimensions))
+        if unknown:
+            raise ValueError(
+                f"dataflow {self.dataflow!r} declares no dimension named {', '.join(unknown)}; "
+                f"its dimensions are {', '.join(dimensions)}"
+            )
         return build_sdmx_key(self.selections.get(dimension) for dimension in dimensions)
 
     @property
