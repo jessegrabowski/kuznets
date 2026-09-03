@@ -134,13 +134,6 @@ def get_api_key(source: str, api_key: str | None = None, required: bool = True) 
     -------
     api_key : str or None
         The resolved key, or ``None`` when none is found and *required* is False.
-
-    Raises
-    ------
-    ValueError
-        If no key is found and *required* is True.
-    TypeError
-        If a resolved key is not a string.
     """
     for candidate in (
         api_key,

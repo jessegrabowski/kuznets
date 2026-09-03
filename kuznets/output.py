@@ -44,15 +44,6 @@ def validate_output_type(output_type: str) -> str:
     -------
     str
         The canonical backend name.
-
-    Raises
-    ------
-    TypeError
-        If ``output_type`` is not a str.
-    ValueError
-        If ``output_type`` does not name a recognized backend.
-    ImportError
-        If the backend is recognized but its package is not installed.
     """
     if not isinstance(output_type, str):
         raise TypeError(f"output_type must be a str, got {type(output_type).__name__}")
@@ -355,11 +346,6 @@ def concat_frames(frames: Sequence[IntoFrame]):
     -------
     DataFrame or Table
         The stacked frame in the shared backend.
-
-    Raises
-    ------
-    ValueError
-        If ``frames`` is empty.
     """
     if not frames:
         raise ValueError("concat_frames requires at least one frame")
