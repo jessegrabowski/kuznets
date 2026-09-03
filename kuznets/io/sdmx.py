@@ -37,7 +37,7 @@ class SDMXCode(NamedTuple):
     """A parsed data structure definition: code labels per codelist, and the time dimensions."""
 
     codes: dict[str | None, dict[str | None, str | None]]
-    ts: list[str | None]
+    time_dimensions: list[str | None]
 
 
 def read_sdmx(path_or_buf: PathOrBuffer, dtype: str = "float64", dsd: SDMXCode | None = None) -> pd.DataFrame:
@@ -109,7 +109,7 @@ def _construct_series(
     values: list[list[tuple[str | None, str | None]]], name: str | None, dsd: SDMXCode | None = None
 ) -> list[pd.Series]:
     # ts defines attributes to be handled as times
-    times = dsd.ts if dsd is not None else []
+    times = dsd.time_dimensions if dsd is not None else []
 
     if len(values) < 1:
         raise ValueError("Data contains no 'Series'")
@@ -225,7 +225,7 @@ def _read_sdmx_dsd(path_or_buf: PathOrBuffer) -> SDMXCode:
 
     times = [dimension.get("id") for dimension in datastructures.iter(_TIMEDIMENSION)]
 
-    result = SDMXCode(codes=code_results, ts=times)
+    result = SDMXCode(codes=code_results, time_dimensions=times)
     return result
 
 
