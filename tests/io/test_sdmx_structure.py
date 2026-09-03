@@ -1,6 +1,6 @@
 import pytest
 
-from kuznets.io import read_data_structure, read_dataflow_structure_ref
+from kuznets.io import read_codelist, read_data_structure, read_dataflow_structure_ref
 
 pytestmark = pytest.mark.stable
 
@@ -84,3 +84,23 @@ class TestReadDataStructure:
     def test_document_without_a_data_structure_raises(self, dirpath):
         with pytest.raises(ValueError, match="no data structure"):
             read_data_structure(dirpath / "imf_dataflow_cpi.xml")
+
+
+class TestReadCodelist:
+    def test_country_codes(self, dirpath):
+        codes = read_codelist(dirpath / "imf_codelist_country.xml")
+
+        assert len(codes) == 343
+        assert codes["LAO"] == "Lao People's Democratic Republic"
+
+    def test_alpha_2_codes_are_absent(self, dirpath):
+        # The trap this whole mechanism exists to catch: the IMF answers an alpha-2 country code
+        # with HTTP 200 and no observations, so 'LA' has to be rejected before the request goes out.
+        codes = read_codelist(dirpath / "imf_codelist_country.xml")
+
+        assert "LAO" in codes
+        assert "LA" not in codes
+
+    def test_document_without_a_codelist_raises(self, dirpath):
+        with pytest.raises(ValueError, match="no codelist"):
+            read_codelist(dirpath / "imf_dataflow_cpi.xml")

@@ -493,6 +493,33 @@ def read_data_structure(path_or_buf: PathOrBuffer) -> DataStructure:
     return DataStructure([identifier for _, identifier, _ in declared], time_dimension, codelists)
 
 
+def read_codelist(path_or_buf: PathOrBuffer) -> dict[str, str]:
+    """Read an SDMX codelist into its codes and their English names.
+
+    Parameters
+    ----------
+    path_or_buf : str or file-like
+        A valid SDMX-XML structure message carrying a codelist.
+
+    Returns
+    -------
+    codes : dict mapping str to str
+        Each code identifier mapped to its English name, or to the identifier itself where the
+        document names it in no other language.
+    """
+    root = ET.fromstring(_read_content(path_or_buf))
+    codelist = next(_iter_local(root, "Codelist"), None)
+    if codelist is None:
+        raise ValueError("Document carries no codelist")
+
+    codes = {}
+    for code in _iter_local(codelist, "Code"):
+        identifier = code.get("id")
+        if identifier:
+            codes[identifier] = _get_english_name(code) or identifier
+    return codes
+
+
 def _iter_local(element: ET.Element, name: str) -> Iterator[ET.Element]:
     """Iterate the descendants of ``element`` whose local name matches, ignoring namespace."""
     return (descendant for descendant in element.iter() if _local_name(descendant.tag) == name)
