@@ -3,6 +3,7 @@ from pandas import DataFrame, DatetimeIndex
 from kuznets.base import _BaseReader
 from kuznets.io import read_jsdmx
 from kuznets.output import filter_date_range
+from kuznets.utils import _year_bounds
 
 
 class OECDReader(_BaseReader):
@@ -48,10 +49,11 @@ class OECDReader(_BaseReader):
         df = read_jsdmx(payload)
         # Non-calendar period codes stay as a string index and can't be sliced by datetime bounds.
         if isinstance(df.index, DatetimeIndex):
-            df = df.truncate(self.start, self.end)
+            df = df.truncate(*_year_bounds(self.start, self.end))
         return df
 
     def _present_tidy(self, payload: dict):
         """Build the long native frame and filter it to the requested range."""
         frame = read_jsdmx(payload, output_type=self.output_type)
-        return filter_date_range(frame, start=self.start, end=self.end)
+        start, end = _year_bounds(self.start, self.end)
+        return filter_date_range(frame, start=start, end=end)

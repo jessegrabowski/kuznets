@@ -298,6 +298,22 @@ def filter_date_range(
     return ndf.filter(condition).to_native()
 
 
+def is_empty(frame: IntoFrame) -> bool:
+    """Report whether a native frame of any backend holds no rows.
+
+    Parameters
+    ----------
+    frame : DataFrame or Table
+        A native frame of any supported backend.
+
+    Returns
+    -------
+    bool
+        True when the frame has no rows.
+    """
+    return nw.from_native(frame).lazy().select(nw.len().alias("rows")).collect()["rows"][0] == 0
+
+
 def to_datetime_col(frame: IntoFrame, column: str):
     """Cast a string ``column`` to datetime, keeping the strings when they are not calendar dates.
 

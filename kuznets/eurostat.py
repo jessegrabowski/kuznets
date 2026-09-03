@@ -3,6 +3,7 @@ from pandas import DataFrame, DatetimeIndex
 from kuznets.base import _BaseReader
 from kuznets.io import read_jstat
 from kuznets.output import filter_date_range
+from kuznets.utils import _year_bounds
 
 
 class EurostatReader(_BaseReader):
@@ -38,10 +39,11 @@ class EurostatReader(_BaseReader):
         # Non-calendar period codes (e.g. semesters) stay as a string index and can't be sliced
         # against datetime bounds; the server-side year filter already constrains those.
         if isinstance(df.index, DatetimeIndex):
-            df = df.truncate(self.start, self.end)
+            df = df.truncate(*_year_bounds(self.start, self.end))
         return df
 
     def _present_tidy(self, payload: dict):
         """Build the long native frame and filter it to the requested range."""
         frame = read_jstat(payload, output_type=self.output_type)
-        return filter_date_range(frame, start=self.start, end=self.end)
+        start, end = _year_bounds(self.start, self.end)
+        return filter_date_range(frame, start=start, end=end)

@@ -2,8 +2,10 @@ import importlib.util
 
 import pandas as pd
 import pytest
+import requests
 
 from kuznets.data import DataReader
+from kuznets.imf import IMTSReader
 from tests._mock import make_response, patch_session_get
 
 pytestmark = pytest.mark.stable
@@ -46,6 +48,35 @@ class TestDataReader:
         default = DataReader("GDP", "fred")
         explicit = DataReader("GDP", "fred", output_type="pandas")
         pd.testing.assert_frame_equal(default, explicit)
+
+    def test_imts_dispatch_matches_the_reader(self, monkeypatch, datapath):
+        # The dispatch reads the reporting country straight from ``name``; every other dimension
+        # takes the reader's defaults, so the two calls must agree.
+        patch_session_get(monkeypatch, {"api.imf.org": datapath("data", "imf", "imts_lao_2019_exports.xml")})
+
+        dispatched = DataReader("LAO", "imts", start="2019", end="2019")
+        direct = IMTSReader("LAO", start="2019", end="2019").read()
+
+        pd.testing.assert_frame_equal(dispatched, direct)
+
+    def test_imts_dispatch_forwards_output_type(self, monkeypatch, datapath):
+        polars = pytest.importorskip("polars")
+        patch_session_get(monkeypatch, {"api.imf.org": datapath("data", "imf", "imts_lao_2019_exports.xml")})
+
+        tidy = DataReader("LAO", "imts", start="2019", end="2019", output_type="polars")
+
+        assert isinstance(tidy, polars.DataFrame)
+        assert tidy.columns == ["country", "indicator", "counterpart", "frequency", "period", "value"]
+
+    def test_imts_dispatch_forwards_headers(self, monkeypatch, datapath):
+        # Most branches drop ``headers`` on the floor (issue #32); this one must not, so a host that
+        # blocks the default agent stays workable through DataReader.
+        patch_session_get(monkeypatch, {"api.imf.org": datapath("data", "imf", "imts_lao_2019_exports.xml")})
+        session = requests.Session()
+
+        DataReader("LAO", "imts", start="2019", end="2019", headers={"User-Agent": "probe"}, session=session)
+
+        assert session.headers["User-Agent"] == "probe"
 
     def test_nasdaq_output_type_converts_symbols(self, monkeypatch):
         polars = pytest.importorskip("polars")

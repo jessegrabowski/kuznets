@@ -32,6 +32,15 @@ class TestOECDOffline:
         )
         assert au.loc["2009"].iloc[0] == pytest.approx(19.7, abs=0.1)
 
+    def test_a_partial_year_keeps_the_periods_the_service_sent(self, monkeypatch, datapath):
+        # startPeriod/endPeriod filter by year, so a mid-year range must not drop the annual
+        # observations the service stamped at January 1st.
+        patch_session_get(monkeypatch, {"sdmx.oecd.org": datapath("data", "oecd", "tud.json")})
+
+        df = web.DataReader(TUD, "oecd", start=datetime(2009, 6, 1), end=datetime(2010, 6, 1))
+
+        assert list(df.index.year) == [2009, 2010]
+
     def test_invalid_symbol_type_raises(self):
         with pytest.raises(ValueError):
             web.DataReader(1234, "oecd")

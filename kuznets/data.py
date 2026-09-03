@@ -14,6 +14,7 @@ from kuznets.econdb import EcondbReader
 from kuznets.eurostat import EurostatReader
 from kuznets.famafrench import FamaFrenchReader
 from kuznets.fred import FredReader
+from kuznets.imf import IMTSReader
 from kuznets.moex import MoexReader
 from kuznets.nasdaq_trader import get_nasdaq_symbols
 from kuznets.naver import NaverDailyReader
@@ -58,6 +59,7 @@ _DATA_SOURCES = {
     "famafrench",
     "oecd",
     "eurostat",
+    "imts",
     "nasdaq",
     "quandl",
     "moex",
@@ -1077,6 +1079,17 @@ def DataReader(
             retry_count=retry_count,
             pause=pause,
             session=session,
+            output_type=backend,
+        ).read()
+    elif data_source == "imts":
+        return IMTSReader(
+            symbols=name,
+            start=start,
+            end=end,
+            retry_count=retry_count,
+            pause=pause,
+            session=session,
+            headers=headers,
             output_type=backend,
         ).read()
     elif data_source == "nasdaq":

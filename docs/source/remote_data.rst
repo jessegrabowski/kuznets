@@ -46,6 +46,7 @@ The following sources have been previously supported but are fully working in th
     - :ref:`Yahoo Finance<remote_data.yahoo>`
     - :ref:`Eurostat<remote_data.eurostat>`
     - :ref:`OECD<remote_data.oecd>`
+    - :ref:`IMF International Trade in Goods<remote_data.imts>`
     - :ref:`Econdb<remote_data.econdb>`
     - :ref:`World Bank<remote_data.wb>`
     - :ref:`Thrift Savings Plan<remote_data.tsp>`
@@ -601,6 +602,67 @@ The following example downloads 'Trade Union Density' data.
     df.columns
 
     df.xs('Australia', axis=1, level='Reference area')
+
+.. _remote_data.imts:
+
+IMF International Trade in Goods
+================================
+
+`International Trade in Goods (by partner country) <https://data.imf.org/en/datasets/IMF.STA:IMTS>`__
+reports the value of goods traded between a reporting country and each of its partners. It is the
+dataflow the IMF formerly published as Direction of Trade Statistics (DOTS), and it is served from
+the SDMX 2.1 API at `<https://api.imf.org/external/sdmx/2.1/>`__.
+
+Pass the reporting country as an ISO 3166-1 alpha-3 code. Four indicators are available:
+``XG_FOB_USD`` (exports of goods, FOB), ``MG_FOB_USD`` and ``MG_CIF_USD`` (imports of goods, FOB and
+CIF) and ``TBG_USD`` (the goods trade balance), all in US dollars.
+
+.. ipython:: python
+   :okexcept:
+
+    import kuznets.data as web
+
+    df = web.DataReader('LAO', 'imts', start=2019, end=2019)
+
+    df.xs('THA', axis=1, level='counterpart')
+
+``DataReader`` reads the reporting country from its first argument and leaves every other dimension
+at its default: exports of goods FOB, every partner, annual. Selecting a different indicator,
+frequency, or partner means using the reader directly.
+
+.. ipython:: python
+   :okexcept:
+
+    from kuznets.imf import IMTSReader
+
+    IMTSReader('THA', counterpart=['LAO', 'VNM'], indicator='MG_CIF_USD', start=2019, end=2019).read()
+
+Two things about this dataflow reward a moment's care.
+
+**Country codes are alpha-3, and the API answers a wrong one with an empty document rather than an
+error.** So does a missing indicator. The reader rejects codes that are too short before making the
+request, and raises :class:`~kuznets.utils.RemoteDataError` when a response carries no observations
+at all, rather than handing back an empty frame that looks like a country with no trade.
+
+**The counterpart dimension mixes partners with aggregates.** Alongside the individual partners it
+carries regional, income and world groupings under codes prefixed ``G``, ``GX`` or ``TX`` -- 19 of
+the 105 counterparts in the example above. Summing across the counterpart level therefore
+double-counts: ``G001`` alone is the world total, and it matches the sum of the 86 individual
+partners. Select the partners explicitly, or read the total from the aggregate.
+
+.. ipython:: python
+   :okexcept:
+
+    exports = df.xs('XG_FOB_USD', axis=1, level='indicator').iloc[0].droplevel(['country', 'frequency'])
+
+    partners = exports[[code.isalpha() for code in exports.index]]
+
+    (partners.sort_values(ascending=False).head() / partners.sum()).round(3)
+
+IMF data is served under the `IMF's terms of use <https://www.imf.org/external/terms.htm>`__:
+© International Monetary Fund Copyright, all rights reserved. The IMF asks that the dataset be
+cited as "International Monetary Fund. International Trade in Goods (by partner country),
+https://data.imf.org/en/datasets/IMF.STA:IMTS".
 
 .. _remote_data.eurostat:
 

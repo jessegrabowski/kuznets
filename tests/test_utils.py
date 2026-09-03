@@ -7,7 +7,7 @@ import pandas as pd
 import pytest
 
 import kuznets.utils
-from kuznets.utils import _sanitize_dates
+from kuznets.utils import _sanitize_dates, _year_bounds
 
 
 class TestVersionFallback:
@@ -76,3 +76,18 @@ class TestUtils:
         default_start = pd.to_datetime(dt.date.today() - dt.timedelta(days=365 * 5))
         default_end = pd.to_datetime(dt.date.today())
         assert _sanitize_dates(None, None) == (default_start, default_end)
+
+
+class TestYearBounds:
+    def test_widens_a_partial_range_to_whole_years(self):
+        start, end = _year_bounds(pd.Timestamp("2019-06-15"), pd.Timestamp("2021-03-02"))
+
+        assert start == pd.Timestamp("2019-01-01")
+        assert end == pd.Timestamp("2021-12-31")
+
+    def test_an_integer_end_year_covers_that_whole_year(self):
+        # _sanitize_dates reads a bare year as January 1st, which would otherwise bound a request
+        # for 2019 to its first day and drop every sub-annual period after it.
+        start, end = _year_bounds(*_sanitize_dates(2019, 2019))
+
+        assert (start, end) == (pd.Timestamp("2019-01-01"), pd.Timestamp("2019-12-31"))

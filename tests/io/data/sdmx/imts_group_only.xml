@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<message:StructureSpecificData
+    xmlns:message="http://www.sdmx.org/resources/sdmxml/schemas/v2_1/message"
+    xmlns:ss="http://www.sdmx.org/resources/sdmxml/schemas/v2_1/data/structurespecific"
+    xmlns:ns1="urn:sdmx:org.sdmx.infomodel.datastructure.DataStructure=IMF.STA:DSD_IMTS(1.0.0):ObsLevelDim:TIME_PERIOD">
+  <message:Header>
+    <message:ID>IDNOTPROVIDED</message:ID>
+    <message:Test>false</message:Test>
+    <message:Sender id="IMF.STA"/>
+  </message:Header>
+  <message:DataSet ss:structureRef="DSD_IMTS" ss:dataScope="DataStructure" xsi:type="ns1:DataSetType" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <ns1:Group xsi:type="ns1:Group" COUNTRY="LAO" INDICATOR="XG_FOB_USD"/>
+    <ns1:Group xsi:type="ns1:Group" COUNTRY="LAO" INDICATOR="MG_CIF_USD"/>
+    <ns1:Group xsi:type="ns1:Group" COUNTRY="LAO" INDICATOR="MG_FOB_USD"/>
+    <ns1:Group xsi:type="ns1:Group" COUNTRY="LAO" INDICATOR="TBG_USD"/>
+  </message:DataSet>
+</message:StructureSpecificData>
