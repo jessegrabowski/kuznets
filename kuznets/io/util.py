@@ -34,7 +34,7 @@ def _load_json(path_or_buf: JSONSource) -> Any:
     return json.loads(jdata, object_pairs_hook=OrderedDict)
 
 
-def _to_datetime_index(idx: pd.Index, name: str) -> pd.Index:
+def _to_datetime_index(idx: Sequence[Any] | pd.Index, name: str) -> pd.Index:
     """Coerce period codes to a ``DatetimeIndex``, falling back to a string ``Index`` on failure."""
     try:
         return pd.DatetimeIndex(pd.to_datetime(idx), name=name)
