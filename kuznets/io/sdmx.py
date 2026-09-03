@@ -525,10 +525,10 @@ def _iter_local(element: ET.Element, name: str) -> Iterator[ET.Element]:
     return (descendant for descendant in element.iter() if _local_name(descendant.tag) == name)
 
 
-def _reference(element: ET.Element, cls: str) -> StructureRef | None:
+def _reference(element: ET.Element, artefact_class: str) -> StructureRef | None:
     """Find the first ``<Ref>`` under ``element`` referencing an artefact of the given class."""
     for ref in _iter_local(element, "Ref"):
-        if ref.get("class") != cls:
+        if ref.get("class") != artefact_class:
             continue
         agency, identifier, version = ref.get("agencyID"), ref.get("id"), ref.get("version")
         if agency is not None and identifier is not None and version is not None:
