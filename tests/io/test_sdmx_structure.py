@@ -4,6 +4,10 @@ from kuznets.io import read_codelist, read_data_structure, read_dataflow_structu
 
 pytestmark = pytest.mark.stable
 
+COMMON = "http://www.sdmx.org/resources/sdmxml/schemas/v2_1/common"
+MESSAGE = "http://www.sdmx.org/resources/sdmxml/schemas/v2_1/message"
+STRUCTURE = "http://www.sdmx.org/resources/sdmxml/schemas/v2_1/structure"
+
 
 @pytest.fixture
 def dirpath(datapath):
@@ -11,7 +15,7 @@ def dirpath(datapath):
 
 
 class TestReadDataflowStructureRef:
-    def test_imf_dataflow(self, dirpath):
+    def test_imf_dataflow_names_its_data_structure(self, dirpath):
         ref = read_dataflow_structure_ref(dirpath / "imf_dataflow_cpi.xml")
 
         assert ref == ("IMF.STA", "DSD_CPI", "5.0.0")
@@ -81,6 +85,23 @@ class TestReadDataStructure:
         assert structure.dimensions == ["COUNTRY", "INDEX_TYPE", "COICOP_1999", "TYPE_OF_TRANSFORMATION", "FREQUENCY"]
         assert structure.codelists == {}
 
+    def test_dimensions_order_by_position_not_document_order(self):
+        # Every recorded fixture happens to declare its dimensions already in position order, so
+        # only a document that disagrees can tell the sort from an accident of the source data.
+        document = (
+            f'<mes:Structure xmlns:mes="{MESSAGE}" xmlns:str="{STRUCTURE}"><mes:Structures>'
+            '<str:DataStructures><str:DataStructure id="DSD_TEST"><str:DataStructureComponents>'
+            '<str:DimensionList id="DimensionDescriptor">'
+            '<str:Dimension id="THIRD" position="2"/>'
+            '<str:Dimension id="FIRST" position="0"/>'
+            '<str:Dimension id="SECOND" position="1"/>'
+            '<str:TimeDimension id="TIME_PERIOD"/>'
+            "</str:DimensionList></str:DataStructureComponents></str:DataStructure>"
+            "</str:DataStructures></mes:Structures></mes:Structure>"
+        )
+
+        assert read_data_structure(document).dimensions == ["FIRST", "SECOND", "THIRD"]
+
     def test_document_without_a_data_structure_raises(self, dirpath):
         with pytest.raises(ValueError, match="no data structure"):
             read_data_structure(dirpath / "imf_dataflow_cpi.xml")
@@ -104,3 +125,16 @@ class TestReadCodelist:
     def test_document_without_a_codelist_raises(self, dirpath):
         with pytest.raises(ValueError, match="no codelist"):
             read_codelist(dirpath / "imf_dataflow_cpi.xml")
+
+    def test_codes_without_an_english_name_fall_back_to_the_identifier(self):
+        # A code names itself in whatever languages it likes, and the identifier is what a caller
+        # validates against, so it has to survive a missing English label.
+        document = (
+            f'<mes:Structure xmlns:mes="{MESSAGE}" xmlns:str="{STRUCTURE}" xmlns:com="{COMMON}">'
+            '<str:Codelist id="CL_TEST">'
+            '<str:Code id="NAMED"><com:Name xml:lang="en">Named</com:Name></str:Code>'
+            '<str:Code id="UNNAMED"><com:Name xml:lang="fr">Sans nom</com:Name></str:Code>'
+            "</str:Codelist></mes:Structure>"
+        )
+
+        assert read_codelist(document) == {"NAMED": "Named", "UNNAMED": "UNNAMED"}
