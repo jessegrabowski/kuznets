@@ -106,6 +106,20 @@ class TestBaseReader:
         b = base._BaseReader([], headers={"User-Agent": ua})
         assert b.session.headers["User-Agent"] == ua
 
+    def test_empty_response_names_the_url_that_was_requested(self):
+        # A reader that fetches more than one URL -- wb appends the indicator, the SDMX reader
+        # resolves structure before data -- would otherwise be told the wrong one came back empty.
+        class _Reader(base._BaseReader):
+            @property
+            def url(self):
+                return "https://example.test/base"
+
+        reader = _Reader([])
+        reader.session = _FakeSession(make_response(b""))
+
+        with pytest.raises(OSError, match="https://example.test/other"):
+            reader._read_url_as_StringIO("https://example.test/other")
+
     def test_get_response_returns_ok(self):
         b = base._BaseReader([])
         b.session = _FakeSession(_FakeResponse(requests.codes.ok))
