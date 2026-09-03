@@ -1,7 +1,7 @@
 import pytest
 import requests
 
-from kuznets.io import read_codelist, read_data_structure, read_dataflow_structure_ref
+from kuznets.io import read_codelist, read_data_structure, read_dataflow_ref, read_dataflow_structure_ref
 from tests._mock import service_up, tolerate_outage
 
 pytestmark = pytest.mark.stable
@@ -50,6 +50,20 @@ class TestReadDataflowStructureRef:
     def test_document_without_a_dataflow_raises(self, dirpath):
         with pytest.raises(ValueError, match="no dataflow"):
             read_dataflow_structure_ref(dirpath / "ilo_datastructure_earnings.xml")
+
+
+class TestReadDataflowRef:
+    def test_the_dataflow_identifies_itself_apart_from_its_structure(self, dirpath):
+        # CPI is the dataflow a data request addresses; DSD_CPI is only the shape it points at.
+        assert read_dataflow_ref(dirpath / "imf_dataflow_cpi.xml") == ("IMF.STA", "CPI", "5.0.0")
+        assert read_dataflow_structure_ref(dirpath / "imf_dataflow_cpi.xml").id == "DSD_CPI"
+
+    def test_ilo_dataflow(self, dirpath):
+        assert read_dataflow_ref(dirpath / "ilo_dataflow_earnings.xml") == ("ILO", "DF_EAR_CMTA_SEX_CUR_NB", "1.0")
+
+    def test_document_without_a_dataflow_raises(self, dirpath):
+        with pytest.raises(ValueError, match="no fully identified dataflow"):
+            read_dataflow_ref(dirpath / "ilo_datastructure_earnings.xml")
 
 
 class TestReadDataStructure:

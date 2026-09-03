@@ -431,6 +431,30 @@ def read_dataflow_structure_ref(path_or_buf: PathOrBuffer) -> StructureRef:
     raise ValueError("Document declares no dataflow referencing a data structure definition")
 
 
+def read_dataflow_ref(path_or_buf: PathOrBuffer) -> StructureRef:
+    """Read a dataflow record's own agency, identifier and version.
+
+    This is what addresses the dataflow in a data request, and it is distinct from the data
+    structure it references: the IMF's ``CPI`` dataflow points at ``DSD_CPI``.
+
+    Parameters
+    ----------
+    path_or_buf : str, Path, or file-like
+        A valid SDMX-XML structure message describing one or more dataflows.
+
+    Returns
+    -------
+    ref : StructureRef
+        The dataflow's ``agency``, ``id`` and ``version``.
+    """
+    root = ET.fromstring(_read_content(path_or_buf))
+    for dataflow in _iter_local(root, "Dataflow"):
+        agency, identifier, version = dataflow.get("agencyID"), dataflow.get("id"), dataflow.get("version")
+        if agency is not None and identifier is not None and version is not None:
+            return StructureRef(agency=agency, id=identifier, version=version)
+    raise ValueError("Document declares no fully identified dataflow")
+
+
 def read_data_structure(path_or_buf: PathOrBuffer) -> DataStructure:
     """Read a data structure definition into its ordered dimensions and their codelists.
 
