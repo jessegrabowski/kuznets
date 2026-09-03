@@ -206,7 +206,7 @@ def _read_content(path_or_buf: Any) -> Any:
             exists = False
 
         if exists:
-            data = Path(filepath_or_buffer).read_text()
+            data = Path(filepath_or_buffer).read_text(encoding="utf-8")
         else:
             data = filepath_or_buffer
     elif hasattr(filepath_or_buffer, "read"):

@@ -1,4 +1,4 @@
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Iterable, Iterator, Mapping, Sequence
 from io import BytesIO
 import time
 from typing import IO, NamedTuple
@@ -387,3 +387,187 @@ def _empty_observations(names: list[str], time_pos: int, output_type: str) -> Fr
 def _local_name(tag: str) -> str:
     """Strip the namespace from a qualified element tag."""
     return tag.rpartition("}")[2]
+
+
+class StructureRef(NamedTuple):
+    """A reference to a maintainable SDMX artefact, as an agency, identifier and version."""
+
+    agency: str
+    id: str
+    version: str
+
+
+class DataStructure(NamedTuple):
+    """A data structure definition, reduced to what building and validating a data key needs."""
+
+    dimensions: list[str]
+    time_dimension: str
+    codelists: dict[str, StructureRef]
+
+
+def read_dataflow_structure_ref(path_or_buf: PathOrBuffer) -> StructureRef:
+    """Read the data structure definition a dataflow record points at.
+
+    A dataflow is served without its shape; the record only references the data structure definition
+    that carries it.
+
+    Parameters
+    ----------
+    path_or_buf : str, Path, or file-like
+        A valid SDMX-XML structure message describing one or more dataflows.
+
+    Returns
+    -------
+    ref : StructureRef
+        The referenced data structure's ``agency``, ``id`` and ``version``. The version is taken
+        verbatim, since services disagree on its form: the IMF writes ``'5.0.0'`` where the ILO
+        writes ``'1.0'``.
+    """
+    root = ET.fromstring(_read_content(path_or_buf))
+    for dataflow in _iter_local(root, "Dataflow"):
+        ref = _reference(dataflow, "DataStructure")
+        if ref is not None:
+            return ref
+    raise ValueError("Document declares no dataflow referencing a data structure definition")
+
+
+def read_data_structure(path_or_buf: PathOrBuffer) -> DataStructure:
+    """Read a data structure definition into its ordered dimensions and their codelists.
+
+    Parameters
+    ----------
+    path_or_buf : str, Path, or file-like
+        A valid SDMX-XML structure message carrying a data structure definition.
+
+    Returns
+    -------
+    structure : DataStructure
+        ``dimensions``, the dimension identifiers in key order; ``time_dimension``, the identifier
+        of the time dimension; and ``codelists``, a :class:`StructureRef` per dimension whose
+        codelist could be resolved. A dimension resolving to none is absent from ``codelists``
+        rather than raising, so a caller can validate the dimensions it can and skip the rest.
+    """
+    root = ET.fromstring(_read_content(path_or_buf))
+    structure = next(_iter_local(root, "DataStructure"), None)
+    if structure is None:
+        raise ValueError("Document carries no data structure definition")
+
+    dimension_list = next(_iter_local(structure, "DimensionList"), None)
+    if dimension_list is None:
+        raise ValueError(f"Data structure {structure.get('id')!r} declares no dimension list")
+
+    # Only declarations carry both an id and a position; the bare <Dimension> elements elsewhere in
+    # the document are references from group and attribute relationships.
+    declared: list[tuple[int, str, ET.Element]] = []
+    time_dimension = _TIME_PERIOD
+    for element in dimension_list:
+        name = _local_name(element.tag)
+        if name == "TimeDimension":
+            time_dimension = element.get("id") or _TIME_PERIOD
+        elif name == "Dimension":
+            identifier = element.get("id")
+            if identifier is not None:
+                declared.append((int(element.get("position") or "0"), identifier, element))
+    declared.sort(key=lambda declaration: declaration[0])
+
+    concepts = _concept_codelists(root)
+    codelists: dict[str, StructureRef] = {}
+    for _, identifier, element in declared:
+        ref = _dimension_codelist(element, concepts)
+        if ref is not None:
+            codelists[identifier] = ref
+
+    return DataStructure([identifier for _, identifier, _ in declared], time_dimension, codelists)
+
+
+def read_codelist(path_or_buf: PathOrBuffer) -> dict[str, str]:
+    """Read an SDMX codelist into its codes and their English names.
+
+    Parameters
+    ----------
+    path_or_buf : str, Path, or file-like
+        A valid SDMX-XML structure message carrying a codelist.
+
+    Returns
+    -------
+    codes : dict mapping str to str
+        Each code identifier mapped to its English name, or to the identifier itself where the
+        document names it in no other language.
+    """
+    root = ET.fromstring(_read_content(path_or_buf))
+    codelist = next(_iter_local(root, "Codelist"), None)
+    if codelist is None:
+        raise ValueError("Document carries no codelist")
+
+    codes = {}
+    for code in _iter_local(codelist, "Code"):
+        identifier = code.get("id")
+        if identifier:
+            codes[identifier] = _get_english_name(code) or identifier
+    return codes
+
+
+def _iter_local(element: ET.Element, name: str) -> Iterator[ET.Element]:
+    """Iterate the descendants of ``element`` whose local name matches, ignoring namespace."""
+    return (descendant for descendant in element.iter() if _local_name(descendant.tag) == name)
+
+
+def _reference(element: ET.Element, artefact_class: str) -> StructureRef | None:
+    """Find the first ``<Ref>`` under ``element`` referencing an artefact of the given class."""
+    for ref in _iter_local(element, "Ref"):
+        if ref.get("class") != artefact_class:
+            continue
+        agency, identifier, version = ref.get("agencyID"), ref.get("id"), ref.get("version")
+        if agency is not None and identifier is not None and version is not None:
+            return StructureRef(agency=agency, id=identifier, version=version)
+    return None
+
+
+def _concept_codelists(root: ET.Element) -> dict[str, StructureRef]:
+    """Map every concept in the document to the codelist it enumerates, where it names one.
+
+    Concepts are keyed both by scheme and identifier together and by identifier alone, because a
+    dimension names its concept's parent scheme but concept identifiers are usually unique anyway.
+    Scheme identifiers repeat across agencies, so the first definition of a key wins.
+    """
+    codelists: dict[str, StructureRef] = {}
+    for scheme in _iter_local(root, "ConceptScheme"):
+        scheme_id = scheme.get("id")
+        for concept in _iter_local(scheme, "Concept"):
+            concept_id = concept.get("id")
+            if concept_id is None:
+                continue
+            ref = _reference(concept, "Codelist")
+            if ref is None:
+                continue
+            codelists.setdefault(_concept_key(scheme_id, concept_id), ref)
+            codelists.setdefault(concept_id, ref)
+    return codelists
+
+
+def _concept_key(scheme: str | None, concept: str) -> str:
+    """Key a concept by its scheme and identifier together."""
+    return f"{scheme}:{concept}"
+
+
+def _dimension_codelist(dimension: ET.Element, concepts: dict[str, StructureRef]) -> StructureRef | None:
+    """Resolve the codelist enumerating a dimension, from the dimension or from its concept.
+
+    The ILO records the reference on the dimension; the IMF leaves the dimension bare and records it
+    on the concept, reachable only when the concept schemes are in the same document.
+    """
+    for representation in _iter_local(dimension, "LocalRepresentation"):
+        ref = _reference(representation, "Codelist")
+        if ref is not None:
+            return ref
+
+    identity = next(_iter_local(dimension, "ConceptIdentity"), None)
+    if identity is None:
+        return None
+    concept = next(_iter_local(identity, "Ref"), None)
+    if concept is None:
+        return None
+    concept_id = concept.get("id")
+    if concept_id is None:
+        return None
+    return concepts.get(_concept_key(concept.get("maintainableParentID"), concept_id)) or concepts.get(concept_id)
