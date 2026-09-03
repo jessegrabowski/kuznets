@@ -169,14 +169,13 @@ def _present_observations(
     time_pos: int,
     output_type: str,
 ) -> Frame:
-    """Present parsed observations as today's wide pandas frame or a long native frame.
+    """Present parsed observations as a wide pandas frame or a long native frame.
 
-    The pandas path pivots to the time-indexed wide frame, with its legacy time parsing. Every
-    other backend gets one row per observation with display-labeled dimension columns and a float64
-    ``value`` column; period codes parse in Python via :func:`parse_period_code` before any
-    backend sees them, so the time column is datetime-typed identically everywhere -- including
-    quarterly, semester, and ISO-week codes -- and stays string-typed only when a code defeats the
-    parser.
+    The pandas path pivots to a time-indexed wide frame. Every other backend gets one row per
+    observation with display-labeled dimension columns and a float64 ``value`` column; period codes
+    parse in Python via :func:`parse_period_code` before any backend sees them, so the time column is
+    datetime-typed identically everywhere -- including quarterly, semester, and ISO-week codes -- and
+    stays string-typed only when a code defeats the parser.
     """
     if output_type == PANDAS:
         return _pivot_observations(records, dim_names, label_maps, time_pos)

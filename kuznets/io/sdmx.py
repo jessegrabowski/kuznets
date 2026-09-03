@@ -41,21 +41,23 @@ class SDMXCode(NamedTuple):
 
 
 def read_sdmx(path_or_buf: PathOrBuffer, dtype: str = "float64", dsd: SDMXCode | None = None) -> pd.DataFrame:
-    """
-    Convert a SDMX-XML string to pandas object
+    """Convert an SDMX-XML generic data message to a wide pandas frame.
 
     Parameters
     ----------
-    path_or_buf : a valid SDMX-XML string or file-like
-        https://webgate.ec.europa.eu/fpfis/mwikis/sdmx/index.php/Main_Page
-    dtype : str
-        dtype to coerce values
-    dsd : dict
-        parsed DSD dict corresponding to the SDMX-XML data
+    path_or_buf : str, Path, or file-like
+        A valid SDMX-XML string, path, or open file.
+    dtype : str, optional
+        dtype the observation values coerce to. Default 'float64'.
+    dsd : SDMXCode, optional
+        Parsed data structure definition, used to label the series keys and to identify which
+        dimensions carry times. Default None, which leaves the codes unlabeled.
 
     Returns
     -------
-    results : Series, DataFrame, or dictionaly of Series or DataFrame.
+    df : DataFrame
+        Observations indexed by the dimension at observation, with the series keys forming the
+        columns.
     """
 
     xdata = _read_content(path_or_buf)
@@ -192,38 +194,33 @@ def _get_english_name(element: ET.Element) -> str | None:
 
 
 def _read_sdmx_dsd(path_or_buf: PathOrBuffer) -> SDMXCode:
-    """
-    Convert a SDMX-XML DSD string to mapping dictionary
+    """Parse an SDMX-XML data structure definition into its code labels and time dimensions.
 
     Parameters
     ----------
-    filepath_or_buffer : a valid SDMX-XML DSD string or file-like
-        https://webgate.ec.europa.eu/fpfis/mwikis/sdmx/index.php/Main_Page
+    path_or_buf : str, Path, or file-like
+        A valid SDMX-XML structure message.
 
     Returns
     -------
-    results : namedtuple (SDMXCode)
+    dsd : SDMXCode
+        Display names per codelist, and the identifiers of the dimensions carrying times.
     """
-
     xdata = _read_content(path_or_buf)
     root = ET.fromstring(xdata)
 
     structure = _get_child(root, _MESSAGE + "Structures")
     codes = _get_child(structure, _STRUCTURE + "Codelists")
-    # concepts = _get_child(structure, _STRUCTURE + 'Concepts')
     datastructures = _get_child(structure, _STRUCTURE + "DataStructures")
 
     code_results = {}
     for codelist in codes:
-        # codelist_id = codelist.get('id')
         codelist_name = _get_english_name(codelist)
         mapper = {}
         for code in codelist.iter(_CODE):
             code_id = code.get("id")
             name = _get_english_name(code)
             mapper[code_id] = name
-        # codeobj = SDMXCode(id=codelist_id, name=codelist_name, mapper=mapper)
-        # code_results[codelist_id] = codeobj
         code_results[codelist_name] = mapper
 
     times = [dimension.get("id") for dimension in datastructures.iter(_TIMEDIMENSION)]
@@ -233,7 +230,7 @@ def _read_sdmx_dsd(path_or_buf: PathOrBuffer) -> SDMXCode:
 
 
 def _read_zipped_sdmx(path_or_buf: PathOrBuffer) -> IO[bytes]:
-    """Unzipp data contains SDMX-XML"""
+    """Unzip a downloaded SDMX-XML archive and open its single member."""
     data = _read_content(path_or_buf)
 
     if not isinstance(data, bytes):
