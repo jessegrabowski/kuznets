@@ -17,9 +17,9 @@ from kuznets.io import (
     read_dataflow_structure_ref,
     read_structure_specific,
 )
-from kuznets.output import PANDAS, filter_date_range
+from kuznets.output import PANDAS, filter_date_range, is_empty
 from kuznets.typing import DateLike, Frame, Headers, Symbols
-from kuznets.utils import _year_bounds
+from kuznets.utils import RemoteDataError, _year_bounds
 
 # Resolved structures keyed by service root, agency and dataflow. A dataflow's shape changes only
 # when the service republishes it, so resolving it once per process spares every later read the two
@@ -247,6 +247,7 @@ class _SdmxDataflowReader(_BaseReader):
     def _present_pandas(self, payload: str) -> DataFrame:
         """Pivot the observations into the wide time-indexed frame, truncated to the range."""
         df = read_structure_specific(payload, self._column_names(), PANDAS)
+        self._require_observations(df)
         if isinstance(df.index, DatetimeIndex):
             df = df.truncate(*_year_bounds(self.start, self.end))
         return df
@@ -254,8 +255,30 @@ class _SdmxDataflowReader(_BaseReader):
     def _present_tidy(self, payload: str) -> Frame:
         """Build the long native frame and filter it to the requested range."""
         frame = read_structure_specific(payload, self._column_names(), self.output_type)
+        self._require_observations(frame)
         start, end = _year_bounds(self.start, self.end)
         return filter_date_range(frame, "period", start, end)
+
+    def _require_observations(self, frame: Frame) -> None:
+        """Refuse to hand back an empty frame, naming whether the key or the coverage is at fault.
+
+        A bad code and a series the service does not carry both come back as an empty document under
+        HTTP 200, so the message reports which of the two validation was able to rule out.
+        """
+        if not is_empty(frame):
+            return
+        unchecked = sorted(set(self.selections) - self._validated)
+        if unchecked:
+            detail = (
+                f"the codes selected on {', '.join(unchecked)} could not be checked against a codelist, "
+                "so one of them may not exist"
+            )
+        else:
+            detail = "every selected code exists in the service's codelists, so this selection has no data"
+        raise RemoteDataError(
+            f"{self.dataflow} returned no observations for key {self.key!r} over "
+            f"{self.start.year}-{self.end.year}; {detail}"
+        )
 
 
 def _as_codes(selection: str | Iterable[str]) -> list[str]:

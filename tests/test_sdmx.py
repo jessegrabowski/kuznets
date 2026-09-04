@@ -5,6 +5,7 @@ import pandas as pd
 import pytest
 
 from kuznets.sdmx import _SdmxDataflowReader, clear_structure_cache
+from kuznets.utils import RemoteDataError
 from tests._backends import BACKENDS, as_narwhals, skip_unless_installed
 from tests._mock import from_fixtures, patch_session_get
 
@@ -65,8 +66,7 @@ def _forget_resolved_dataflows():
     clear_structure_cache()
 
 
-@pytest.fixture
-def service(datapath):
+def make_service(data_fixture):
     """A handler answering the structure, codelist and data requests, recording each URL."""
     requested = []
 
@@ -78,12 +78,22 @@ def service(datapath):
                 "/datastructure/": DATA_STRUCTURE.encode(),
                 "CL_COUNTRY": codelist_document("CL_COUNTRY", "LAO", "LKA", "LVA", "THA", "VNM").encode(),
                 "CL_FREQ": codelist_document("CL_FREQ", "A", "M", "Q").encode(),
-                "/data/": datapath("io", "data", "sdmx", "imts_structure_specific.xml"),
+                "/data/": data_fixture,
             }
         )(url, params, **kwargs)
 
     counting.requested = requested
     return counting
+
+
+@pytest.fixture
+def service(datapath):
+    return make_service(datapath("io", "data", "sdmx", "imts_structure_specific.xml"))
+
+
+@pytest.fixture
+def service_without_observations(datapath):
+    return make_service(datapath("io", "data", "sdmx", "imts_group_only.xml"))
 
 
 class TestDiscovery:
@@ -317,3 +327,28 @@ class TestCodelistEscalation:
         FakeServiceReader("IMTS", {"COUNTRY": "LAO", "FREQUENCY": "A"}, start="2018", end="2019").read()
 
         assert sum("/codelist/" in url for url in service.requested) == 2
+
+
+class TestEmptyObservations:
+    def test_an_empty_document_raises_naming_the_key(self, monkeypatch, service_without_observations):
+        patch_session_get(monkeypatch, service_without_observations)
+        reader = FakeServiceReader("IMTS", {"COUNTRY": "LAO"}, start="2018", end="2019")
+
+        with pytest.raises(RemoteDataError, match=re.escape("'LAO...'")):
+            reader.read()
+
+    def test_a_validated_selection_reports_missing_coverage(self, monkeypatch, service_without_observations):
+        # Every code was checked, so an empty result cannot be a bad code -- the service simply
+        # carries nothing for this selection, which is the distinction context.md asks for.
+        patch_session_get(monkeypatch, service_without_observations)
+        reader = FakeServiceReader("IMTS", {"COUNTRY": "LAO"}, start="2018", end="2019")
+
+        with pytest.raises(RemoteDataError, match="every selected code exists"):
+            reader.read()
+
+    def test_an_unchecked_selection_says_a_bad_code_is_still_possible(self, monkeypatch, service_without_observations):
+        patch_session_get(monkeypatch, service_without_observations)
+        reader = FakeServiceReader("IMTS", {"INDICATOR": "XG_FOB_USD"}, start="2018", end="2019")
+
+        with pytest.raises(RemoteDataError, match="INDICATOR could not be checked"):
+            reader.read()
