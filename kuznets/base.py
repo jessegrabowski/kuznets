@@ -239,7 +239,7 @@ class _BaseReader:
         out = StringIO()
         if len(text) == 0:
             service = self.__class__.__name__
-            raise OSError(f"{service} request returned no data; check URL for invalid inputs: {self.url}")
+            raise OSError(f"{service} request returned no data; check URL for invalid inputs: {url}")
         if isinstance(text, bytes):
             out.write(text.decode("utf-8"))
         else:

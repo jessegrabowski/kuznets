@@ -1,7 +1,7 @@
 from collections.abc import Iterable, Iterator, Mapping, Sequence
 from io import BytesIO
 import time
-from typing import IO, NamedTuple
+from typing import IO, Literal, NamedTuple, overload
 from xml.etree import ElementTree as ET
 import zipfile
 
@@ -11,7 +11,7 @@ import pandas as pd
 from kuznets.compat import HTTPError
 from kuznets.io.util import _present_observations, _read_content
 from kuznets.output import PANDAS, make_frame, observation_schema, validate_output_type
-from kuznets.typing import Frame, PathOrBuffer
+from kuznets.typing import BackendName, Frame, OutputType, PathOrBuffer
 
 _TIME_PERIOD = "TIME_PERIOD"
 _OBS_VALUE = "OBS_VALUE"
@@ -280,10 +280,22 @@ def build_sdmx_key(selections: Iterable[str | Iterable[str] | None]) -> str:
     return ".".join(parts)
 
 
+@overload
 def read_structure_specific(
     path_or_buf: PathOrBuffer,
     dimensions: Mapping[str, str] | Sequence[str] | None = None,
-    output_type: str = "pandas",
+    output_type: Literal["pandas"] = "pandas",
+) -> pd.DataFrame: ...
+@overload
+def read_structure_specific(
+    path_or_buf: PathOrBuffer,
+    dimensions: Mapping[str, str] | Sequence[str] | None = None,
+    output_type: BackendName = ...,
+) -> Frame: ...
+def read_structure_specific(
+    path_or_buf: PathOrBuffer,
+    dimensions: Mapping[str, str] | Sequence[str] | None = None,
+    output_type: OutputType = "pandas",
 ) -> Frame:
     """Convert an SDMX 2.1 ``StructureSpecificData`` message to a dataframe of the requested backend.
 
@@ -429,6 +441,30 @@ def read_dataflow_structure_ref(path_or_buf: PathOrBuffer) -> StructureRef:
         if ref is not None:
             return ref
     raise ValueError("Document declares no dataflow referencing a data structure definition")
+
+
+def read_dataflow_ref(path_or_buf: PathOrBuffer) -> StructureRef:
+    """Read a dataflow record's own agency, identifier and version.
+
+    This is what addresses the dataflow in a data request, and it is distinct from the data
+    structure it references: the IMF's ``CPI`` dataflow points at ``DSD_CPI``.
+
+    Parameters
+    ----------
+    path_or_buf : str, Path, or file-like
+        A valid SDMX-XML structure message describing one or more dataflows.
+
+    Returns
+    -------
+    ref : StructureRef
+        The dataflow's ``agency``, ``id`` and ``version``.
+    """
+    root = ET.fromstring(_read_content(path_or_buf))
+    for dataflow in _iter_local(root, "Dataflow"):
+        agency, identifier, version = dataflow.get("agencyID"), dataflow.get("id"), dataflow.get("version")
+        if agency is not None and identifier is not None and version is not None:
+            return StructureRef(agency=agency, id=identifier, version=version)
+    raise ValueError("Document declares no fully identified dataflow")
 
 
 def read_data_structure(path_or_buf: PathOrBuffer) -> DataStructure:
