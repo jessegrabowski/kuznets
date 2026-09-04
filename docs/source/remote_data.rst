@@ -46,9 +46,12 @@ The following sources have been previously supported but are fully working in th
     - :ref:`Yahoo Finance<remote_data.yahoo>`
     - :ref:`Eurostat<remote_data.eurostat>`
     - :ref:`OECD<remote_data.oecd>`
+    - :ref:`IMF<remote_data.imf>`
     - :ref:`IMF International Trade in Goods<remote_data.imts>`
+    - :ref:`ILOSTAT<remote_data.ilostat>`
     - :ref:`Econdb<remote_data.econdb>`
     - :ref:`World Bank<remote_data.wb>`
+    - :ref:`World Bank International Debt Statistics<remote_data.wb_ids>`
     - :ref:`Thrift Savings Plan<remote_data.tsp>`
 
 
@@ -577,6 +580,37 @@ indicators, or a single 'bad' (#4 above) country code).
 
 See docstrings for more info.
 
+.. _remote_data.wb_ids:
+
+World Bank International Debt Statistics
+========================================
+
+`International Debt Statistics <https://datatopics.worldbank.org/debt/ids/>`__ is a separate
+database from the World Development Indicators, and adds a creditor dimension the WDI has no
+equivalent for. ``DT.INR.DPPG`` is the average interest rate on new public and publicly guaranteed
+external debt commitments, ``DT.INR.OFFT`` and ``DT.INR.PRVT`` split the same rate by official and
+private creditor, and ``DT.MAT.DPPG`` reports average maturity.
+
+.. ipython:: python
+   :okexcept:
+
+    import kuznets.data as web
+
+    web.DataReader('ZMB', 'wb-ids', series='DT.INR.DPPG', start=1990, end=2020)
+
+Series are reported per creditor and in aggregate, and the reader defaults to the aggregate. Reading
+every creditor for one country and series runs to five figures of rows.
+
+.. ipython:: python
+   :okexcept:
+
+    from kuznets.wb_ids import WorldBankIDSReader
+
+    WorldBankIDSReader('DT.INR.DPPG', 'ZMB', counterpart='all', start=2015, end=2020).shape
+
+Data is served under the World Bank's
+`terms of use <https://www.worldbank.org/en/about/legal>`__.
+
 .. _remote_data.oecd:
 
 OECD
@@ -602,6 +636,43 @@ The following example downloads 'Trade Union Density' data.
     df.columns
 
     df.xs('Australia', axis=1, level='Reference area')
+
+.. _remote_data.imf:
+
+IMF
+===
+
+The IMF serves over two hundred dataflows from its SDMX 2.1 API at
+`<https://api.imf.org/external/sdmx/2.1/>`__, among them ``CPI`` (consumer prices), ``MFS_IR``
+(monetary and financial statistics, interest rates), ``QGFS`` (quarterly government finance) and
+``BOP`` (balance of payments). Their dimensions differ in name, number and order, so the reader asks
+the service for a dataflow's shape before requesting any data. Name the dataflow and the country.
+
+.. ipython:: python
+   :okexcept:
+
+    import kuznets.data as web
+
+    df = web.DataReader('ZMB', 'imf', dataflow='CPI', start=2020, end=2020)
+
+    df.columns.names
+
+``DataReader`` reads the country from its first argument. Restricting any other dimension means
+using the reader directly, passing a mapping keyed by the dimension identifiers the service
+declares.
+
+.. ipython:: python
+   :okexcept:
+
+    from kuznets.imf import IMFReader
+
+    IMFReader('MFS_IR', {'COUNTRY': 'ZMB', 'FREQUENCY': 'A'}, start=2018, end=2020).read()
+
+Codes are checked against the service's own codelists before the request goes out, so a mistyped
+country raises rather than returning an empty frame. An empty result therefore means the service
+carries no data for that selection, and the error says so.
+
+Data is served under the IMF's `terms of use <https://www.imf.org/external/terms.htm>`__.
 
 .. _remote_data.imts:
 
@@ -663,6 +734,30 @@ IMF data is served under the `IMF's terms of use <https://www.imf.org/external/t
 © International Monetary Fund Copyright, all rights reserved. The IMF asks that the dataset be
 cited as "International Monetary Fund. International Trade in Goods (by partner country),
 https://data.imf.org/en/datasets/IMF.STA:IMTS".
+
+.. _remote_data.ilostat:
+
+ILOSTAT
+=======
+
+The ILO's `SDMX service <https://sdmx.ilo.org/rest/dataflow/ILO>`__ carries earnings, employment and
+hours. Dataflow identifiers encode the indicator and its breakdowns, so they are looked up rather
+than guessed: ``DF_EAR_CMTA_SEX_CUR_NB`` is mean monthly earnings by sex and currency, and the
+``DF_EAR_*`` family covers earnings generally.
+
+Dimensions carry the ILO's own names, so the country is ``REF_AREA`` rather than ``COUNTRY``.
+
+.. ipython:: python
+   :okexcept:
+
+    import kuznets.data as web
+
+    df = web.DataReader('ZMB', 'ilostat', dataflow='DF_EAR_CMTA_SEX_CUR_NB', start=2015, end=2019)
+
+    df.columns.names
+
+Data is served under the ILO's
+`terms <https://www.ilo.org/disclaimer-privacy-policy>`__.
 
 .. _remote_data.eurostat:
 

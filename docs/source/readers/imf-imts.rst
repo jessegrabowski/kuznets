@@ -1,7 +1,11 @@
-IMF International Trade in Goods
---------------------------------
+IMF
+---
 
 .. py:module:: kuznets.imf
+
+.. autoclass:: IMFReader
+   :members:
+   :inherited-members:
 
 .. autoclass:: IMTSReader
    :members:
