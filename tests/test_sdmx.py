@@ -1,13 +1,17 @@
+import re
+
 import narwhals.stable.v2 as nw
 import pandas as pd
 import pytest
 
 from kuznets.sdmx import _SdmxDataflowReader, clear_structure_cache
+from kuznets.utils import RemoteDataError
 from tests._backends import BACKENDS, as_narwhals, skip_unless_installed
 from tests._mock import from_fixtures, patch_session_get
 
 pytestmark = pytest.mark.stable
 
+COMMON = "http://www.sdmx.org/resources/sdmxml/schemas/v2_1/common"
 MESSAGE = "http://www.sdmx.org/resources/sdmxml/schemas/v2_1/message"
 STRUCTURE = "http://www.sdmx.org/resources/sdmxml/schemas/v2_1/structure"
 
@@ -26,14 +30,27 @@ DATA_STRUCTURE = (
     f'<mes:Structure xmlns:mes="{MESSAGE}" xmlns:str="{STRUCTURE}"><mes:Structures>'
     '<str:DataStructures><str:DataStructure id="DSD_IMTS"><str:DataStructureComponents>'
     '<str:DimensionList id="DimensionDescriptor">'
-    '<str:Dimension id="COUNTRY" position="0"/>'
+    '<str:Dimension id="COUNTRY" position="0"><str:LocalRepresentation><str:Enumeration>'
+    '<Ref agencyID="IMF" id="CL_COUNTRY" version="1.6.0" class="Codelist"/>'
+    "</str:Enumeration></str:LocalRepresentation></str:Dimension>"
     '<str:Dimension id="INDICATOR" position="1"/>'
     '<str:Dimension id="COUNTERPART_COUNTRY" position="2"/>'
-    '<str:Dimension id="FREQUENCY" position="3"/>'
+    '<str:Dimension id="FREQUENCY" position="3"><str:LocalRepresentation><str:Enumeration>'
+    '<Ref agencyID="IMF" id="CL_FREQ" version="1.0.0" class="Codelist"/>'
+    "</str:Enumeration></str:LocalRepresentation></str:Dimension>"
     '<str:TimeDimension id="TIME_PERIOD"/>'
     "</str:DimensionList></str:DataStructureComponents></str:DataStructure></str:DataStructures>"
     "</mes:Structures></mes:Structure>"
 )
+
+
+def codelist_document(identifier: str, *codes: str) -> str:
+    entries = "".join(f'<str:Code id="{code}"><com:Name xml:lang="en">{code}</com:Name></str:Code>' for code in codes)
+    return (
+        f'<mes:Structure xmlns:mes="{MESSAGE}" xmlns:str="{STRUCTURE}" xmlns:com="{COMMON}"><mes:Structures>'
+        f'<str:Codelists><str:Codelist id="{identifier}">{entries}</str:Codelist></str:Codelists>'
+        "</mes:Structures></mes:Structure>"
+    )
 
 
 class FakeServiceReader(_SdmxDataflowReader):
@@ -49,23 +66,34 @@ def _forget_resolved_dataflows():
     clear_structure_cache()
 
 
-@pytest.fixture
-def service(datapath):
-    """A handler answering the two structure requests and the data request, counting each URL."""
+def make_service(data_fixture):
+    """A handler answering the structure, codelist and data requests, recording each URL."""
     requested = []
 
     def counting(url, params=None, **kwargs):
-        requested.append(url)
+        requested.append(url + (f"?references={params['references']}" if params and "references" in params else ""))
         return from_fixtures(
             {
                 "/dataflow/": DATAFLOW_RECORD.encode(),
                 "/datastructure/": DATA_STRUCTURE.encode(),
-                "/data/": datapath("io", "data", "sdmx", "imts_structure_specific.xml"),
+                "CL_COUNTRY": codelist_document("CL_COUNTRY", "LAO", "LKA", "LVA", "THA", "VNM").encode(),
+                "CL_FREQ": codelist_document("CL_FREQ", "A", "M", "Q").encode(),
+                "/data/": data_fixture,
             }
         )(url, params, **kwargs)
 
     counting.requested = requested
     return counting
+
+
+@pytest.fixture
+def service(datapath):
+    return make_service(datapath("io", "data", "sdmx", "imts_structure_specific.xml"))
+
+
+@pytest.fixture
+def service_without_observations(datapath):
+    return make_service(datapath("io", "data", "sdmx", "imts_group_only.xml"))
 
 
 class TestDiscovery:
@@ -148,7 +176,7 @@ class TestStructureCache:
         FakeServiceReader("IMTS", {"COUNTRY": "LAO"}, start="2018", end="2019").read()
         FakeServiceReader("IMTS", {"COUNTRY": "THA"}, start="2018", end="2019").read()
 
-        structure_requests = [url for url in service.requested if "/data/" not in url]
+        structure_requests = [url for url in service.requested if "/dataflow/" in url or "/datastructure/" in url]
         assert len(structure_requests) == 2
         assert sum("/data/" in url for url in service.requested) == 2
 
@@ -199,3 +227,128 @@ class TestPresentation:
         assert tidy.columns == ["COUNTRY", "INDICATOR", "COUNTERPART_COUNTRY", "FREQUENCY", "period", "value"]
         assert tidy.schema["period"] == nw.Datetime
         assert len(tidy) == 4
+
+
+class TestSelectionValidation:
+    def test_a_code_the_service_does_not_list_raises_before_the_data_request(self, monkeypatch, service):
+        patch_session_get(monkeypatch, service)
+        reader = FakeServiceReader("IMTS", {"COUNTRY": "ZZZ"}, start="2018", end="2019")
+
+        with pytest.raises(ValueError, match="COUNTRY has no code 'ZZZ' in codelist CL_COUNTRY"):
+            reader.read()
+
+        assert not any("/data/" in url for url in service.requested)
+
+    def test_the_message_suggests_a_near_miss(self, monkeypatch, service):
+        # The trap this exists to catch: an alpha-2 country code is answered with 200 and no
+        # observations, so 'LA' has to be rejected with the alpha-3 it was meant to be.
+        patch_session_get(monkeypatch, service)
+        reader = FakeServiceReader("IMTS", {"COUNTRY": "LA"}, start="2018", end="2019")
+
+        with pytest.raises(ValueError, match=re.escape("did you mean 'LAO', 'LVA', 'LKA'")):
+            reader.read()
+
+    def test_every_code_of_a_multi_value_selection_is_checked(self, monkeypatch, service):
+        patch_session_get(monkeypatch, service)
+        reader = FakeServiceReader("IMTS", {"COUNTRY": ["LAO", "ZZZ"]}, start="2018", end="2019")
+
+        with pytest.raises(ValueError, match="'ZZZ'"):
+            reader.read()
+
+    def test_a_dimension_the_service_does_not_enumerate_is_skipped(self, monkeypatch, service):
+        # INDICATOR carries no codelist reference, so there is nothing to validate against and the
+        # read proceeds rather than failing on a code that might be perfectly good.
+        patch_session_get(monkeypatch, service)
+
+        df = FakeServiceReader("IMTS", {"INDICATOR": "ANYTHING"}, start="2018", end="2019").read()
+
+        assert not df.empty
+
+    def test_a_restricted_dimension_without_a_codelist_asks_for_the_concept_schemes(self, monkeypatch, service):
+        # The IMF records codelists on the concept, so the plain structure resolves none of them and
+        # the reader has to escalate before it can validate anything.
+        patch_session_get(monkeypatch, service)
+
+        FakeServiceReader("IMTS", {"INDICATOR": "XG_FOB_USD"}, start="2018", end="2019").read()
+
+        assert any("references=children" in url for url in service.requested)
+
+    def test_a_selection_the_structure_already_enumerates_does_not_escalate(self, monkeypatch, service):
+        patch_session_get(monkeypatch, service)
+
+        FakeServiceReader("IMTS", {"COUNTRY": "LAO"}, start="2018", end="2019").read()
+
+        assert not any("references=children" in url for url in service.requested)
+
+    def test_a_code_with_no_near_miss_reports_the_codelist_size(self, monkeypatch, service):
+        patch_session_get(monkeypatch, service)
+        reader = FakeServiceReader("IMTS", {"COUNTRY": "QQQQQQ"}, start="2018", end="2019")
+
+        with pytest.raises(ValueError, match="which lists 5 codes"):
+            reader.read()
+
+    def test_a_codelist_is_fetched_once_across_reads(self, monkeypatch, service):
+        patch_session_get(monkeypatch, service)
+
+        FakeServiceReader("IMTS", {"COUNTRY": "LAO"}, start="2018", end="2019").read()
+        FakeServiceReader("IMTS", {"COUNTRY": "THA"}, start="2018", end="2019").read()
+
+        assert sum("/codelist/" in url for url in service.requested) == 1
+
+
+class TestCodelistEscalation:
+    def test_the_concept_schemes_are_requested_once_across_reads(self, monkeypatch, service):
+        # Escalation is remembered with the structure, so a dimension the service never enumerates
+        # costs one extra request per dataflow rather than one per read.
+        patch_session_get(monkeypatch, service)
+
+        FakeServiceReader("IMTS", {"INDICATOR": "XG_FOB_USD"}, start="2018", end="2019").read()
+        FakeServiceReader("IMTS", {"INDICATOR": "MG_CIF_USD"}, start="2018", end="2019").read()
+
+        assert sum("references=children" in url for url in service.requested) == 1
+
+    def test_a_structure_cached_without_codelists_is_upgraded_on_demand(self, monkeypatch, service):
+        # The first reader restricts nothing, so the plain structure satisfies it and is cached. The
+        # second needs a codelist that structure does not carry, and has to escalate off the hit.
+        patch_session_get(monkeypatch, service)
+
+        FakeServiceReader("IMTS", start="2018", end="2019").read()
+        assert not any("references=children" in url for url in service.requested)
+
+        FakeServiceReader("IMTS", {"INDICATOR": "XG_FOB_USD"}, start="2018", end="2019").read()
+
+        assert any("references=children" in url for url in service.requested)
+
+    def test_each_codelist_is_fetched_on_its_own(self, monkeypatch, service):
+        # One cache entry per codelist reference; keying it any looser would validate one dimension
+        # against another's codes.
+        patch_session_get(monkeypatch, service)
+
+        FakeServiceReader("IMTS", {"COUNTRY": "LAO", "FREQUENCY": "A"}, start="2018", end="2019").read()
+
+        assert sum("/codelist/" in url for url in service.requested) == 2
+
+
+class TestEmptyObservations:
+    def test_an_empty_document_raises_naming_the_key(self, monkeypatch, service_without_observations):
+        patch_session_get(monkeypatch, service_without_observations)
+        reader = FakeServiceReader("IMTS", {"COUNTRY": "LAO"}, start="2018", end="2019")
+
+        with pytest.raises(RemoteDataError, match=re.escape("'LAO...'")):
+            reader.read()
+
+    def test_a_validated_selection_reports_missing_coverage(self, monkeypatch, service_without_observations):
+        # Every code was checked, so an empty result cannot be a bad code -- the service simply
+        # carries nothing for this selection, which is the distinction context.md asks for.
+        patch_session_get(monkeypatch, service_without_observations)
+        reader = FakeServiceReader("IMTS", {"COUNTRY": "LAO"}, start="2018", end="2019")
+
+        with pytest.raises(RemoteDataError, match="every selected code exists"):
+            reader.read()
+
+    def test_an_unchecked_selection_says_a_bad_code_is_still_possible(self, monkeypatch, service_without_observations):
+        patch_session_get(monkeypatch, service_without_observations)
+        reader = FakeServiceReader("IMTS", {"INDICATOR": "XG_FOB_USD"}, start="2018", end="2019")
+
+        with pytest.raises(RemoteDataError, match="INDICATOR could not be checked"):
+            reader.read()
