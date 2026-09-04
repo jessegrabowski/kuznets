@@ -732,8 +732,11 @@ class WorldBankReader(_BaseReader):
         session : Session, optional
             ``requests.sessions.Session`` instance to be used.
         errors : str, default "warn"
-            One of ``{'ignore', 'warn', 'raise'}``. Controls validation of country codes against a
-            hardcoded list. ``'raise'`` will raise a ``ValueError`` on a bad country code.
+            One of ``{'ignore', 'warn', 'raise'}``. Governs both a country code that fails
+            validation against a hardcoded list and an indicator the service does not recognize.
+            Under the default an unrecognized indicator warns and is left out of the frame, so a
+            caller who does not check gets a column short; ``'raise'`` turns both into a
+            ``ValueError``.
         output_type : str, optional
             Backend of the returned data: 'pandas', 'polars', 'pyarrow' (alias 'arrow'), or 'dask'.
             Backends other than pandas must be installed separately. Default 'pandas'.
@@ -1036,7 +1039,9 @@ def download(
         Frequency of the data (``'M'`` for monthly, ``'Q'`` for quarterly, ``'A'`` for annual).
         ``None`` defaults to annual.
     errors : str, default "warn"
-        One of ``{'ignore', 'warn', 'raise'}``. Controls validation of country codes.
+        One of ``{'ignore', 'warn', 'raise'}``. Governs an unrecognized country code and an
+        unrecognized indicator alike. Under the default an unrecognized indicator warns and is left
+        out of the frame; ``'raise'`` turns both into a ``ValueError``.
     output_type : str, optional
         Backend of the returned data: 'pandas', 'polars', 'pyarrow' (alias 'arrow'), or 'dask'.
         Backends other than pandas must be installed separately. Default 'pandas'.
