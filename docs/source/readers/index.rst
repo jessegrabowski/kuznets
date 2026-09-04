@@ -8,6 +8,7 @@ Data Readers
    fred
    famafrench
    imf-imts
+   ilostat
    bank-of-canada
    econdb
    eurostat

@@ -14,3 +14,12 @@ World Bank
 .. autofunction:: get_indicators
 
 .. autofunction:: search
+
+International Debt Statistics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. py:module:: kuznets.wb_ids
+
+.. autoclass:: WorldBankIDSReader
+   :members:
+   :inherited-members:
