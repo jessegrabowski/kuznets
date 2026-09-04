@@ -126,10 +126,11 @@ class _SdmxDataflowReader(_BaseReader):
 
     @property
     def url(self) -> str:
-        """Data URL once the dataflow is resolved, and the service root before that."""
-        if self._resolved is None:
+        """Data URL once the dataflow's shape is known, and the service root before that."""
+        resolved = self._resolved or self._static_structure()
+        if resolved is None:
             return self._SERVICE
-        flow = self._resolved.flow
+        flow = resolved.flow
         return f"{self._SERVICE}/data/{flow.agency},{flow.id},{flow.version}/{self.key}"
 
     @property
@@ -162,8 +163,20 @@ class _SdmxDataflowReader(_BaseReader):
         finally:
             self.close()
 
+    def _static_structure(self) -> ResolvedDataflow | None:
+        """The dataflow's shape when a subclass already knows it, sparing the structure requests.
+
+        Default None, meaning the shape is discovered. A subclass fixing one dataflow can return it
+        instead, at the cost of the codelists that discovery would have brought with it.
+        """
+        return None
+
     def _resolve(self) -> ResolvedDataflow:
         """Resolve the dataflow's reference and data structure, once per process."""
+        static = self._static_structure()
+        if static is not None:
+            return static
+
         cache_key = (self._SERVICE, self.agency, self.dataflow)
         resolved = _STRUCTURE_CACHE.get(cache_key)
         if resolved is None:
@@ -234,10 +247,11 @@ class _SdmxDataflowReader(_BaseReader):
         return cached
 
     def _require_resolved(self) -> ResolvedDataflow:
-        """Return the resolved dataflow, or explain that nothing has read its structure yet."""
-        if self._resolved is None:
+        """Return the dataflow's shape, or explain that nothing has read it yet."""
+        resolved = self._resolved or self._static_structure()
+        if resolved is None:
             raise RuntimeError(f"the shape of dataflow {self.dataflow!r} is not known until it is read")
-        return self._resolved
+        return resolved
 
     def _column_names(self) -> dict[str, str]:
         """Map each SDMX dimension to the column name it is presented under."""
