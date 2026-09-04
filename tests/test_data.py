@@ -5,6 +5,7 @@ import pytest
 import requests
 
 from kuznets.data import DataReader
+from kuznets.ilostat import ILOSTATReader
 from kuznets.imf import IMFReader, IMTSReader
 from kuznets.sdmx import clear_structure_cache
 from tests._mock import make_response, patch_session_get
@@ -12,6 +13,7 @@ from tests._mock import make_response, patch_session_get
 pytestmark = pytest.mark.stable
 
 
+_COMMON = "http://www.sdmx.org/resources/sdmxml/schemas/v2_1/common"
 _MESSAGE = "http://www.sdmx.org/resources/sdmxml/schemas/v2_1/message"
 _STRUCTURE = "http://www.sdmx.org/resources/sdmxml/schemas/v2_1/structure"
 
@@ -28,6 +30,14 @@ _IMTS_SHAPED_STRUCTURE = (
     "</str:DimensionList></str:DataStructureComponents></str:DataStructure></str:DataStructures>"
     "</mes:Structures></mes:Structure>"
 )
+
+
+_ILO_AREA_CODELIST = (
+    f'<mes:Structure xmlns:mes="{_MESSAGE}" xmlns:str="{_STRUCTURE}" xmlns:com="{_COMMON}"><mes:Structures>'
+    '<str:Codelists><str:Codelist id="CL_AREA">'
+    '<str:Code id="ZMB"><com:Name xml:lang="en">Zambia</com:Name></str:Code>'
+    "</str:Codelist></str:Codelists></mes:Structures></mes:Structure>"
+).encode()
 
 
 @pytest.fixture(autouse=True)
@@ -103,6 +113,28 @@ class TestDataReader:
 
         dispatched = DataReader("LAO", "imf", dataflow="CPI", start="2019", end="2019")
         direct = IMFReader("CPI", {"COUNTRY": "LAO"}, start="2019", end="2019").read()
+
+        pd.testing.assert_frame_equal(dispatched, direct)
+
+    def test_ilostat_dispatch_requires_a_dataflow(self):
+        with pytest.raises(ValueError, match="needs a dataflow"):
+            DataReader("ZMB", "ilostat", start="2015", end="2019")
+
+    def test_ilostat_dispatch_reads_the_country_from_name(self, monkeypatch, datapath):
+        # The ILO calls the country REF_AREA, so a dispatch copied from 'imf' would select a
+        # dimension this service does not declare.
+        patch_session_get(
+            monkeypatch,
+            {
+                "/dataflow/": datapath("io", "data", "sdmx", "ilo_dataflow_earnings.xml"),
+                "/datastructure/": datapath("io", "data", "sdmx", "ilo_datastructure_earnings.xml"),
+                "CL_AREA": _ILO_AREA_CODELIST,
+                "/data/": datapath("data", "ilostat", "earnings_zmb.xml"),
+            },
+        )
+
+        dispatched = DataReader("ZMB", "ilostat", dataflow="DF_EAR_CMTA_SEX_CUR_NB", start="2015", end="2019")
+        direct = ILOSTATReader("DF_EAR_CMTA_SEX_CUR_NB", {"REF_AREA": "ZMB"}, start="2015", end="2019").read()
 
         pd.testing.assert_frame_equal(dispatched, direct)
 

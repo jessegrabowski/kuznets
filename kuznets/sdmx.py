@@ -21,6 +21,10 @@ from kuznets.output import PANDAS, filter_date_range, is_empty
 from kuznets.typing import DateLike, Frame, Headers, Symbols
 from kuznets.utils import RemoteDataError, _year_bounds
 
+# The payload format this reader parses. Pinned because a service left to its own default may answer
+# with SDMX generic data, which the parser reads as a document of no observations rather than refusing.
+_STRUCTURE_SPECIFIC = "structurespecificdata"
+
 # Resolved structures keyed by service root, agency and dataflow. A dataflow's shape changes only
 # when the service republishes it, so resolving it once per process spares every later read the two
 # structure requests.
@@ -147,8 +151,12 @@ class _SdmxDataflowReader(_BaseReader):
 
     @property
     def params(self) -> dict:
-        """Query parameters bounding the request to the requested year range."""
-        return {"startPeriod": self.start.year, "endPeriod": self.end.year}
+        """Query parameters bounding the data request to the year range and pinning its format."""
+        return {
+            "startPeriod": self.start.year,
+            "endPeriod": self.end.year,
+            "format": _STRUCTURE_SPECIFIC,
+        }
 
     def _read_lines(self, out: StringIO) -> str:
         """Pass the XML response body through as the payload for the presenters."""

@@ -87,7 +87,11 @@ class TestIMTSOffline:
     def test_params_bound_the_year_range(self):
         reader = IMTSReader("LAO", start="2015", end="2019")
 
-        assert reader.params == {"startPeriod": 2015, "endPeriod": 2019}
+        assert reader.params == {
+            "startPeriod": 2015,
+            "endPeriod": 2019,
+            "format": "structurespecificdata",
+        }
 
 
 class TestIMTSGuards:
