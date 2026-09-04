@@ -4,7 +4,7 @@ import narwhals.stable.v2 as nw
 import pandas as pd
 import pytest
 
-from kuznets.imf import IMTSReader
+from kuznets.imf import IMFReader, IMTSReader
 from kuznets.utils import RemoteDataError
 from tests._backends import BACKENDS, as_narwhals, skip_unless_installed
 from tests._mock import live_or_record, make_response, patch_session_get, tolerate_outage
@@ -164,3 +164,32 @@ class TestIMTSBackends:
         )
 
         assert len(tidy) == 105
+
+
+@pytest.mark.network
+class TestIMFDataflowsLive:
+    @pytest.mark.filterwarnings("ignore:Could not infer format:UserWarning")
+    def test_dataflows_of_different_shapes_read_from_one_code_path(self):
+        # CPI carries five dimensions and MFS_IR three, so a key of the wrong arity would come back
+        # empty rather than raising. Nothing here names either shape.
+        with tolerate_outage():
+            prices = IMFReader("CPI", {"COUNTRY": "ZMB", "FREQUENCY": "M"}, start="2020", end="2020").read()
+            rates = IMFReader("MFS_IR", {"COUNTRY": "ZMB", "FREQUENCY": "M"}, start="2020", end="2020").read()
+
+            assert list(prices.columns.names) == [
+                "COUNTRY",
+                "INDEX_TYPE",
+                "COICOP_1999",
+                "TYPE_OF_TRANSFORMATION",
+                "FREQUENCY",
+            ]
+            assert list(rates.columns.names) == ["COUNTRY", "INDICATOR", "FREQUENCY"]
+
+    def test_an_alpha_2_country_code_is_rejected_before_the_data_request(self):
+        with tolerate_outage(), pytest.raises(ValueError, match="did you mean 'LAO'"):
+            IMFReader("CPI", {"COUNTRY": "LA", "FREQUENCY": "M"}, start="2020", end="2020").read()
+
+    def test_a_country_that_does_not_report_is_named_as_missing_coverage(self):
+        # Lao PDR reports no monetary statistics at any frequency, with every code in the key valid.
+        with tolerate_outage(), pytest.raises(RemoteDataError, match="every selected code exists"):
+            IMFReader("MFS_IR", {"COUNTRY": "LAO", "FREQUENCY": "M"}, start="2020", end="2020").read()

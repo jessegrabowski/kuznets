@@ -4,8 +4,42 @@ import requests
 from kuznets.base import _BaseReader
 from kuznets.io import build_sdmx_key, read_structure_specific
 from kuznets.output import PANDAS, filter_date_range, is_empty
+from kuznets.sdmx import _SdmxDataflowReader
 from kuznets.typing import DateLike, Headers, OutputType, Symbols
 from kuznets.utils import RemoteDataError, _year_bounds
+
+IMF_SDMX = "https://api.imf.org/external/sdmx/2.1"
+
+# The IMTS dimensions, in key order, mapped to the names this reader presents them under.
+IMTS_DIMENSIONS = {
+    "COUNTRY": "country",
+    "INDICATOR": "indicator",
+    "COUNTERPART_COUNTRY": "counterpart",
+    "FREQUENCY": "frequency",
+}
+
+_COLUMNS = IMTS_DIMENSIONS | {"TIME_PERIOD": "period"}
+
+
+class IMFReader(_SdmxDataflowReader):
+    """Read any dataflow from the IMF's SDMX 2.1 service, discovering its shape per request.
+
+    The service publishes over two hundred dataflows -- ``CPI`` for consumer prices, ``MFS_IR`` for
+    interest rates, ``QGFS`` for government finance, ``BOP`` for the balance of payments -- and their
+    dimensions differ in name, number and order. Name the dataflow and the codes to restrict it to,
+    and the reader resolves the rest.
+
+    Data is served under the IMF's terms of use: © International Monetary Fund Copyright, all rights
+    reserved, https://www.imf.org/external/terms.htm. The IMF asks that a dataflow be cited by name,
+    as at https://data.imf.org.
+
+    Examples
+    --------
+    >>> IMFReader("CPI", {"COUNTRY": "ZMB", "FREQUENCY": "M"}, start=2020).read()  # doctest: +SKIP
+    """
+
+    _SERVICE = IMF_SDMX
+
 
 # The dataflow's dimensions, in key order, mapped to the names this reader presents them under.
 IMTS_DIMENSIONS = {
