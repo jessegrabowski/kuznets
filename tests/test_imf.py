@@ -4,10 +4,10 @@ import narwhals.stable.v2 as nw
 import pandas as pd
 import pytest
 
-from kuznets.imf import IMTSReader
+from kuznets.imf import IMFReader, IMTSReader
 from kuznets.utils import RemoteDataError
 from tests._backends import BACKENDS, as_narwhals, skip_unless_installed
-from tests._mock import live_or_record, make_response, patch_session_get, tolerate_outage
+from tests._mock import from_fixtures, live_or_record, make_response, patch_session_get, tolerate_outage
 
 pytestmark = pytest.mark.stable
 
@@ -67,6 +67,22 @@ class TestIMTSOffline:
         df = read_laos(monkeypatch, datapath, start="2019-06-01", end="2019-12-31")
 
         assert list(df.index.year) == [2019]
+
+    def test_reading_costs_one_request(self, monkeypatch, datapath):
+        # IMTS declares its own dimensions, so a read goes straight to the data. Discovering them
+        # instead would put two structure requests in front of every read.
+        requested = []
+
+        def counting(url, params=None, **kwargs):
+            requested.append(url)
+            return from_fixtures({"api.imf.org": datapath(*LAOS_2019)})(url, params, **kwargs)
+
+        patch_session_get(monkeypatch, counting)
+
+        IMTSReader("LAO", start="2019", end="2019").read()
+
+        assert len(requested) == 1
+        assert "/data/IMF.STA,IMTS,1.0.0/" in requested[0]
 
     def test_params_bound_the_year_range(self):
         reader = IMTSReader("LAO", start="2015", end="2019")
@@ -164,3 +180,32 @@ class TestIMTSBackends:
         )
 
         assert len(tidy) == 105
+
+
+@pytest.mark.network
+class TestIMFDataflowsLive:
+    @pytest.mark.filterwarnings("ignore:Could not infer format:UserWarning")
+    def test_dataflows_of_different_shapes_read_from_one_code_path(self):
+        # CPI carries five dimensions and MFS_IR three, so a key of the wrong arity would come back
+        # empty rather than raising. Nothing here names either shape.
+        with tolerate_outage():
+            prices = IMFReader("CPI", {"COUNTRY": "ZMB", "FREQUENCY": "M"}, start="2020", end="2020").read()
+            rates = IMFReader("MFS_IR", {"COUNTRY": "ZMB", "FREQUENCY": "M"}, start="2020", end="2020").read()
+
+            assert list(prices.columns.names) == [
+                "COUNTRY",
+                "INDEX_TYPE",
+                "COICOP_1999",
+                "TYPE_OF_TRANSFORMATION",
+                "FREQUENCY",
+            ]
+            assert list(rates.columns.names) == ["COUNTRY", "INDICATOR", "FREQUENCY"]
+
+    def test_an_alpha_2_country_code_is_rejected_before_the_data_request(self):
+        with tolerate_outage(), pytest.raises(ValueError, match="did you mean 'LAO'"):
+            IMFReader("CPI", {"COUNTRY": "LA", "FREQUENCY": "M"}, start="2020", end="2020").read()
+
+    def test_a_country_that_does_not_report_is_named_as_missing_coverage(self):
+        # Lao PDR reports no monetary statistics at any frequency, with every code in the key valid.
+        with tolerate_outage(), pytest.raises(RemoteDataError, match="every selected code exists"):
+            IMFReader("MFS_IR", {"COUNTRY": "LAO", "FREQUENCY": "M"}, start="2020", end="2020").read()
