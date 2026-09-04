@@ -5,10 +5,36 @@ import pytest
 import requests
 
 from kuznets.data import DataReader
-from kuznets.imf import IMTSReader
+from kuznets.imf import IMFReader, IMTSReader
+from kuznets.sdmx import clear_structure_cache
 from tests._mock import make_response, patch_session_get
 
 pytestmark = pytest.mark.stable
+
+
+_MESSAGE = "http://www.sdmx.org/resources/sdmxml/schemas/v2_1/message"
+_STRUCTURE = "http://www.sdmx.org/resources/sdmxml/schemas/v2_1/structure"
+
+# A structure shaped like the recorded IMTS data, so the dispatch can be exercised against it.
+_IMTS_SHAPED_STRUCTURE = (
+    f'<mes:Structure xmlns:mes="{_MESSAGE}" xmlns:str="{_STRUCTURE}"><mes:Structures>'
+    '<str:DataStructures><str:DataStructure id="DSD_CPI"><str:DataStructureComponents>'
+    '<str:DimensionList id="DimensionDescriptor">'
+    '<str:Dimension id="COUNTRY" position="0"/>'
+    '<str:Dimension id="INDICATOR" position="1"/>'
+    '<str:Dimension id="COUNTERPART_COUNTRY" position="2"/>'
+    '<str:Dimension id="FREQUENCY" position="3"/>'
+    '<str:TimeDimension id="TIME_PERIOD"/>'
+    "</str:DimensionList></str:DataStructureComponents></str:DataStructure></str:DataStructures>"
+    "</mes:Structures></mes:Structure>"
+)
+
+
+@pytest.fixture(autouse=True)
+def _forget_resolved_dataflows():
+    clear_structure_cache()
+    yield
+    clear_structure_cache()
 
 
 class TestDataReader:
@@ -56,6 +82,27 @@ class TestDataReader:
 
         dispatched = DataReader("LAO", "imts", start="2019", end="2019")
         direct = IMTSReader("LAO", start="2019", end="2019").read()
+
+        pd.testing.assert_frame_equal(dispatched, direct)
+
+    def test_imf_dispatch_requires_a_dataflow(self):
+        # 'imf' serves over two hundred dataflows, and reading one unrestricted is a multi-megabyte
+        # download, so the dataflow is required rather than defaulted.
+        with pytest.raises(ValueError, match="needs a dataflow"):
+            DataReader("ZMB", "imf", start="2020", end="2020")
+
+    def test_imf_dispatch_reads_the_country_from_name(self, monkeypatch, datapath):
+        # 'name' is the country on every IMF dataflow, so the dispatch and the reader called with
+        # that selection have to agree.
+        fixtures = {
+            "/dataflow/": datapath("io", "data", "sdmx", "imf_dataflow_cpi.xml"),
+            "/datastructure/": _IMTS_SHAPED_STRUCTURE.encode(),
+            "/data/": datapath("data", "imf", "imts_lao_2019_exports.xml"),
+        }
+        patch_session_get(monkeypatch, fixtures)
+
+        dispatched = DataReader("LAO", "imf", dataflow="CPI", start="2019", end="2019")
+        direct = IMFReader("CPI", {"COUNTRY": "LAO"}, start="2019", end="2019").read()
 
         pd.testing.assert_frame_equal(dispatched, direct)
 

@@ -14,7 +14,7 @@ from kuznets.econdb import EcondbReader
 from kuznets.eurostat import EurostatReader
 from kuznets.famafrench import FamaFrenchReader
 from kuznets.fred import FredReader
-from kuznets.imf import IMTSReader
+from kuznets.imf import IMFReader, IMTSReader
 from kuznets.moex import MoexReader
 from kuznets.nasdaq_trader import get_nasdaq_symbols
 from kuznets.naver import NaverDailyReader
@@ -59,6 +59,7 @@ _DATA_SOURCES = {
     "famafrench",
     "oecd",
     "eurostat",
+    "imf",
     "imts",
     "nasdaq",
     "quandl",
@@ -906,6 +907,7 @@ def DataReader(
     headers: Headers | None = None,
     output_type: Literal["pandas"] = "pandas",
     max_workers: int | None = None,
+    dataflow: str | None = None,
 ) -> DataFrame: ...
 @overload
 def DataReader(
@@ -920,6 +922,7 @@ def DataReader(
     headers: Headers | None = None,
     output_type: BackendName = ...,
     max_workers: int | None = None,
+    dataflow: str | None = None,
 ) -> Frame: ...
 def DataReader(
     name: Symbols,
@@ -933,6 +936,7 @@ def DataReader(
     headers: Headers | None = None,
     output_type: OutputType = "pandas",
     max_workers: int | None = None,
+    dataflow: str | None = None,
 ) -> Frame:
     """
     Import data from a number of online sources.
@@ -972,6 +976,10 @@ def DataReader(
         Number of concurrent requests for multi-symbol reads from the daily-price sources. Keep it
         modest for rate-limited hosts, and pass 1 when supplying a session that is not thread-safe.
         Default 5.
+    dataflow : str, optional
+        Dataflow to read, for sources that serve many under one name. Required by ``'imf'``, where
+        *name* selects the country, e.g. ``DataReader('ZMB', 'imf', dataflow='CPI')``. Ignored
+        elsewhere. Default None.
 
     Returns
     -------
@@ -1079,6 +1087,20 @@ def DataReader(
             retry_count=retry_count,
             pause=pause,
             session=session,
+            output_type=backend,
+        ).read()
+    elif data_source == "imf":
+        if not dataflow:
+            raise ValueError("Reading from 'imf' needs a dataflow, e.g. DataReader('ZMB', 'imf', dataflow='CPI')")
+        return IMFReader(
+            dataflow=dataflow,
+            selections={"COUNTRY": name},
+            start=start,
+            end=end,
+            retry_count=retry_count,
+            pause=pause,
+            session=session,
+            headers=headers,
             output_type=backend,
         ).read()
     elif data_source == "imts":
