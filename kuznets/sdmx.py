@@ -1,4 +1,5 @@
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping, Sequence
+import difflib
 from io import StringIO
 from typing import NamedTuple
 
@@ -10,6 +11,7 @@ from kuznets.io import (
     DataStructure,
     StructureRef,
     build_sdmx_key,
+    read_codelist,
     read_data_structure,
     read_dataflow_ref,
     read_dataflow_structure_ref,
@@ -25,16 +27,25 @@ from kuznets.utils import _year_bounds
 _STRUCTURE_CACHE: dict[tuple[str, str, str], "ResolvedDataflow"] = {}
 
 
+# Codes per codelist, keyed by service root and the codelist's own reference. Validating a
+# selection needs only membership, and a codelist is large enough that refetching it per read is
+# the difference between one request and one per dimension.
+_CODELIST_CACHE: dict[tuple[str, str, str, str], frozenset[str]] = {}
+
+
 class ResolvedDataflow(NamedTuple):
     """A dataflow addressed and shaped: how to request it, and the dimensions its key needs."""
 
     flow: StructureRef
+    structure_ref: StructureRef
     structure: DataStructure
+    children_requested: bool = False
 
 
 def clear_structure_cache() -> None:
-    """Forget every resolved dataflow, so the next read re-requests its structure."""
+    """Forget every resolved dataflow and codelist, so the next read re-requests them."""
     _STRUCTURE_CACHE.clear()
+    _CODELIST_CACHE.clear()
 
 
 class _SdmxDataflowReader(_BaseReader):
@@ -111,6 +122,7 @@ class _SdmxDataflowReader(_BaseReader):
         self.agency = agency
         self.selections = dict(selections or {})
         self._resolved: ResolvedDataflow | None = None
+        self._validated: set[str] = set()
 
     @property
     def url(self) -> str:
@@ -142,29 +154,84 @@ class _SdmxDataflowReader(_BaseReader):
         return out.read()
 
     def _read_core(self) -> str:
-        """Resolve the dataflow's shape, then fetch the data it addresses."""
+        """Resolve the dataflow's shape, check the selection against it, then fetch the data."""
         try:
             self._resolved = self._resolve()
+            self._validated = self._validate_selections(self._resolved)
             return self._read_one_data(self.url, self.params)
         finally:
             self.close()
 
     def _resolve(self) -> ResolvedDataflow:
-        """Resolve the dataflow's own reference and its data structure, once per process."""
+        """Resolve the dataflow's reference and data structure, once per process."""
         cache_key = (self._SERVICE, self.agency, self.dataflow)
-        cached = _STRUCTURE_CACHE.get(cache_key)
-        if cached is not None:
-            return cached
+        resolved = _STRUCTURE_CACHE.get(cache_key)
+        if resolved is None:
+            record = self._read_one_data(f"{self._SERVICE}/dataflow/{self.agency}/{self.dataflow}", None)
+            resolved = self._read_structure(read_dataflow_ref(record), read_dataflow_structure_ref(record))
 
-        record = self._read_one_data(f"{self._SERVICE}/dataflow/{self.agency}/{self.dataflow}", None)
-        flow = read_dataflow_ref(record)
-        reference = read_dataflow_structure_ref(record)
-        document = self._read_one_data(
-            f"{self._SERVICE}/datastructure/{reference.agency}/{reference.id}/{reference.version}", None
-        )
-        resolved = ResolvedDataflow(flow=flow, structure=read_data_structure(document))
+        # Services disagree on where a codelist reference lives. The ILO puts it on the dimension, so
+        # the data structure alone carries it; the IMF puts it on the concept, which only arrives
+        # with the concept schemes. Asking for those unconditionally would cost the ILO 1.4MB.
+        if not resolved.children_requested and self._dimensions_missing_codelists(resolved):
+            resolved = self._read_structure(resolved.flow, resolved.structure_ref, children=True)
+
         _STRUCTURE_CACHE[cache_key] = resolved
         return resolved
+
+    def _read_structure(
+        self, flow: StructureRef, reference: StructureRef, *, children: bool = False
+    ) -> ResolvedDataflow:
+        """Fetch and parse a data structure, optionally with the concept schemes it references."""
+        document = self._read_one_data(
+            f"{self._SERVICE}/datastructure/{reference.agency}/{reference.id}/{reference.version}",
+            {"references": "children"} if children else None,
+        )
+        return ResolvedDataflow(flow, reference, read_data_structure(document), children_requested=children)
+
+    def _dimensions_missing_codelists(self, resolved: ResolvedDataflow) -> set[str]:
+        """Name the restricted dimensions whose codelist the current structure does not resolve."""
+        declared = set(resolved.structure.dimensions)
+        return {name for name in self.selections if name in declared and name not in resolved.structure.codelists}
+
+    def _validate_selections(self, resolved: ResolvedDataflow) -> set[str]:
+        """Reject codes the service does not list, and report which dimensions could be checked.
+
+        A dimension whose codelist the service does not resolve is skipped rather than failed, so
+        validation is partial and the returned set is how partial.
+        """
+        validated = set()
+        for dimension, selection in self.selections.items():
+            reference = resolved.structure.codelists.get(dimension)
+            if reference is None or selection is None:
+                continue
+            codes = self._codelist(reference)
+            unknown = [code for code in _as_codes(selection) if code not in codes]
+            if unknown:
+                raise ValueError(self._unknown_code_message(dimension, reference, unknown, codes))
+            validated.add(dimension)
+        return validated
+
+    def _unknown_code_message(
+        self, dimension: str, reference: StructureRef, unknown: list[str], codes: frozenset[str]
+    ) -> str:
+        """Explain which codes the dimension does not accept, suggesting near misses where there are any."""
+        message = f"{dimension} has no code {', '.join(repr(code) for code in unknown)} in codelist {reference.id}"
+        ordered = sorted(codes)
+        suggestions = list(dict.fromkeys(match for code in unknown for match in _nearest_codes(code, ordered)))
+        if suggestions:
+            return f"{message}; did you mean {', '.join(repr(match) for match in suggestions)}?"
+        return f"{message}, which lists {len(codes)} codes"
+
+    def _codelist(self, reference: StructureRef) -> frozenset[str]:
+        """Fetch the codes a codelist enumerates, once per process."""
+        cache_key = (self._SERVICE, reference.agency, reference.id, reference.version)
+        cached = _CODELIST_CACHE.get(cache_key)
+        if cached is None:
+            url = f"{self._SERVICE}/codelist/{reference.agency}/{reference.id}/{reference.version}"
+            cached = frozenset(read_codelist(self._read_one_data(url, None)))
+            _CODELIST_CACHE[cache_key] = cached
+        return cached
 
     def _require_resolved(self) -> ResolvedDataflow:
         """Return the resolved dataflow, or explain that nothing has read its structure yet."""
@@ -189,3 +256,19 @@ class _SdmxDataflowReader(_BaseReader):
         frame = read_structure_specific(payload, self._column_names(), self.output_type)
         start, end = _year_bounds(self.start, self.end)
         return filter_date_range(frame, "period", start, end)
+
+
+def _as_codes(selection: str | Iterable[str]) -> list[str]:
+    """Normalize a dimension selection to the list of codes it names."""
+    return [selection] if isinstance(selection, str) else list(selection)
+
+
+def _nearest_codes(code: str, ordered: Sequence[str], limit: int = 3) -> list[str]:
+    """Codes a rejected one was most plausibly meant to be, likeliest first.
+
+    Codes extending the rejected one rank ahead of edit-distance matches, because the common mistake
+    is a code from the wrong scheme -- an ISO alpha-2 country where the service wants alpha-3. Pass
+    *ordered* sorted: equal-scoring matches tie-break on the code itself.
+    """
+    extends = [candidate for candidate in ordered if candidate.startswith(code)]
+    return list(dict.fromkeys(extends + difflib.get_close_matches(code, ordered, n=limit)))[:limit]
