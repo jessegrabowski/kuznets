@@ -29,6 +29,7 @@ from kuznets.tiingo import (
     TiingoQuoteReader,
 )
 from kuznets.typing import BackendName, DateLike, Frame, Headers, OutputType, Symbols
+from kuznets.wb_ids import WorldBankIDSReader
 from kuznets.yahoo.actions import YahooActionReader, YahooDivReader
 from kuznets.yahoo.daily import YahooDailyReader
 from kuznets.yahoo.fundamentals import YahooFundamentalsReader
@@ -61,6 +62,7 @@ _DATA_SOURCES = {
     "oecd",
     "eurostat",
     "ilostat",
+    "wb-ids",
     "imf",
     "imts",
     "nasdaq",
@@ -910,6 +912,7 @@ def DataReader(
     output_type: Literal["pandas"] = "pandas",
     max_workers: int | None = None,
     dataflow: str | None = None,
+    series: str | None = None,
 ) -> DataFrame: ...
 @overload
 def DataReader(
@@ -925,6 +928,7 @@ def DataReader(
     output_type: BackendName = ...,
     max_workers: int | None = None,
     dataflow: str | None = None,
+    series: str | None = None,
 ) -> Frame: ...
 def DataReader(
     name: Symbols,
@@ -939,6 +943,7 @@ def DataReader(
     output_type: OutputType = "pandas",
     max_workers: int | None = None,
     dataflow: str | None = None,
+    series: str | None = None,
 ) -> Frame:
     """
     Import data from a number of online sources.
@@ -1089,6 +1094,22 @@ def DataReader(
             retry_count=retry_count,
             pause=pause,
             session=session,
+            output_type=backend,
+        ).read()
+    elif data_source == "wb-ids":
+        if not series:
+            raise ValueError(
+                "Reading from 'wb-ids' needs a series, e.g. DataReader('ZMB', 'wb-ids', series='DT.INR.DPPG')"
+            )
+        return WorldBankIDSReader(
+            symbols=series,
+            countries=name,
+            start=start,
+            end=end,
+            retry_count=retry_count,
+            pause=pause,
+            session=session,
+            headers=headers,
             output_type=backend,
         ).read()
     elif data_source == "ilostat":

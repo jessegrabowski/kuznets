@@ -8,7 +8,8 @@ from kuznets.data import DataReader
 from kuznets.ilostat import ILOSTATReader
 from kuznets.imf import IMFReader, IMTSReader
 from kuznets.sdmx import clear_structure_cache
-from tests._mock import make_response, patch_session_get
+from kuznets.wb_ids import WorldBankIDSReader
+from tests._mock import from_fixtures, make_response, patch_session_get
 
 pytestmark = pytest.mark.stable
 
@@ -136,6 +137,29 @@ class TestDataReader:
         dispatched = DataReader("ZMB", "ilostat", dataflow="DF_EAR_CMTA_SEX_CUR_NB", start="2015", end="2019")
         direct = ILOSTATReader("DF_EAR_CMTA_SEX_CUR_NB", {"REF_AREA": "ZMB"}, start="2015", end="2019").read()
 
+        pd.testing.assert_frame_equal(dispatched, direct)
+
+    def test_wb_ids_dispatch_requires_a_series(self):
+        with pytest.raises(ValueError, match="needs a series"):
+            DataReader("ZMB", "wb-ids", start="1990", end="2020")
+
+    def test_wb_ids_dispatch_reads_the_country_from_name(self, monkeypatch, datapath):
+        # 'name' is the borrowing country and the series comes in separately, the opposite of how
+        # the WDI reader takes them. Both land in the URL, so only the URL can tell them apart.
+        requested = []
+
+        def recording(url, params=None, **kwargs):
+            requested.append(url)
+            return from_fixtures({"api.worldbank.org": datapath("data", "wb_ids", "zmb_dppg.json")})(
+                url, params, **kwargs
+            )
+
+        patch_session_get(monkeypatch, recording)
+
+        dispatched = DataReader("ZMB", "wb-ids", series="DT.INR.DPPG", start="1990", end="2020")
+        direct = WorldBankIDSReader("DT.INR.DPPG", "ZMB", start="1990", end="2020").read()
+
+        assert "/country/ZMB/series/DT.INR.DPPG/" in requested[0]
         pd.testing.assert_frame_equal(dispatched, direct)
 
     def test_imts_dispatch_forwards_output_type(self, monkeypatch, datapath):
