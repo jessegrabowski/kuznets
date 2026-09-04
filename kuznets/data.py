@@ -14,6 +14,7 @@ from kuznets.econdb import EcondbReader
 from kuznets.eurostat import EurostatReader
 from kuznets.famafrench import FamaFrenchReader
 from kuznets.fred import FredReader
+from kuznets.ilostat import ILOSTATReader
 from kuznets.imf import IMFReader, IMTSReader
 from kuznets.moex import MoexReader
 from kuznets.nasdaq_trader import get_nasdaq_symbols
@@ -59,6 +60,7 @@ _DATA_SOURCES = {
     "famafrench",
     "oecd",
     "eurostat",
+    "ilostat",
     "imf",
     "imts",
     "nasdaq",
@@ -977,9 +979,9 @@ def DataReader(
         modest for rate-limited hosts, and pass 1 when supplying a session that is not thread-safe.
         Default 5.
     dataflow : str, optional
-        Dataflow to read, for sources that serve many under one name. Required by ``'imf'``, where
-        *name* selects the country, e.g. ``DataReader('ZMB', 'imf', dataflow='CPI')``. Ignored
-        elsewhere. Default None.
+        Dataflow to read, for sources that serve many under one name. Required by ``'imf'`` and
+        ``'ilostat'``, where *name* selects the country, e.g.
+        ``DataReader('ZMB', 'imf', dataflow='CPI')``. Ignored elsewhere. Default None.
 
     Returns
     -------
@@ -1087,6 +1089,23 @@ def DataReader(
             retry_count=retry_count,
             pause=pause,
             session=session,
+            output_type=backend,
+        ).read()
+    elif data_source == "ilostat":
+        if not dataflow:
+            raise ValueError(
+                "Reading from 'ilostat' needs a dataflow, e.g. "
+                "DataReader('ZMB', 'ilostat', dataflow='DF_EAR_CMTA_SEX_CUR_NB')"
+            )
+        return ILOSTATReader(
+            dataflow=dataflow,
+            selections={"REF_AREA": name},
+            start=start,
+            end=end,
+            retry_count=retry_count,
+            pause=pause,
+            session=session,
+            headers=headers,
             output_type=backend,
         ).read()
     elif data_source == "imf":
