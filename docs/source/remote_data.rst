@@ -596,7 +596,7 @@ private creditor, and ``DT.MAT.DPPG`` reports average maturity.
 
     import kuznets.data as web
 
-    web.DataReader('ZMB', 'wb-ids', series='DT.INR.DPPG', start=1990, end=2020)
+    web.DataReader('ZMB', 'wb-ids', symbols='DT.INR.DPPG', start=1990, end=2020)
 
 Series are reported per creditor and in aggregate, and the reader defaults to the aggregate. Reading
 every creditor for one country and series runs to five figures of rows.

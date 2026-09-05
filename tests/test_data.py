@@ -99,7 +99,7 @@ class TestDataReader:
     def test_imf_dispatch_requires_a_dataflow(self):
         # 'imf' serves over two hundred dataflows, and reading one unrestricted is a multi-megabyte
         # download, so the dataflow is required rather than defaulted.
-        with pytest.raises(ValueError, match="needs a dataflow"):
+        with pytest.raises(TypeError, match="dataflow"):
             DataReader("ZMB", "imf", start="2020", end="2020")
 
     def test_imf_dispatch_reads_the_country_from_name(self, monkeypatch, datapath):
@@ -118,7 +118,7 @@ class TestDataReader:
         pd.testing.assert_frame_equal(dispatched, direct)
 
     def test_ilostat_dispatch_requires_a_dataflow(self):
-        with pytest.raises(ValueError, match="needs a dataflow"):
+        with pytest.raises(TypeError, match="dataflow"):
             DataReader("ZMB", "ilostat", start="2015", end="2019")
 
     def test_ilostat_dispatch_reads_the_country_from_name(self, monkeypatch, datapath):
@@ -139,13 +139,14 @@ class TestDataReader:
 
         pd.testing.assert_frame_equal(dispatched, direct)
 
-    def test_wb_ids_dispatch_requires_a_series(self):
-        with pytest.raises(ValueError, match="needs a series"):
+    def test_wb_ids_dispatch_requires_the_series_as_symbols(self):
+        with pytest.raises(TypeError, match="symbols"):
             DataReader("ZMB", "wb-ids", start="1990", end="2020")
 
     def test_wb_ids_dispatch_reads_the_country_from_name(self, monkeypatch, datapath):
-        # 'name' is the borrowing country and the series comes in separately, the opposite of how
-        # the WDI reader takes them. Both land in the URL, so only the URL can tell them apart.
+        # 'name' is the borrowing country and the series arrives as the reader's own 'symbols', the
+        # opposite of how the WDI reader takes them. Both land in the URL, so only the URL can tell
+        # them apart.
         requested = []
 
         def recording(url, params=None, **kwargs):
@@ -156,11 +157,33 @@ class TestDataReader:
 
         patch_session_get(monkeypatch, recording)
 
-        dispatched = DataReader("ZMB", "wb-ids", series="DT.INR.DPPG", start="1990", end="2020")
+        dispatched = DataReader("ZMB", "wb-ids", symbols="DT.INR.DPPG", start="1990", end="2020")
         direct = WorldBankIDSReader("DT.INR.DPPG", "ZMB", start="1990", end="2020").read()
 
         assert "/country/ZMB/series/DT.INR.DPPG/" in requested[0]
         pd.testing.assert_frame_equal(dispatched, direct)
+
+    def test_a_readers_own_arguments_reach_it_through_the_dispatch(self, monkeypatch, datapath):
+        # The dispatch names only the arguments every source shares, so a reader's own axes are
+        # reachable only by forwarding. Without it 'counterpart' had no way through, and since the
+        # fixture answers any URL, only the requested key shows whether it arrived.
+        requested = []
+
+        def recording(url, params=None, **kwargs):
+            requested.append(url)
+            return from_fixtures({"api.imf.org": datapath("data", "imf", "imts_lao_2019_exports.xml")})(
+                url, params, **kwargs
+            )
+
+        patch_session_get(monkeypatch, recording)
+
+        DataReader("LAO", "imts", start="2019", end="2019", counterpart="THA", freq="Q")
+
+        assert requested[0].endswith("/LAO.XG_FOB_USD.THA.Q")
+
+    def test_an_argument_the_reader_does_not_take_raises(self):
+        with pytest.raises(TypeError, match="dataflow"):
+            DataReader("AAPL", "yahoo", dataflow="CPI")
 
     def test_imts_dispatch_forwards_output_type(self, monkeypatch, datapath):
         polars = pytest.importorskip("polars")
