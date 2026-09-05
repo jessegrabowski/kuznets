@@ -35,12 +35,16 @@ def _load_json(path_or_buf: JSONSource) -> Any:
 
 
 def _to_datetime_index(idx: Sequence[Any] | pd.Index, name: str) -> pd.Index:
-    """Coerce period codes to a ``DatetimeIndex``, falling back to a string ``Index`` on failure."""
-    try:
-        return pd.DatetimeIndex(pd.to_datetime(idx), name=name)
-    except (ValueError, TypeError):
-        # Semester and other non-calendar codes (e.g. '2013-S1') aren't datetimes; keep the labels.
+    """Coerce period codes to a ``DatetimeIndex`` through :func:`parse_period_code`.
+
+    Return a string ``Index`` instead if any code is unrecognized, so a mixed index is never half
+    parsed.
+    """
+    parsed = [parse_period_code(code) for code in idx]
+    if any(period is None for period in parsed):
+        # Codes outside the calendar, such as a fiscal year, stay as labels for the caller to read.
         return pd.Index(idx, name=name)
+    return pd.DatetimeIndex(parsed, name=name)
 
 
 def _pivot_observations(
@@ -92,7 +96,7 @@ def _pivot_observations(
 
 _SEMESTER_CODE = re.compile(r"^(\d{4})-?S([12])$", re.IGNORECASE)
 _WEEK_CODE = re.compile(r"^(\d{4})-?W(\d{2})$", re.IGNORECASE)
-_MONTH_CODE = re.compile(r"^(\d{4})M(\d{1,2})$", re.IGNORECASE)
+_MONTH_CODE = re.compile(r"^(\d{4})-?M(\d{1,2})$", re.IGNORECASE)
 
 
 def parse_period_code(code: object) -> datetime | None:
@@ -100,7 +104,7 @@ def parse_period_code(code: object) -> datetime | None:
 
     Standard codes -- annual ('2009'), monthly ('2009-01'), daily ('2009-01-15'), quarterly
     ('2009-Q1' or '2009Q1') -- parse through ``pandas.Period``. Semesters ('2013-S2' -> July 1st),
-    ISO weeks ('2020-W05' -> that week's Monday) and the World Bank's month form ('2009M01') have no
+    ISO weeks ('2020-W05' -> that week's Monday) and month codes ('2009M01', '2020-M01') have no
     pandas frequency and parse here. Codes are case-insensitive and must open with a four-digit
     year; anything unrecognized returns None so the column stays string-typed.
     """

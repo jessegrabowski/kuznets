@@ -73,13 +73,52 @@ def test_to_datetime_index_parses_calendar_codes():
     assert idx.name == "Time"
 
 
-@pytest.mark.filterwarnings("ignore:Could not infer format:UserWarning")
-def test_to_datetime_index_keeps_non_calendar_codes():
-    # Semester codes aren't datetimes; they must survive as plain labels, which is what tells the
-    # readers to skip datetime-bounded truncation.
-    idx = _to_datetime_index(["2013-S1", "2013-S2"], "Time")
+def test_to_datetime_index_keeps_codes_it_cannot_parse():
+    # A fiscal year has no start this can compute, so the labels survive and the readers skip
+    # datetime-bounded truncation.
+    idx = _to_datetime_index(["FY2009/10", "FY2010/11"], "Time")
+
     assert not isinstance(idx, pd.DatetimeIndex)
-    assert list(idx) == ["2013-S1", "2013-S2"]
+    assert list(idx) == ["FY2009/10", "FY2010/11"]
+
+
+def test_to_datetime_index_reads_a_month_code_pandas_misparses():
+    # '2020-M01' is the IMF's monthly form. Handed to pd.to_datetime it parses as one second past
+    # midnight on the first of January, collapsing a year of months onto a single day.
+    idx = _to_datetime_index(["2020-M01", "2020-M02", "2020-M12"], "Time")
+
+    assert list(idx) == [pd.Timestamp("2020-01-01"), pd.Timestamp("2020-02-01"), pd.Timestamp("2020-12-01")]
+
+
+def test_to_datetime_index_keeps_every_code_when_one_is_unparseable():
+    # A half-parsed index would leave the reader comparing timestamps against labels, so one bad
+    # code demotes the whole axis.
+    idx = _to_datetime_index(["2009", "FY2009/10"], "Time")
+
+    assert list(idx) == ["2009", "FY2009/10"]
+
+
+@pytest.mark.parametrize(
+    "codes",
+    [
+        ["2020-M01", "2020-M02"],
+        ["2013-S1", "2013-S2"],
+        ["2009-Q1", "2009-Q2"],
+        ["2020-W05", "2020-W06"],
+        ["2018", "2019"],
+    ],
+)
+def test_both_presentations_agree_on_a_period(codes):
+    # One response can be asked for as pandas or as any other backend, and a wide frame can hold
+    # several frequencies at once, so the two paths have to read a code the same way.
+    skip_unless_installed("polars")
+    records = [(("AT", code), float(n)) for n, code in enumerate(codes)]
+
+    wide = _present_observations(records, ["Area", "Time"], [{}, {}], 1, "pandas")
+    tidy = as_narwhals(_present_observations(records, ["Area", "Time"], [{}, {}], 1, "polars"))
+
+    assert isinstance(wide.index, pd.DatetimeIndex)
+    assert [t.to_pydatetime() for t in wide.index] == tidy["Time"].to_list()
 
 
 class TestObservationsToRecords:
@@ -161,10 +200,12 @@ class TestParsePeriodCode:
             ("2013-s2", datetime(2013, 7, 1)),
             ("2020-W01", datetime(2019, 12, 30)),
             ("2020-W53", datetime(2020, 12, 28)),
-            # The World Bank's month form, which pandas does not recognize.
+            # Month codes, which pandas misreads as a year and a seconds field.
             ("2009M01", datetime(2009, 1, 1)),
             ("2009M7", datetime(2009, 7, 1)),
             ("2009m12", datetime(2009, 12, 1)),
+            ("2009-M01", datetime(2009, 1, 1)),
+            ("2009-m12", datetime(2009, 12, 1)),
             # Tolerated variants pandas parses to the correct period.
             ("20090101", datetime(2009, 1, 1)),
             ("2009/03", datetime(2009, 3, 1)),
@@ -201,6 +242,7 @@ class TestParsePeriodCode:
             "2020-W99",
             "2009M13",
             "2009M00",
+            "2009-M13",
             # Decimal years would misparse as year-month; they must stay strings.
             "2009.5",
         ],
