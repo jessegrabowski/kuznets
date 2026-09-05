@@ -666,7 +666,7 @@ declares.
 
     from kuznets.imf import IMFReader
 
-    IMFReader('MFS_IR', {'COUNTRY': 'ZMB', 'FREQUENCY': 'A'}, start=2018, end=2020).read()
+    IMFReader('MFS_IR', {'COUNTRY': 'ZMB', 'FREQUENCY': 'M'}, start=2020, end=2020).read()
 
 Codes are checked against the service's own codelists before the request goes out, so a mistyped
 country raises rather than returning an empty frame. An empty result therefore means the service
