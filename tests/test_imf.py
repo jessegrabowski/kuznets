@@ -188,7 +188,6 @@ class TestIMTSBackends:
 
 @pytest.mark.network
 class TestIMFDataflowsLive:
-    @pytest.mark.filterwarnings("ignore:Could not infer format:UserWarning")
     def test_dataflows_of_different_shapes_read_from_one_code_path(self):
         # CPI carries five dimensions and MFS_IR three, so a key of the wrong arity would come back
         # empty rather than raising. Nothing here names either shape.
@@ -204,6 +203,9 @@ class TestIMFDataflowsLive:
                 "FREQUENCY",
             ]
             assert list(rates.columns.names) == ["COUNTRY", "INDICATOR", "FREQUENCY"]
+            # The IMF writes months as '2020-M01'. Read by pandas alone they collapse onto a single
+            # day, differing only in the seconds field.
+            assert prices.index.normalize().nunique() == len(prices)
 
     def test_an_alpha_2_country_code_is_rejected_before_the_data_request(self):
         with tolerate_outage(), pytest.raises(ValueError, match="did you mean 'LAO'"):
