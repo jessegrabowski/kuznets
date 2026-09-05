@@ -911,8 +911,7 @@ def DataReader(
     headers: Headers | None = None,
     output_type: Literal["pandas"] = "pandas",
     max_workers: int | None = None,
-    dataflow: str | None = None,
-    series: str | None = None,
+    **kwargs: Any,
 ) -> DataFrame: ...
 @overload
 def DataReader(
@@ -927,8 +926,7 @@ def DataReader(
     headers: Headers | None = None,
     output_type: BackendName = ...,
     max_workers: int | None = None,
-    dataflow: str | None = None,
-    series: str | None = None,
+    **kwargs: Any,
 ) -> Frame: ...
 def DataReader(
     name: Symbols,
@@ -942,8 +940,7 @@ def DataReader(
     headers: Headers | None = None,
     output_type: OutputType = "pandas",
     max_workers: int | None = None,
-    dataflow: str | None = None,
-    series: str | None = None,
+    **kwargs: Any,
 ) -> Frame:
     """
     Import data from a number of online sources.
@@ -983,10 +980,12 @@ def DataReader(
         Number of concurrent requests for multi-symbol reads from the daily-price sources. Keep it
         modest for rate-limited hosts, and pass 1 when supplying a session that is not thread-safe.
         Default 5.
-    dataflow : str, optional
-        Dataflow to read, for sources that serve many under one name. Required by ``'imf'`` and
-        ``'ilostat'``, where *name* selects the country, e.g.
-        ``DataReader('ZMB', 'imf', dataflow='CPI')``. Ignored elsewhere. Default None.
+    **kwargs
+        Further arguments, forwarded verbatim to the reader this source builds and named as that
+        reader names them. This is how a source's own axes are reached: ``'imf'`` and ``'ilostat'``
+        require ``dataflow``, ``'wb-ids'`` requires ``symbols``, and ``'imts'`` takes
+        ``counterpart``, ``indicator`` and ``freq``. An argument the reader does not accept raises
+        ``TypeError``.
 
     Returns
     -------
@@ -1026,6 +1025,7 @@ def DataReader(
             session=session,
             output_type=backend,
             max_workers=max_workers,
+            **kwargs,
         ).read()
 
     elif data_source == "bankofcanada":
@@ -1037,6 +1037,7 @@ def DataReader(
             pause=pause,
             session=session,
             output_type=backend,
+            **kwargs,
         ).read()
 
     elif data_source == "stooq":
@@ -1050,6 +1051,7 @@ def DataReader(
             session=session,
             output_type=backend,
             max_workers=max_workers,
+            **kwargs,
         ).read()
 
     elif data_source == "fred":
@@ -1063,6 +1065,7 @@ def DataReader(
             api_key=api_key,
             headers=headers,
             output_type=backend,
+            **kwargs,
         ).read()
 
     elif data_source == "famafrench":
@@ -1074,6 +1077,7 @@ def DataReader(
             pause=pause,
             session=session,
             output_type=backend,
+            **kwargs,
         ).read()
 
     elif data_source == "oecd":
@@ -1085,6 +1089,7 @@ def DataReader(
             pause=pause,
             session=session,
             output_type=backend,
+            **kwargs,
         ).read()
     elif data_source == "eurostat":
         return EurostatReader(
@@ -1095,14 +1100,10 @@ def DataReader(
             pause=pause,
             session=session,
             output_type=backend,
+            **kwargs,
         ).read()
     elif data_source == "wb-ids":
-        if not series:
-            raise ValueError(
-                "Reading from 'wb-ids' needs a series, e.g. DataReader('ZMB', 'wb-ids', series='DT.INR.DPPG')"
-            )
         return WorldBankIDSReader(
-            symbols=series,
             countries=name,
             start=start,
             end=end,
@@ -1111,15 +1112,10 @@ def DataReader(
             session=session,
             headers=headers,
             output_type=backend,
+            **kwargs,
         ).read()
     elif data_source == "ilostat":
-        if not dataflow:
-            raise ValueError(
-                "Reading from 'ilostat' needs a dataflow, e.g. "
-                "DataReader('ZMB', 'ilostat', dataflow='DF_EAR_CMTA_SEX_CUR_NB')"
-            )
         return ILOSTATReader(
-            dataflow=dataflow,
             selections={"REF_AREA": name},
             start=start,
             end=end,
@@ -1128,12 +1124,10 @@ def DataReader(
             session=session,
             headers=headers,
             output_type=backend,
+            **kwargs,
         ).read()
     elif data_source == "imf":
-        if not dataflow:
-            raise ValueError("Reading from 'imf' needs a dataflow, e.g. DataReader('ZMB', 'imf', dataflow='CPI')")
         return IMFReader(
-            dataflow=dataflow,
             selections={"COUNTRY": name},
             start=start,
             end=end,
@@ -1142,6 +1136,7 @@ def DataReader(
             session=session,
             headers=headers,
             output_type=backend,
+            **kwargs,
         ).read()
     elif data_source == "imts":
         return IMTSReader(
@@ -1153,11 +1148,12 @@ def DataReader(
             session=session,
             headers=headers,
             output_type=backend,
+            **kwargs,
         ).read()
     elif data_source == "nasdaq":
         if name != "symbols":
             raise ValueError(f"Only the string 'symbols' is supported for Nasdaq, not {name!r}")
-        nasdaq_symbols = get_nasdaq_symbols(retry_count=retry_count, pause=pause)
+        nasdaq_symbols = get_nasdaq_symbols(retry_count=retry_count, pause=pause, **kwargs)
         if backend == PANDAS:
             return nasdaq_symbols
         tidy, _ = detach_index(nasdaq_symbols)
@@ -1174,6 +1170,7 @@ def DataReader(
             api_key=api_key,
             output_type=backend,
             max_workers=max_workers,
+            **kwargs,
         ).read()
     elif data_source == "moex":
         return MoexReader(
@@ -1185,6 +1182,7 @@ def DataReader(
             session=session,
             output_type=backend,
             max_workers=max_workers,
+            **kwargs,
         ).read()
     elif data_source == "tiingo":
         return TiingoDailyReader(
@@ -1196,6 +1194,7 @@ def DataReader(
             session=session,
             api_key=api_key,
             output_type=backend,
+            **kwargs,
         ).read()
 
     elif data_source == "yahoo-actions":
@@ -1208,6 +1207,7 @@ def DataReader(
             session=session,
             output_type=backend,
             max_workers=max_workers,
+            **kwargs,
         ).read()
 
     elif data_source == "yahoo-dividends":
@@ -1223,6 +1223,7 @@ def DataReader(
             interval="d",
             output_type=backend,
             max_workers=max_workers,
+            **kwargs,
         ).read()
 
     elif data_source == "yahoo-fundamentals":
@@ -1235,6 +1236,7 @@ def DataReader(
             session=session,
             output_type=backend,
             max_workers=max_workers,
+            **kwargs,
         ).read()
 
     elif data_source == "av-forex":
@@ -1245,6 +1247,7 @@ def DataReader(
             session=session,
             api_key=api_key,
             output_type=backend,
+            **kwargs,
         ).read()
 
     elif data_source == "av-forex-daily":
@@ -1258,6 +1261,7 @@ def DataReader(
             session=session,
             api_key=api_key,
             output_type=backend,
+            **kwargs,
         ).read()
 
     elif data_source == "av-daily":
@@ -1271,6 +1275,7 @@ def DataReader(
             session=session,
             api_key=api_key,
             output_type=backend,
+            **kwargs,
         ).read()
 
     elif data_source == "av-daily-adjusted":
@@ -1284,6 +1289,7 @@ def DataReader(
             session=session,
             api_key=api_key,
             output_type=backend,
+            **kwargs,
         ).read()
 
     elif data_source == "av-weekly":
@@ -1297,6 +1303,7 @@ def DataReader(
             session=session,
             api_key=api_key,
             output_type=backend,
+            **kwargs,
         ).read()
 
     elif data_source == "av-weekly-adjusted":
@@ -1310,6 +1317,7 @@ def DataReader(
             session=session,
             api_key=api_key,
             output_type=backend,
+            **kwargs,
         ).read()
 
     elif data_source == "av-monthly":
@@ -1323,6 +1331,7 @@ def DataReader(
             session=session,
             api_key=api_key,
             output_type=backend,
+            **kwargs,
         ).read()
 
     elif data_source == "av-monthly-adjusted":
@@ -1336,6 +1345,7 @@ def DataReader(
             session=session,
             api_key=api_key,
             output_type=backend,
+            **kwargs,
         ).read()
 
     elif data_source == "av-intraday":
@@ -1349,6 +1359,7 @@ def DataReader(
             session=session,
             api_key=api_key,
             output_type=backend,
+            **kwargs,
         ).read()
 
     elif data_source == "econdb":
@@ -1360,6 +1371,7 @@ def DataReader(
             pause=pause,
             session=session,
             output_type=backend,
+            **kwargs,
         ).read()
 
     elif data_source == "naver":
@@ -1372,6 +1384,7 @@ def DataReader(
             session=session,
             output_type=backend,
             max_workers=max_workers,
+            **kwargs,
         ).read()
 
     else:

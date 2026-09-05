@@ -596,7 +596,7 @@ private creditor, and ``DT.MAT.DPPG`` reports average maturity.
 
     import kuznets.data as web
 
-    web.DataReader('ZMB', 'wb-ids', series='DT.INR.DPPG', start=1990, end=2020)
+    web.DataReader('ZMB', 'wb-ids', symbols='DT.INR.DPPG', start=1990, end=2020)
 
 Series are reported per creditor and in aggregate, and the reader defaults to the aggregate. Reading
 every creditor for one country and series runs to five figures of rows.
@@ -666,7 +666,7 @@ declares.
 
     from kuznets.imf import IMFReader
 
-    IMFReader('MFS_IR', {'COUNTRY': 'ZMB', 'FREQUENCY': 'A'}, start=2018, end=2020).read()
+    IMFReader('MFS_IR', {'COUNTRY': 'ZMB', 'FREQUENCY': 'M'}, start=2020, end=2020).read()
 
 Codes are checked against the service's own codelists before the request goes out, so a mistyped
 country raises rather than returning an empty frame. An empty result therefore means the service
