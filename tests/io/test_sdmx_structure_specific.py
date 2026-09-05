@@ -74,6 +74,18 @@ class TestReadStructureSpecificPandas:
 
         assert read_structure_specific(document, IMTS_DIMENSIONS).empty
 
+    def test_a_message_of_another_type_is_refused(self):
+        # A service left to its own default may answer with generic data, which has no <Series>
+        # elements and so would otherwise read as a valid document holding nothing.
+        document = """<GenericData>
+          <DataSet>
+            <Series><SeriesKey><Value id="COUNTRY" value="LAO"/></SeriesKey></Series>
+          </DataSet>
+        </GenericData>"""
+
+        with pytest.raises(ValueError, match="got 'GenericData'"):
+            read_structure_specific(document, IMTS_DIMENSIONS)
+
     def test_observations_without_a_value_are_dropped(self):
         document = """<StructureSpecificData>
           <DataSet>

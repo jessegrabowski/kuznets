@@ -15,6 +15,7 @@ from kuznets.typing import BackendName, Frame, OutputType, PathOrBuffer
 
 _TIME_PERIOD = "TIME_PERIOD"
 _OBS_VALUE = "OBS_VALUE"
+_STRUCTURE_SPECIFIC_DATA = "StructureSpecificData"
 
 _STRUCTURE = "{http://www.sdmx.org/resources/sdmxml/schemas/v2_1/structure}"
 _MESSAGE = "{http://www.sdmx.org/resources/sdmxml/schemas/v2_1/message}"
@@ -302,7 +303,8 @@ def read_structure_specific(
     This message type carries dimension and attribute values as XML attributes of ``<Series>`` and
     ``<Obs>`` rather than as the child elements :func:`read_sdmx` expects, and its target namespace
     is dataflow-specific, so elements match on their local names. Observations carrying no value,
-    and documents holding only ``<Group>`` metadata, contribute no rows.
+    and documents holding only ``<Group>`` metadata, contribute no rows. Raise ``ValueError`` for a
+    message of any other type.
 
     Parameters
     ----------
@@ -328,6 +330,11 @@ def read_structure_specific(
     """
     output_type = validate_output_type(output_type)
     root = ET.fromstring(_read_content(path_or_buf))
+    if (message := _local_name(root.tag)) != _STRUCTURE_SPECIFIC_DATA:
+        raise ValueError(
+            f"expected a {_STRUCTURE_SPECIFIC_DATA} message, got {message!r}; request the data with "
+            "'format=structurespecificdata'."
+        )
     records = _structure_specific_records(root)
 
     codes, names = _resolve_dimensions(dimensions, records)
