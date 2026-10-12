@@ -3,7 +3,7 @@
 
 "SERIES"
 "id","label","description"
-"FXUSDCAD","USD/CAD","Daily average exchange rate: daily value of the US dollar expressed in Canadian dollars, for 1 unit of US dollar"
+"FXUSDCAD","USD/CAD","Daily average exchange rate of the US dollar in Canadian dollars."
 
 "OBSERVATIONS"
 "date","FXUSDCAD"
