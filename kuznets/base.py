@@ -361,6 +361,7 @@ class _DailyBaseReader(_BaseReader):
         pause: float | None = None,
         session: requests.Session | None = None,
         chunksize: int = 25,
+        headers: Headers | None = None,
         output_type: str = "pandas",
         max_workers: int | None = None,
     ) -> None:
@@ -383,6 +384,8 @@ class _DailyBaseReader(_BaseReader):
             ``requests.sessions.Session`` instance to be used.
         chunksize : int, default 25
             Unused; retained for backward compatibility.
+        headers : dict, optional
+            Headers applied to every request, merged over ``options.headers`` and the config file.
         output_type : str, optional
             Backend of the returned data: 'pandas', 'polars', 'pyarrow' (alias 'arrow'), or 'dask'.
             Backends other than pandas must be installed separately. Default 'pandas'.
@@ -398,6 +401,7 @@ class _DailyBaseReader(_BaseReader):
             retry_count=retry_count,
             pause=pause,
             session=session,
+            headers=headers,
             output_type=output_type,
         )
         self.chunksize = chunksize

@@ -7,7 +7,8 @@ from pandas import DataFrame, to_datetime, to_numeric
 import requests
 
 from kuznets.base import _DailyBaseReader
-from kuznets.typing import DateLike, Symbols
+from kuznets.config import get_headers
+from kuznets.typing import DateLike, Headers, Symbols
 
 
 class NaverDailyReader(_DailyBaseReader):
@@ -29,6 +30,7 @@ class NaverDailyReader(_DailyBaseReader):
         interval: str = "d",
         get_actions: bool = False,
         adjust_dividends: bool = True,
+        headers: Headers | None = None,
         output_type: str = "pandas",
         max_workers: int | None = None,
     ) -> None:
@@ -61,6 +63,8 @@ class NaverDailyReader(_DailyBaseReader):
             Not implemented.
         adjust_dividends : bool, default True
             Not implemented.
+        headers : dict, optional
+            Headers applied to every request, merged over ``options.headers`` and the config file.
         output_type : str, optional
             Backend of the returned data: 'pandas', 'polars', 'pyarrow' (alias 'arrow'), or 'dask'.
             Backends other than pandas must be installed separately. Default 'pandas'.
@@ -79,6 +83,7 @@ class NaverDailyReader(_DailyBaseReader):
             pause=pause,
             session=session,
             chunksize=chunksize,
+            headers=headers,
             output_type=output_type,
             max_workers=max_workers,
         )
@@ -88,7 +93,7 @@ class NaverDailyReader(_DailyBaseReader):
             "Sec-Fetch-Mode": "no-cors",
             "Referer": f"https://finance.naver.com/item/fchart.nhn?code={symbols}",
             "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/76.0.3809.100 Safari/537.36",  # noqa
-        }
+        } | (get_headers(headers) or {})
 
     @property
     def get_actions(self) -> bool:

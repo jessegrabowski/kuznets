@@ -37,6 +37,12 @@ class TestNaverOffline:
         assert NaverDailyReader(symbols="005930").get_actions is False
         assert NaverDailyReader(symbols="005930", get_actions=True).get_actions is True
 
+    def test_caller_headers_override_the_reader_defaults(self):
+        reader = NaverDailyReader("005930", headers={"User-Agent": "probe"})
+
+        assert reader.headers["User-Agent"] == "probe"
+        assert "005930" in reader.headers["Referer"]
+
     def test_bulk_fetch_not_implemented(self):
         with pytest.raises(NotImplementedError):
             DataReader(["005930", "000660"])

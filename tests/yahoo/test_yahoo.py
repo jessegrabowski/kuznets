@@ -43,6 +43,14 @@ def _chart_offline(monkeypatch, datapath, symbol):
 
 
 class TestYahooOffline:
+    @pytest.mark.parametrize("reader_class", [YahooDailyReader, YahooFundamentalsReader])
+    def test_caller_headers_override_the_browser_defaults(self, reader_class):
+        # Yahoo needs the browser headers, but a caller's User-Agent has to win over them.
+        reader = reader_class("AAPL", headers={"User-Agent": "probe"})
+
+        assert reader.headers["User-Agent"] == "probe"
+        assert reader.headers["Upgrade-Insecure-Requests"] == "1"
+
     def test_daily_prices_are_parsed(self, monkeypatch, datapath):
         _chart_offline(monkeypatch, datapath, "AAPL")
         df = web.get_data_yahoo("AAPL", start=_CHART_START, end=_CHART_END)

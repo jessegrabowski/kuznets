@@ -6,8 +6,9 @@ from pandas import DataFrame, concat, to_datetime
 
 from kuznets.base import _DEFAULT_MAX_WORKERS, _BaseReader, _fetch_symbols_concurrently
 from kuznets.output import from_pandas
+from kuznets.typing import Headers
 from kuznets.utils import RemoteDataError, SymbolWarning
-from kuznets.yahoo.headers import DEFAULT_HEADERS, session_headers
+from kuznets.yahoo.headers import request_headers
 
 # Line items per statement, in presentation order. Yahoo silently omits items a company does not
 # report (e.g. Goodwill for Apple), so requesting the full set is safe for every symbol.
@@ -187,6 +188,7 @@ class YahooFundamentalsReader(_BaseReader):
         freq: str = "annual",
         statement: str = "balance-sheet",
         series: str | list[str] | None = None,
+        headers: Headers | None = None,
         output_type: str = "pandas",
         max_workers: int | None = None,
     ) -> None:
@@ -219,6 +221,8 @@ class YahooFundamentalsReader(_BaseReader):
             Exact line items to fetch, named without the frequency prefix (e.g. ``'TotalAssets'``,
             not ``'annualTotalAssets'``). A bare string fetches one item. When omitted, the
             ``statement`` preset is fetched.
+        headers : dict, optional
+            Headers applied to every request, merged over ``options.headers`` and the config file.
         output_type : str, optional
             Backend of the returned data: 'pandas', 'polars', 'pyarrow' (alias 'arrow'), or 'dask'.
             Backends other than pandas must be installed separately. Default 'pandas'.
@@ -234,6 +238,7 @@ class YahooFundamentalsReader(_BaseReader):
             pause=pause,
             session=session,
             freq=freq,
+            headers=headers,
             output_type=output_type,
         )
         if freq not in _FREQS:
@@ -250,7 +255,7 @@ class YahooFundamentalsReader(_BaseReader):
             requested = series
         self.series = tuple(requested)
         self.max_workers = _DEFAULT_MAX_WORKERS if max_workers is None else max_workers
-        self.headers = DEFAULT_HEADERS if session is None else session_headers(session)
+        self.headers = request_headers(session, headers)
 
     @property
     def url(self) -> str:

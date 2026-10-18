@@ -4,8 +4,8 @@ from pandas import DataFrame, Series, date_range, isnull, notnull, to_datetime
 import requests
 
 from kuznets.base import _DailyBaseReader
-from kuznets.typing import DateLike, Symbols
-from kuznets.yahoo.headers import DEFAULT_HEADERS, session_headers
+from kuznets.typing import DateLike, Headers, Symbols
+from kuznets.yahoo.headers import request_headers
 
 
 class YahooDailyReader(_DailyBaseReader):
@@ -25,6 +25,7 @@ class YahooDailyReader(_DailyBaseReader):
         interval: str = "d",
         get_actions: bool = False,
         adjust_dividends: bool = True,
+        headers: Headers | None = None,
         output_type: str = "pandas",
         max_workers: int | None = None,
     ) -> None:
@@ -61,6 +62,8 @@ class YahooDailyReader(_DailyBaseReader):
             If True, adds Dividend and Split columns to the DataFrame.
         adjust_dividends : bool, default True
             If True, adjusts dividends for splits.
+        headers : dict, optional
+            Headers applied to every request, merged over ``options.headers`` and the config file.
         output_type : str, optional
             Backend of the returned data: 'pandas', 'polars', 'pyarrow' (alias 'arrow'), or 'dask'.
             Backends other than pandas must be installed separately. Default 'pandas'.
@@ -76,11 +79,12 @@ class YahooDailyReader(_DailyBaseReader):
             pause=pause,
             session=session,
             chunksize=chunksize,
+            headers=headers,
             output_type=output_type,
             max_workers=max_workers,
         )
 
-        self.headers = DEFAULT_HEADERS if session is None else session_headers(session)
+        self.headers = request_headers(session, headers)
 
         self.adjust_price = adjust_price
         self.ret_index = ret_index
