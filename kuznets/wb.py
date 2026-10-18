@@ -844,7 +844,7 @@ class WorldBankReader(_BaseReader):
                 out = reduce(lambda x, y: x.merge(y, how="outer"), data)
                 out = out.drop("iso_code", axis=1)
                 out["year"] = _period_starts(out["year"])
-                out = out.set_index(["country", "year"])
+                out = out.set_index(["country", "year"]).sort_index()
                 out = out.apply(pd.to_numeric, errors="coerce")
 
                 return out
