@@ -5,7 +5,7 @@ import requests
 
 from kuznets.base import _DailyBaseReader
 from kuznets.typing import DateLike, Headers, Symbols
-from kuznets.yahoo.headers import DEFAULT_HEADERS, session_headers
+from kuznets.yahoo.headers import request_headers
 
 
 class YahooDailyReader(_DailyBaseReader):
@@ -84,7 +84,7 @@ class YahooDailyReader(_DailyBaseReader):
             max_workers=max_workers,
         )
 
-        self.headers = DEFAULT_HEADERS if session is None else session_headers(session)
+        self.headers = request_headers(session, headers)
 
         self.adjust_price = adjust_price
         self.ret_index = ret_index

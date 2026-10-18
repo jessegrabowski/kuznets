@@ -7,6 +7,7 @@ from pandas import DataFrame, to_datetime, to_numeric
 import requests
 
 from kuznets.base import _DailyBaseReader
+from kuznets.config import get_headers
 from kuznets.typing import DateLike, Headers, Symbols
 
 
@@ -92,7 +93,7 @@ class NaverDailyReader(_DailyBaseReader):
             "Sec-Fetch-Mode": "no-cors",
             "Referer": f"https://finance.naver.com/item/fchart.nhn?code={symbols}",
             "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/76.0.3809.100 Safari/537.36",  # noqa
-        }
+        } | (get_headers(headers) or {})
 
     @property
     def get_actions(self) -> bool:

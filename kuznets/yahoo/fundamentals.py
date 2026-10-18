@@ -8,7 +8,7 @@ from kuznets.base import _DEFAULT_MAX_WORKERS, _BaseReader, _fetch_symbols_concu
 from kuznets.output import from_pandas
 from kuznets.typing import Headers
 from kuznets.utils import RemoteDataError, SymbolWarning
-from kuznets.yahoo.headers import DEFAULT_HEADERS, session_headers
+from kuznets.yahoo.headers import request_headers
 
 # Line items per statement, in presentation order. Yahoo silently omits items a company does not
 # report (e.g. Goodwill for Apple), so requesting the full set is safe for every symbol.
@@ -255,7 +255,7 @@ class YahooFundamentalsReader(_BaseReader):
             requested = series
         self.series = tuple(requested)
         self.max_workers = _DEFAULT_MAX_WORKERS if max_workers is None else max_workers
-        self.headers = DEFAULT_HEADERS if session is None else session_headers(session)
+        self.headers = request_headers(session, headers)
 
     @property
     def url(self) -> str:
