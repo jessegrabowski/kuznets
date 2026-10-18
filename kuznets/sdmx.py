@@ -292,6 +292,10 @@ class _SdmxDataflowReader(_BaseReader):
         """
         if not is_empty(frame):
             return
+        raise self._no_observations_error()
+
+    def _no_observations_error(self) -> RemoteDataError:
+        """Explain an empty selection, naming whether the key or the coverage is at fault."""
         unchecked = sorted(set(self.selections) - self._validated)
         if unchecked:
             detail = (
@@ -300,7 +304,7 @@ class _SdmxDataflowReader(_BaseReader):
             )
         else:
             detail = "every selected code exists in the service's codelists, so this selection has no data"
-        raise RemoteDataError(
+        return RemoteDataError(
             f"{self.dataflow} returned no observations for key {self.key!r} over "
             f"{self.start.year}-{self.end.year}; {detail}"
         )
