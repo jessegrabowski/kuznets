@@ -299,11 +299,29 @@ class _BaseReader:
 
         if params is not None and len(params) > 0:
             url = url + "?" + urlencode(params)
-        msg = f"Unable to read URL: {url}"
-        if response.encoding:
-            msg += f"\nResponse Text:\n{response.text}"
+        raise RemoteDataError(_unreadable_message(url, response))
 
-        raise RemoteDataError(msg)
+    def _post_response(self, url: str, payload: dict) -> requests.Response:
+        """Send *payload* as a JSON POST to *url*, raising ``RemoteDataError`` on a non-ok status.
+
+        Parameters
+        ----------
+        url : str
+            Target URL.
+        payload : dict
+            Request body, serialized as JSON.
+
+        Returns
+        -------
+        response : Response
+            Server response.
+        """
+        # urllib3 does not retry POST by default, so a transient failure surfaces on the first try.
+        response = self.session.post(url, json=payload, headers=self.headers, timeout=self.timeout)
+        if response.status_code == requests.codes.ok:
+            return response
+        self._output_error(response)
+        raise RemoteDataError(_unreadable_message(url, response))
 
     def _output_error(self, out: requests.Response) -> None:
         """Inspect a non-ok response and raise a source-specific error if recognized.
@@ -347,6 +365,14 @@ class _BaseReader:
             rs.index.name = index_name.encode("ascii", "ignore").decode()
 
         return rs
+
+
+def _unreadable_message(url: str, response: requests.Response) -> str:
+    """Describe a failed request, quoting the response body when it has one."""
+    message = f"Unable to read URL: {url}"
+    if response.encoding:
+        message += f"\nResponse Text:\n{response.text}"
+    return message
 
 
 class _DailyBaseReader(_BaseReader):
