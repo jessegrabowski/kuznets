@@ -55,7 +55,7 @@ class TestWorldBankOffline:
 
         result = download(country="JP", indicator="NY.GDP.PCAP.CD", start=2000, end=2004, errors="ignore")
         # Fixture is a frozen real recording, so round only to the nearest 100 (not 1000).
-        result = np.round(result.sort_index(), decimals=-2)
+        result = np.round(result, decimals=-2)
 
         expected = pd.DataFrame(
             {
@@ -70,6 +70,14 @@ class TestWorldBankOffline:
         ).sort_index()
         expected.index.names = ["country", "year"]
         pd.testing.assert_frame_equal(result, expected)
+
+    def test_download_returns_years_ascending(self, monkeypatch, datapath):
+        # The API serves newest first, and every other reader returns oldest first.
+        patch_session_get(monkeypatch, {"NY.GDP.PCAP.CD": datapath("data", "wb", "country_jp_gdp.json")})
+
+        result = download(country="JP", indicator="NY.GDP.PCAP.CD", start=2000, end=2004, errors="ignore")
+
+        assert result.index.get_level_values("year").is_monotonic_increasing
 
     def test_invalid_country_raises(self):
         with pytest.raises(ValueError, match=r"Invalid Country Code\(s\): XX"):
