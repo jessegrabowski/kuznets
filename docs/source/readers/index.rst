@@ -11,6 +11,7 @@ Data Readers
    ilostat
    bank-of-canada
    bis
+   bls
    econdb
    eurostat
    moex
