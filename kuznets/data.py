@@ -974,7 +974,7 @@ def DataReader(
     headers : dict, optional
         Headers applied to every request, merged over ``options.headers`` and the config file. Pass
         a ``User-Agent`` here to identify as something other than ``kuznets`` when a host
-        blocks the default agent.
+        blocks the default agent. Ignored by ``'nasdaq'``, which downloads over FTP.
     output_type : str, optional
         Backend of the returned data: 'pandas', 'polars', 'pyarrow' (alias 'arrow'), or 'dask'.
         Backends other than pandas must be installed separately. Default 'pandas'.
@@ -1025,6 +1025,7 @@ def DataReader(
             retry_count=retry_count,
             pause=pause,
             session=session,
+            headers=headers,
             output_type=backend,
             max_workers=max_workers,
             **kwargs,
@@ -1038,6 +1039,7 @@ def DataReader(
             retry_count=retry_count,
             pause=pause,
             session=session,
+            headers=headers,
             output_type=backend,
             **kwargs,
         ).read()
@@ -1051,6 +1053,7 @@ def DataReader(
             retry_count=retry_count,
             pause=pause,
             session=session,
+            headers=headers,
             output_type=backend,
             max_workers=max_workers,
             **kwargs,
@@ -1078,6 +1081,7 @@ def DataReader(
             retry_count=retry_count,
             pause=pause,
             session=session,
+            headers=headers,
             output_type=backend,
             **kwargs,
         ).read()
@@ -1090,6 +1094,7 @@ def DataReader(
             retry_count=retry_count,
             pause=pause,
             session=session,
+            headers=headers,
             output_type=backend,
             **kwargs,
         ).read()
@@ -1101,6 +1106,7 @@ def DataReader(
             retry_count=retry_count,
             pause=pause,
             session=session,
+            headers=headers,
             output_type=backend,
             **kwargs,
         ).read()
@@ -1182,6 +1188,7 @@ def DataReader(
             pause=pause,
             session=session,
             api_key=api_key,
+            headers=headers,
             output_type=backend,
             max_workers=max_workers,
             **kwargs,
@@ -1194,6 +1201,7 @@ def DataReader(
             retry_count=retry_count,
             pause=pause,
             session=session,
+            headers=headers,
             output_type=backend,
             max_workers=max_workers,
             **kwargs,
@@ -1207,6 +1215,7 @@ def DataReader(
             pause=pause,
             session=session,
             api_key=api_key,
+            headers=headers,
             output_type=backend,
             **kwargs,
         ).read()
@@ -1219,6 +1228,7 @@ def DataReader(
             retry_count=retry_count,
             pause=pause,
             session=session,
+            headers=headers,
             output_type=backend,
             max_workers=max_workers,
             **kwargs,
@@ -1235,6 +1245,7 @@ def DataReader(
             pause=pause,
             session=session,
             interval="d",
+            headers=headers,
             output_type=backend,
             max_workers=max_workers,
             **kwargs,
@@ -1248,6 +1259,7 @@ def DataReader(
             retry_count=retry_count,
             pause=pause,
             session=session,
+            headers=headers,
             output_type=backend,
             max_workers=max_workers,
             **kwargs,
@@ -1260,6 +1272,7 @@ def DataReader(
             pause=pause,
             session=session,
             api_key=api_key,
+            headers=headers,
             output_type=backend,
             **kwargs,
         ).read()
@@ -1274,6 +1287,7 @@ def DataReader(
             pause=pause,
             session=session,
             api_key=api_key,
+            headers=headers,
             output_type=backend,
             **kwargs,
         ).read()
@@ -1288,6 +1302,7 @@ def DataReader(
             pause=pause,
             session=session,
             api_key=api_key,
+            headers=headers,
             output_type=backend,
             **kwargs,
         ).read()
@@ -1302,6 +1317,7 @@ def DataReader(
             pause=pause,
             session=session,
             api_key=api_key,
+            headers=headers,
             output_type=backend,
             **kwargs,
         ).read()
@@ -1316,6 +1332,7 @@ def DataReader(
             pause=pause,
             session=session,
             api_key=api_key,
+            headers=headers,
             output_type=backend,
             **kwargs,
         ).read()
@@ -1330,6 +1347,7 @@ def DataReader(
             pause=pause,
             session=session,
             api_key=api_key,
+            headers=headers,
             output_type=backend,
             **kwargs,
         ).read()
@@ -1344,6 +1362,7 @@ def DataReader(
             pause=pause,
             session=session,
             api_key=api_key,
+            headers=headers,
             output_type=backend,
             **kwargs,
         ).read()
@@ -1358,6 +1377,7 @@ def DataReader(
             pause=pause,
             session=session,
             api_key=api_key,
+            headers=headers,
             output_type=backend,
             **kwargs,
         ).read()
@@ -1372,6 +1392,7 @@ def DataReader(
             pause=pause,
             session=session,
             api_key=api_key,
+            headers=headers,
             output_type=backend,
             **kwargs,
         ).read()
@@ -1384,6 +1405,7 @@ def DataReader(
             retry_count=retry_count,
             pause=pause,
             session=session,
+            headers=headers,
             output_type=backend,
             **kwargs,
         ).read()
@@ -1396,6 +1418,7 @@ def DataReader(
             retry_count=retry_count,
             pause=pause,
             session=session,
+            headers=headers,
             output_type=backend,
             max_workers=max_workers,
             **kwargs,

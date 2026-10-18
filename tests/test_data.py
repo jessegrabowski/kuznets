@@ -4,8 +4,9 @@ import pandas as pd
 import pytest
 import requests
 
+from kuznets.base import _BaseReader
 from kuznets.bis import BISReader
-from kuznets.data import DataReader
+from kuznets.data import _DATA_SOURCES, DataReader
 from kuznets.ilostat import ILOSTATReader
 from kuznets.imf import IMFReader, IMTSReader
 from kuznets.sdmx import clear_structure_cache
@@ -202,13 +203,28 @@ class TestDataReader:
         assert isinstance(tidy, polars.DataFrame)
         assert tidy.columns == ["country", "indicator", "counterpart", "frequency", "period", "value"]
 
-    def test_imts_dispatch_forwards_headers(self, monkeypatch, datapath):
-        # Most branches drop ``headers`` on the floor (issue #32); this one must not, so a host that
-        # blocks the default agent stays workable through DataReader.
-        patch_session_get(monkeypatch, {"api.imf.org": datapath("data", "imf", "imts_lao_2019_exports.xml")})
+    @pytest.mark.parametrize("data_source", sorted(_DATA_SOURCES - {"nasdaq"}))
+    def test_dispatch_forwards_headers(self, monkeypatch, data_source):
+        # A User-Agent passed to DataReader is the documented workaround for a host that blocks the
+        # default agent, so every source must hand it to the session. Nasdaq downloads over FTP.
+        monkeypatch.setattr(_BaseReader, "read", lambda self: None)
         session = requests.Session()
+        names = {"av-forex": "USD/JPY", "econdb": "ticker=RGDPUS"}
+        source_arguments = {
+            "bis": {"dataflow": "WS_EER"},
+            "ilostat": {"dataflow": "DF_EAR_CMTA_SEX_CUR_NB"},
+            "imf": {"dataflow": "CPI"},
+            "wb-ids": {"symbols": "DT.DOD.DECT.CD"},
+        }
 
-        DataReader("LAO", "imts", start="2019", end="2019", headers={"User-Agent": "probe"}, session=session)
+        DataReader(
+            names.get(data_source, "ABC"),
+            data_source,
+            api_key="key",
+            headers={"User-Agent": "probe"},
+            session=session,
+            **source_arguments.get(data_source, {}),
+        )
 
         assert session.headers["User-Agent"] == "probe"
 
