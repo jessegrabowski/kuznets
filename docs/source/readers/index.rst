@@ -10,6 +10,7 @@ Data Readers
    imf-imts
    ilostat
    bank-of-canada
+   bis
    econdb
    eurostat
    moex

@@ -49,6 +49,7 @@ The following sources have been previously supported but are fully working in th
     - :ref:`IMF<remote_data.imf>`
     - :ref:`IMF International Trade in Goods<remote_data.imts>`
     - :ref:`ILOSTAT<remote_data.ilostat>`
+    - :ref:`Bank for International Settlements<remote_data.bis>`
     - :ref:`Econdb<remote_data.econdb>`
     - :ref:`World Bank<remote_data.wb>`
     - :ref:`World Bank International Debt Statistics<remote_data.wb_ids>`
@@ -758,6 +759,42 @@ Dimensions carry the ILO's own names, so the country is ``REF_AREA`` rather than
 
 Data is served under the ILO's
 `terms <https://www.ilo.org/disclaimer-privacy-policy>`__.
+
+.. _remote_data.bis:
+
+Bank for International Settlements
+==================================
+
+The BIS's `SDMX service <https://stats.bis.org/api/v1/dataflow/BIS>`__ carries effective exchange
+rates (``WS_EER``), central bank policy rates (``WS_CBPOL``), US dollar exchange rates (``WS_XRU``),
+property prices (``WS_SPP``) and total credit (``WS_TC``), among others.
+
+Dimensions carry the BIS's own names, and ``DataReader`` reads the country into ``REF_AREA``, which
+takes ISO 3166-1 alpha-2 codes.
+
+.. ipython:: python
+   :okexcept:
+
+    import kuznets.data as web
+
+    df = web.DataReader('IN', 'bis', dataflow='WS_CBPOL', start=2020, end=2021)
+
+    df.columns.names
+
+Selecting the other dimensions means using the reader directly. The real broad effective exchange
+rate, monthly:
+
+.. ipython:: python
+   :okexcept:
+
+    from kuznets.bis import BISReader
+
+    selection = {'FREQ': 'M', 'EER_TYPE': 'R', 'EER_BASKET': 'B', 'REF_AREA': 'IN'}
+
+    BISReader('WS_EER', selection, start=2011).read().resample('QS').mean()
+
+Data is served under the BIS's
+`terms of use for statistics <https://www.bis.org/about/legal/permitted-use-statistics>`__.
 
 .. _remote_data.eurostat:
 
