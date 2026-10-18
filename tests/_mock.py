@@ -11,6 +11,10 @@ import requests
 # (and ``RECORD=1 pytest -m network`` locally) drives this; the default offline suite never does.
 RECORD = os.environ.get("RECORD", "").lower() in {"1", "true", "yes"}
 
+_SDMX_COMMON = "http://www.sdmx.org/resources/sdmxml/schemas/v2_1/common"
+_SDMX_MESSAGE = "http://www.sdmx.org/resources/sdmxml/schemas/v2_1/message"
+_SDMX_STRUCTURE = "http://www.sdmx.org/resources/sdmxml/schemas/v2_1/structure"
+
 
 class FakeResponse:
     """Minimal stand-in for :class:`requests.Response` for offline tests.
@@ -50,6 +54,16 @@ class FakeResponse:
     def raise_for_status(self) -> None:
         if self.status_code >= 400:
             raise requests.HTTPError(f"{self.status_code} for fake response")
+
+
+def codelist_document(identifier: str, *codes: str) -> bytes:
+    """An SDMX codelist carrying just the codes a test selects, standing in for a service's full one."""
+    entries = "".join(f'<str:Code id="{code}"><com:Name xml:lang="en">{code}</com:Name></str:Code>' for code in codes)
+    return (
+        f'<mes:Structure xmlns:mes="{_SDMX_MESSAGE}" xmlns:str="{_SDMX_STRUCTURE}" xmlns:com="{_SDMX_COMMON}">'
+        f'<mes:Structures><str:Codelists><str:Codelist id="{identifier}">{entries}</str:Codelist></str:Codelists>'
+        "</mes:Structures></mes:Structure>"
+    ).encode()
 
 
 def make_response(

@@ -7,11 +7,10 @@ import pytest
 from kuznets.sdmx import _SdmxDataflowReader, clear_structure_cache
 from kuznets.utils import RemoteDataError
 from tests._backends import BACKENDS, as_narwhals, skip_unless_installed
-from tests._mock import from_fixtures, patch_session_get
+from tests._mock import codelist_document, from_fixtures, patch_session_get
 
 pytestmark = pytest.mark.stable
 
-COMMON = "http://www.sdmx.org/resources/sdmxml/schemas/v2_1/common"
 MESSAGE = "http://www.sdmx.org/resources/sdmxml/schemas/v2_1/message"
 STRUCTURE = "http://www.sdmx.org/resources/sdmxml/schemas/v2_1/structure"
 
@@ -44,15 +43,6 @@ DATA_STRUCTURE = (
 )
 
 
-def codelist_document(identifier: str, *codes: str) -> str:
-    entries = "".join(f'<str:Code id="{code}"><com:Name xml:lang="en">{code}</com:Name></str:Code>' for code in codes)
-    return (
-        f'<mes:Structure xmlns:mes="{MESSAGE}" xmlns:str="{STRUCTURE}" xmlns:com="{COMMON}"><mes:Structures>'
-        f'<str:Codelists><str:Codelist id="{identifier}">{entries}</str:Codelist></str:Codelists>'
-        "</mes:Structures></mes:Structure>"
-    )
-
-
 class FakeServiceReader(_SdmxDataflowReader):
     _SERVICE = SERVICE
 
@@ -76,8 +66,8 @@ def make_service(data_fixture):
             {
                 "/dataflow/": DATAFLOW_RECORD.encode(),
                 "/datastructure/": DATA_STRUCTURE.encode(),
-                "CL_COUNTRY": codelist_document("CL_COUNTRY", "LAO", "LKA", "LVA", "THA", "VNM").encode(),
-                "CL_FREQ": codelist_document("CL_FREQ", "A", "M", "Q").encode(),
+                "CL_COUNTRY": codelist_document("CL_COUNTRY", "LAO", "LKA", "LVA", "THA", "VNM"),
+                "CL_FREQ": codelist_document("CL_FREQ", "A", "M", "Q"),
                 "/data/": data_fixture,
             }
         )(url, params, **kwargs)

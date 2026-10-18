@@ -10,12 +10,11 @@ from kuznets.ilostat import ILOSTATReader
 from kuznets.imf import IMFReader, IMTSReader
 from kuznets.sdmx import clear_structure_cache
 from kuznets.wb_ids import WorldBankIDSReader
-from tests._mock import from_fixtures, make_response, patch_session_get
+from tests._mock import codelist_document, from_fixtures, make_response, patch_session_get
 
 pytestmark = pytest.mark.stable
 
 
-_COMMON = "http://www.sdmx.org/resources/sdmxml/schemas/v2_1/common"
 _MESSAGE = "http://www.sdmx.org/resources/sdmxml/schemas/v2_1/message"
 _STRUCTURE = "http://www.sdmx.org/resources/sdmxml/schemas/v2_1/structure"
 
@@ -32,22 +31,6 @@ _IMTS_SHAPED_STRUCTURE = (
     "</str:DimensionList></str:DataStructureComponents></str:DataStructure></str:DataStructures>"
     "</mes:Structures></mes:Structure>"
 )
-
-
-_ILO_AREA_CODELIST = (
-    f'<mes:Structure xmlns:mes="{_MESSAGE}" xmlns:str="{_STRUCTURE}" xmlns:com="{_COMMON}"><mes:Structures>'
-    '<str:Codelists><str:Codelist id="CL_AREA">'
-    '<str:Code id="ZMB"><com:Name xml:lang="en">Zambia</com:Name></str:Code>'
-    "</str:Codelist></str:Codelists></mes:Structures></mes:Structure>"
-).encode()
-
-
-_BIS_AREA_CODELIST = (
-    f'<mes:Structure xmlns:mes="{_MESSAGE}" xmlns:str="{_STRUCTURE}" xmlns:com="{_COMMON}"><mes:Structures>'
-    '<str:Codelists><str:Codelist id="CL_AREA">'
-    '<str:Code id="IN"><com:Name xml:lang="en">India</com:Name></str:Code>'
-    "</str:Codelist></str:Codelists></mes:Structures></mes:Structure>"
-).encode()
 
 
 @pytest.fixture(autouse=True)
@@ -132,7 +115,7 @@ class TestDataReader:
             {
                 "/dataflow/": datapath("io", "data", "sdmx", "bis_dataflow_eer.xml"),
                 "/datastructure/": datapath("io", "data", "sdmx", "bis_datastructure_eer.xml"),
-                "CL_AREA": _BIS_AREA_CODELIST,
+                "CL_AREA": codelist_document("CL_AREA", "IN"),
                 "/data/": datapath("data", "bis", "eer_in_2011.xml"),
             },
         )
@@ -154,7 +137,7 @@ class TestDataReader:
             {
                 "/dataflow/": datapath("io", "data", "sdmx", "ilo_dataflow_earnings.xml"),
                 "/datastructure/": datapath("io", "data", "sdmx", "ilo_datastructure_earnings.xml"),
-                "CL_AREA": _ILO_AREA_CODELIST,
+                "CL_AREA": codelist_document("CL_AREA", "ZMB"),
                 "/data/": datapath("data", "ilostat", "earnings_zmb.xml"),
             },
         )

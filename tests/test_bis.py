@@ -4,25 +4,11 @@ import pytest
 from kuznets.bis import BISReader
 from kuznets.sdmx import clear_structure_cache
 from kuznets.utils import RemoteDataError
-from tests._mock import from_fixtures, make_response, patch_session_get, service_up, tolerate_outage
+from tests._mock import codelist_document, from_fixtures, make_response, patch_session_get, service_up, tolerate_outage
 
 pytestmark = pytest.mark.stable
 
-COMMON = "http://www.sdmx.org/resources/sdmxml/schemas/v2_1/common"
-MESSAGE = "http://www.sdmx.org/resources/sdmxml/schemas/v2_1/message"
-STRUCTURE = "http://www.sdmx.org/resources/sdmxml/schemas/v2_1/structure"
-
 INDIA_REAL_BROAD = {"FREQ": "M", "EER_TYPE": "R", "EER_BASKET": "B", "REF_AREA": "IN"}
-
-
-def codelist_document(identifier: str, *codes: str) -> bytes:
-    """A codelist carrying just the codes a test selects, standing in for the service's full one."""
-    entries = "".join(f'<str:Code id="{code}"><com:Name xml:lang="en">{code}</com:Name></str:Code>' for code in codes)
-    return (
-        f'<mes:Structure xmlns:mes="{MESSAGE}" xmlns:str="{STRUCTURE}" xmlns:com="{COMMON}"><mes:Structures>'
-        f'<str:Codelists><str:Codelist id="{identifier}">{entries}</str:Codelist></str:Codelists>'
-        "</mes:Structures></mes:Structure>"
-    ).encode()
 
 
 @pytest.fixture(autouse=True)
@@ -83,8 +69,8 @@ class TestBISOffline:
 
     def test_an_empty_selection_is_named_as_missing_coverage(self, monkeypatch, datapath, service):
         # The BIS answers an empty selection with HTTP 404 where other services send an empty document.
-        with open(datapath("data", "bis", "no_data.xml"), "rb") as body:
-            patch_session_get(monkeypatch, service(make_response(body.read(), status_code=404)))
+        body = datapath("data", "bis", "no_data.xml").read_bytes()
+        patch_session_get(monkeypatch, service(make_response(body, status_code=404)))
 
         selection = INDIA_REAL_BROAD | {"REF_AREA": "XM"}
         with pytest.raises(RemoteDataError, match="every selected code exists"):
