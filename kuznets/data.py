@@ -10,6 +10,7 @@ import requests
 from kuznets.av.forex import AVForexReader
 from kuznets.av.time_series import AVTimeSeriesReader
 from kuznets.bankofcanada import BankOfCanadaReader
+from kuznets.bis import BISReader
 from kuznets.econdb import EcondbReader
 from kuznets.eurostat import EurostatReader
 from kuznets.famafrench import FamaFrenchReader
@@ -61,6 +62,7 @@ _DATA_SOURCES = {
     "famafrench",
     "oecd",
     "eurostat",
+    "bis",
     "ilostat",
     "wb-ids",
     "imf",
@@ -982,8 +984,8 @@ def DataReader(
         Default 5.
     **kwargs
         Further arguments, forwarded verbatim to the reader this source builds and named as that
-        reader names them. This is how a source's own axes are reached: ``'imf'`` and ``'ilostat'``
-        require ``dataflow``, ``'wb-ids'`` requires ``symbols``, and ``'imts'`` takes
+        reader names them. This is how a source's own axes are reached: ``'imf'``, ``'ilostat'`` and
+        ``'bis'`` require ``dataflow``, ``'wb-ids'`` requires ``symbols``, and ``'imts'`` takes
         ``counterpart``, ``indicator`` and ``freq``. An argument the reader does not accept raises
         ``TypeError``.
 
@@ -1105,6 +1107,18 @@ def DataReader(
     elif data_source == "wb-ids":
         return WorldBankIDSReader(
             countries=name,
+            start=start,
+            end=end,
+            retry_count=retry_count,
+            pause=pause,
+            session=session,
+            headers=headers,
+            output_type=backend,
+            **kwargs,
+        ).read()
+    elif data_source == "bis":
+        return BISReader(
+            selections={"REF_AREA": name},
             start=start,
             end=end,
             retry_count=retry_count,

@@ -4,6 +4,7 @@ import pandas as pd
 import pytest
 import requests
 
+from kuznets.bis import BISReader
 from kuznets.data import DataReader
 from kuznets.ilostat import ILOSTATReader
 from kuznets.imf import IMFReader, IMTSReader
@@ -37,6 +38,14 @@ _ILO_AREA_CODELIST = (
     f'<mes:Structure xmlns:mes="{_MESSAGE}" xmlns:str="{_STRUCTURE}" xmlns:com="{_COMMON}"><mes:Structures>'
     '<str:Codelists><str:Codelist id="CL_AREA">'
     '<str:Code id="ZMB"><com:Name xml:lang="en">Zambia</com:Name></str:Code>'
+    "</str:Codelist></str:Codelists></mes:Structures></mes:Structure>"
+).encode()
+
+
+_BIS_AREA_CODELIST = (
+    f'<mes:Structure xmlns:mes="{_MESSAGE}" xmlns:str="{_STRUCTURE}" xmlns:com="{_COMMON}"><mes:Structures>'
+    '<str:Codelists><str:Codelist id="CL_AREA">'
+    '<str:Code id="IN"><com:Name xml:lang="en">India</com:Name></str:Code>'
     "</str:Codelist></str:Codelists></mes:Structures></mes:Structure>"
 ).encode()
 
@@ -114,6 +123,22 @@ class TestDataReader:
 
         dispatched = DataReader("LAO", "imf", dataflow="CPI", start="2019", end="2019")
         direct = IMFReader("CPI", {"COUNTRY": "LAO"}, start="2019", end="2019").read()
+
+        pd.testing.assert_frame_equal(dispatched, direct)
+
+    def test_bis_dispatch_reads_the_country_from_name(self, monkeypatch, datapath):
+        patch_session_get(
+            monkeypatch,
+            {
+                "/dataflow/": datapath("io", "data", "sdmx", "bis_dataflow_eer.xml"),
+                "/datastructure/": datapath("io", "data", "sdmx", "bis_datastructure_eer.xml"),
+                "CL_AREA": _BIS_AREA_CODELIST,
+                "/data/": datapath("data", "bis", "eer_in_2011.xml"),
+            },
+        )
+
+        dispatched = DataReader("IN", "bis", dataflow="WS_EER", start="2011", end="2011")
+        direct = BISReader("WS_EER", {"REF_AREA": "IN"}, start="2011", end="2011").read()
 
         pd.testing.assert_frame_equal(dispatched, direct)
 
