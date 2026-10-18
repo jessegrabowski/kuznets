@@ -65,6 +65,7 @@ _DATA_SOURCES = {
     "oecd",
     "eurostat",
     "bis",
+    "bls",
     "ilostat",
     "wb-ids",
     "imf",
@@ -1128,6 +1129,19 @@ def DataReader(
             **kwargs,
         ).read()
 
+    elif data_source == "bls":
+        return BLSReader(
+            symbols=name,
+            start=start,
+            end=end,
+            retry_count=retry_count,
+            pause=pause,
+            session=session,
+            api_key=api_key,
+            headers=headers,
+            output_type=backend,
+            **kwargs,
+        ).read()
     elif data_source == "famafrench":
         return FamaFrenchReader(
             symbols=name,
