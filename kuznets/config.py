@@ -6,6 +6,7 @@ import warnings
 
 # Map a reader's short source name to the environment variable holding its API key.
 API_KEY_ENV_VARS = {
+    "bls": "BLS_API_KEY",
     "fred": "FRED_API_KEY",
     "alphavantage": "ALPHAVANTAGE_API_KEY",
     "quandl": "QUANDL_API_KEY",

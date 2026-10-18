@@ -11,6 +11,7 @@ from kuznets.av.forex import AVForexReader
 from kuznets.av.time_series import AVTimeSeriesReader
 from kuznets.bankofcanada import BankOfCanadaReader
 from kuznets.bis import BISReader
+from kuznets.bls import BLSReader
 from kuznets.econdb import EcondbReader
 from kuznets.eurostat import EurostatReader
 from kuznets.famafrench import FamaFrenchReader
@@ -40,6 +41,7 @@ from kuznets.yahoo.quotes import YahooQuotesReader
 __all__ = [
     "get_data_econdb",
     "get_data_famafrench",
+    "get_data_bls",
     "get_data_fred",
     "get_data_moex",
     "get_data_quandl",
@@ -151,6 +153,59 @@ def get_data_alphavantage(
         chunksize=chunksize,
         api_key=api_key,
         output_type=output_type,
+    ).read()
+
+
+@overload
+def get_data_bls(
+    symbols: Symbols,
+    start: DateLike | None = None,
+    end: DateLike | None = None,
+    retry_count: int | None = None,
+    pause: float | None = None,
+    timeout: float | None = None,
+    session: requests.Session | None = None,
+    headers: Headers | None = None,
+    output_type: Literal["pandas"] = "pandas",
+    api_key: str | None = None,
+) -> DataFrame: ...
+@overload
+def get_data_bls(
+    symbols: Symbols,
+    start: DateLike | None = None,
+    end: DateLike | None = None,
+    retry_count: int | None = None,
+    pause: float | None = None,
+    timeout: float | None = None,
+    session: requests.Session | None = None,
+    headers: Headers | None = None,
+    output_type: BackendName = ...,
+    api_key: str | None = None,
+) -> Frame: ...
+def get_data_bls(
+    symbols: Symbols,
+    start: DateLike | None = None,
+    end: DateLike | None = None,
+    retry_count: int | None = None,
+    pause: float | None = None,
+    timeout: float | None = None,
+    session: requests.Session | None = None,
+    headers: Headers | None = None,
+    output_type: OutputType = "pandas",
+    api_key: str | None = None,
+) -> Frame:
+    """Read one or more BLS series. See :class:`~kuznets.bls.BLSReader`."""
+    return BLSReader(
+        symbols=symbols,
+        start=start,
+        end=end,
+        retry_count=retry_count,
+        pause=pause,
+        timeout=timeout,
+        session=session,
+        headers=headers,
+        output_type=output_type,
+        api_key=api_key,
     ).read()
 
 

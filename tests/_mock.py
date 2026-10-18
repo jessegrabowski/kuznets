@@ -194,6 +194,27 @@ def patch_session_get(monkeypatch, handler, *, record: bool = False) -> None:
     monkeypatch.setattr(requests.Session, "get", fake_get)
 
 
+def patch_session_post(monkeypatch, handler) -> None:
+    """Replace ``requests.Session.post`` with *handler* for the duration of a test.
+
+    Parameters
+    ----------
+    monkeypatch : MonkeyPatch
+        The pytest ``monkeypatch`` fixture.
+    handler : callable or FakeResponse
+        ``handler(url, json=None, **kwargs) -> FakeResponse``, or a :class:`FakeResponse` returned for
+        every request.
+    """
+    if isinstance(handler, FakeResponse):
+        response = handler
+        handler = lambda url, json=None, **kwargs: response  # noqa: E731
+
+    def fake_post(self, url, json=None, **kwargs):
+        return handler(url, json=json, **kwargs)
+
+    monkeypatch.setattr(requests.Session, "post", fake_post)
+
+
 @contextlib.contextmanager
 def tolerate_outage():
     """Skip (not fail) a ``network`` test only when the service is genuinely unreachable.
