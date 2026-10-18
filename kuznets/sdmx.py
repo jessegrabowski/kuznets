@@ -62,6 +62,10 @@ class _SdmxDataflowReader(_BaseReader):
 
     _SERVICE: str = ""
 
+    # The format query parameter pinning the payload, or None for a service that refuses the
+    # parameter and already answers with structure-specific data by default.
+    _FORMAT: str | None = _STRUCTURE_SPECIFIC
+
     def __init__(
         self,
         dataflow: str,
@@ -152,11 +156,10 @@ class _SdmxDataflowReader(_BaseReader):
     @property
     def params(self) -> dict:
         """Query parameters bounding the data request to the year range and pinning its format."""
-        return {
-            "startPeriod": self.start.year,
-            "endPeriod": self.end.year,
-            "format": _STRUCTURE_SPECIFIC,
-        }
+        params: dict[str, object] = {"startPeriod": self.start.year, "endPeriod": self.end.year}
+        if self._FORMAT is not None:
+            params["format"] = self._FORMAT
+        return params
 
     def _read_lines(self, out: StringIO) -> str:
         """Pass the XML response body through as the payload for the presenters."""
