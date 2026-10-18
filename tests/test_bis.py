@@ -76,6 +76,14 @@ class TestBISOffline:
         with pytest.raises(RemoteDataError, match="every selected code exists"):
             BISReader("WS_EER", selection, start="1960", end="1961").read()
 
+    def test_an_unknown_dataflow_reports_the_services_own_message(self, monkeypatch, datapath):
+        # Also an HTTP 404, but on the dataflow request, so it must not be read as an empty selection.
+        body = datapath("data", "bis", "unknown_dataflow.xml").read_bytes()
+        patch_session_get(monkeypatch, {"/dataflow/": make_response(body, status_code=404)})
+
+        with pytest.raises(RemoteDataError, match="No Results Found"):
+            BISReader("WS_NOPE").read()
+
     def test_an_alpha_3_country_code_is_rejected_before_the_data_request(self, monkeypatch, service):
         # No data response is mapped, so reaching the data request fails the test.
         patch_session_get(monkeypatch, service())
