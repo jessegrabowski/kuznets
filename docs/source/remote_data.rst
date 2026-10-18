@@ -28,6 +28,7 @@ extract data from various Internet sources into a pandas DataFrame.
 Currently the following sources are supported and tested:
 
     - :ref:`St.Louis FED (FRED)<remote_data.fred>`
+    - :ref:`Bureau of Labor Statistics<remote_data.bls>`
     - :ref:`Kenneth French's data library<remote_data.ff>`
     - :ref:`Stooq<remote_data.stooq>`
     - :ref:`MOEX<remote_data.moex>`
@@ -393,6 +394,30 @@ FRED
     # Multiple series:
     inflation = web.DataReader(['CPIAUCSL', 'CPILFESL'], 'fred', start, end)
     inflation.head()
+
+
+.. _remote_data.bls:
+
+Bureau of Labor Statistics
+==========================
+
+The `BLS public API <https://www.bls.gov/developers/>`__ serves series by their BLS identifier:
+``LES1252881600`` is median usual weekly earnings, ``CUUR0000SA0`` the CPI-U and ``LNS14000000``
+the unemployment rate. Each observation is stamped at the start of its month, quarter, half-year or
+year, and only the years of ``start`` and ``end`` are used.
+
+.. ipython:: python
+   :okexcept:
+
+    import kuznets as kz
+
+    df = kz.get_data_bls(['LES1252881600'], start=1979, end=2026)
+    df.tail()
+
+Without a key the API serves 25 series and 10 years per request and 25 requests a day, so a long
+range costs several requests. A free `registration key <https://data.bls.gov/registrationEngine/>`__,
+passed as ``api_key`` or set in ``BLS_API_KEY``, raises the limits to 50 series, 20 years and 500
+requests.
 
 
 .. _remote_data.ff:
