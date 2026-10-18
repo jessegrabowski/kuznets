@@ -7,7 +7,7 @@ from pandas import DataFrame, to_datetime, to_numeric
 import requests
 
 from kuznets.base import _DailyBaseReader
-from kuznets.typing import DateLike, Symbols
+from kuznets.typing import DateLike, Headers, Symbols
 
 
 class NaverDailyReader(_DailyBaseReader):
@@ -29,6 +29,7 @@ class NaverDailyReader(_DailyBaseReader):
         interval: str = "d",
         get_actions: bool = False,
         adjust_dividends: bool = True,
+        headers: Headers | None = None,
         output_type: str = "pandas",
         max_workers: int | None = None,
     ) -> None:
@@ -61,6 +62,8 @@ class NaverDailyReader(_DailyBaseReader):
             Not implemented.
         adjust_dividends : bool, default True
             Not implemented.
+        headers : dict, optional
+            Headers applied to every request, merged over ``options.headers`` and the config file.
         output_type : str, optional
             Backend of the returned data: 'pandas', 'polars', 'pyarrow' (alias 'arrow'), or 'dask'.
             Backends other than pandas must be installed separately. Default 'pandas'.
@@ -79,6 +82,7 @@ class NaverDailyReader(_DailyBaseReader):
             pause=pause,
             session=session,
             chunksize=chunksize,
+            headers=headers,
             output_type=output_type,
             max_workers=max_workers,
         )

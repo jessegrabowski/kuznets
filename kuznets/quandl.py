@@ -5,7 +5,7 @@ import requests
 
 from kuznets.base import _DailyBaseReader
 from kuznets.config import get_api_key
-from kuznets.typing import DateLike, Symbols
+from kuznets.typing import DateLike, Headers, Symbols
 
 
 class QuandlReader(_DailyBaseReader):
@@ -25,6 +25,7 @@ class QuandlReader(_DailyBaseReader):
         session: requests.Session | None = None,
         chunksize: int = 25,
         api_key: str | None = None,
+        headers: Headers | None = None,
         output_type: str = "pandas",
         max_workers: int | None = None,
     ) -> None:
@@ -60,6 +61,8 @@ class QuandlReader(_DailyBaseReader):
             Quandl API key. Resolved through :func:`kuznets.config.get_api_key` (argument,
             ``options.api_keys['quandl']``, ``QUANDL_API_KEY``, then the config file). The API key
             is *required*.
+        headers : dict, optional
+            Headers applied to every request, merged over ``options.headers`` and the config file.
         output_type : str, optional
             Backend of the returned data: 'pandas', 'polars', 'pyarrow' (alias 'arrow'), or 'dask'.
             Backends other than pandas must be installed separately. Default 'pandas'.
@@ -75,6 +78,7 @@ class QuandlReader(_DailyBaseReader):
             pause,
             session,
             chunksize,
+            headers=headers,
             output_type=output_type,
             max_workers=max_workers,
         )
