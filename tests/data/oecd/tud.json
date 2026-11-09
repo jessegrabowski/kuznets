@@ -1,8 +1,8 @@
 {
   "meta": {
     "schema": "https://raw.githubusercontent.com/sdmx-twg/sdmx-json/master/data-message/tools/schemas/2.0.0/sdmx-json-data-schema.json",
-    "id": "IREF009389",
-    "prepared": "2026-10-12T06:39:52Z",
+    "id": "IREF005242",
+    "prepared": "2026-11-09T06:23:24Z",
     "test": false,
     "contentLanguages": [
       "en",

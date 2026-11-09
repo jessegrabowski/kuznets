@@ -2,8 +2,8 @@
 "https://www.bankofcanada.ca/terms/"
 
 "SERIES"
-"id","label","description"
-"FXUSDCAD","USD/CAD","Daily average exchange rate of the US dollar in Canadian dollars."
+"id","label","description","date_format"
+"FXUSDCAD","USD/CAD","Daily average exchange rate of the US dollar in Canadian dollars.","daily"
 
 "OBSERVATIONS"
 "date","FXUSDCAD"
