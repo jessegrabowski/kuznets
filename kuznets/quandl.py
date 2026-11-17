@@ -190,7 +190,7 @@ class QuandlReader(_DailyBaseReader):
 
     @staticmethod
     def _clean_columns(df: DataFrame) -> DataFrame:
-        df.rename(
+        return df.rename(
             columns=lambda n: (
                 n.replace(" ", "")
                 .replace(".", "")
@@ -200,7 +200,5 @@ class QuandlReader(_DailyBaseReader):
                 .replace(")", "")
                 .replace("'", "")
                 .replace("-", "")
-            ),
-            inplace=True,
+            )
         )
-        return df

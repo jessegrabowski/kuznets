@@ -58,7 +58,7 @@ jobs:
           add-paths: tests/data
 
       - name: Fail the run if live recording detected drift
-        if: steps.record.outcome == 'failure'
+        if: always() && steps.record.outcome == 'failure'
         run: |
           echo "Live recording reported a failure (likely an upstream API shape change)."
           exit 1

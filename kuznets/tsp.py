@@ -85,7 +85,7 @@ class TSPReader(_BaseReader):
         """
         df = super()._read_core()
         df.columns = (x.strip() for x in df.columns)
-        df.drop(columns=self.all_symbols - set(self.symbols), inplace=True)
+        df = df.drop(columns=self.all_symbols - set(self.symbols))
         return df
 
     @property
