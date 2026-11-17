@@ -51,8 +51,8 @@ class TestFamaFrenchOffline:
         assert "DESCR" in ff
         assert len(ff) > 1
         # Monthly table first, annual table second.
-        assert ff[0].index.freq.rule_code in ("ME", "M")
-        assert ff[1].index.freq.rule_code in ("YE-DEC", "A-DEC")
+        assert ff[0].index.freq.rule_code == "ME"
+        assert ff[1].index.freq.rule_code == "YE-DEC"
 
     def test_daily_factors_index(self, monkeypatch, datapath):
         # Daily files carry 8-digit YYYYMMDD dates and must yield a DatetimeIndex, not the
@@ -111,7 +111,7 @@ class TestFamaFrenchLive:
         with tolerate_outage():
             ff = web.DataReader("F-F_Research_Data_Factors", "famafrench")
             assert "DESCR" in ff
-            assert ff[0].index.freq.rule_code in ("ME", "M")
+            assert ff[0].index.freq.rule_code == "ME"
 
     def test_daily_factors_shape(self, monkeypatch, datapath):
         live_or_record(
