@@ -124,7 +124,7 @@ class EcondbReader(_BaseReader):
                     names=[show_func(x) for x in head.keys()],
                 )
             else:
-                series.rename(columns={"values": entry["ticker"]}, inplace=True)
+                series = series.rename(columns={"values": entry["ticker"]})
 
             if not df.empty:
                 df = df.merge(series, how="outer", left_index=True, right_index=True)

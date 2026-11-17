@@ -126,6 +126,6 @@ class AVForexReader(AlphaVantage):
             df = pd.DataFrame.from_dict(out[self.data_key], orient="index")
         except KeyError as exc:
             raise RemoteDataError() from exc
-        df.sort_index(ascending=True, inplace=True)
+        df = df.sort_index(ascending=True)
         df.index = [id[3:] for id in df.index]
         return df
